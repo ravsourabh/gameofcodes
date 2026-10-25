@@ -3,6 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { isProjectId } from './protocol.mjs';
 import { synthesize, localSpeechAvailable } from './speech.mjs';
+import { validateSetup, exportLocalBuild } from './workspace-setup.mjs';
 import { sourceArchive } from './source-archive.mjs';
 import { createProviderBridge, PROVIDERS } from './providers.mjs';
 import { transcribe } from './speech.mjs';
@@ -35,7 +36,7 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
     return job;
   }
   let sessionCalls = 0;
-  const configuration = async (id) => ({ ...await bridge.status(), mode: process.env.SOVEREIGN_MODE === 'cloud' ? 'cloud' : 'local', localSpeechAvailable, callsUsed: sessionCalls, callLimit: process.env.SOVEREIGN_MODE === 'cloud' ? 300 : 30, ...(id ? { charter: (await state(id)).charter, onboarded: (await state(id)).onboarded } : {}) });
+  const configuration = async (id) => ({ ...await bridge.status(), mode: process.env.SOVEREIGN_MODE === 'cloud' ? 'cloud' : 'local', localSpeechAvailable, ...(process.env.SOVEREIGN_MODE!=='cloud'?{workspaceDefault:root}:{}), callsUsed: sessionCalls, callLimit: process.env.SOVEREIGN_MODE === 'cloud' ? 300 : 30, ...(id ? { charter: (await state(id)).charter, onboarded: (await state(id)).onboarded, setup: (await state(id)).setup || null } : {}) });
   const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
   async function state(id) {
     if (!isProjectId(id)) fail('Invalid project.');
@@ -122,6 +123,13 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
         }
         if (req.method !== 'POST') fail('Unknown court action.', 404);
         checkOrigin(req);
+        if (url.pathname === '/api/court/setup') {
+          const input = await body(req);if(!isProjectId(input.project))fail('Invalid project.');
+          const mode=process.env.SOVEREIGN_MODE==='cloud'?'cloud':'local';
+          const providers=(await bridge.status()).providers;const setup=await validateSetup(input,mode,providers);
+          const data=await exclusive(input.project,randomUUID(),async()=>{const data=await state(input.project);data.setup=setup;if(mode==='local'){const first=providers.find(p=>p.installed&&p.state==='connected').id;for(const role of ['virus',...workRoles])if(!data.brains[role])data.brains[role]=first;}await persist(input.project,data);return data;});
+          json(res,200,{setup:data.setup,brains:data.brains});return true;
+        }
         if (url.pathname === '/api/court/brain') {
           const input = await body(req);
           if (!isProjectId(input.project) || !roles.includes(input.role) || !PROVIDERS.some(provider => provider.id === input.provider)) fail('Choose a court member and a supported brain.');
@@ -148,8 +156,7 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
           res.writeHead(200, { 'Content-Type': 'audio/wav', 'Content-Length': audio.length, 'Cache-Control': 'no-store' }).end(audio); return true;
         }
         if (url.pathname === '/api/court/provider') {
-          const origin = new URL(req.headers.origin);
-          if (!['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname)) fail('Connect your provider from the desktop localhost workspace.', 403);
+          if(process.env.SOVEREIGN_MODE==='cloud')fail('Cloud models use server-managed APIs. Assign a model to a court member instead.',403);
           const input = await body(req);
           if (input.action === 'check') await bridge.check(input.provider);
           else await bridge.select(input.provider);
@@ -223,6 +230,7 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
               });
               room.queue = inspection.then(() => {}, () => {});
               const checks = await inspection;
+              if(process.env.SOVEREIGN_MODE!=='cloud'&&data.setup?.workspace)await exportLocalBuild(data.setup.workspace,input.project,version,folder);
               data.version++; data.artifact = { version, title: data.proposal.title, number: data.version }; data.checks = checks; data.proposal.status = 'ready-for-review';
               room.dirtyUntil = Date.now() + 2000; broadcast(room, { type: 'status', status: 'ready', message: 'Your new application is ready for review' });
               const speech = checks.some(check => check.passed === false) ? 'I created the application files, but a browser startup check failed. Ask Iris for the recorded checks, then we can revise it.' : 'I created the application files and opened them in the browser. The startup checks passed. Please try the features yourself; Iris can show exactly what was checked.';

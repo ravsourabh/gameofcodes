@@ -261,11 +261,13 @@ export class CourtCharacter {
     const energy = speaking ? Math.max(this.amplitude, 0.1) : 0;
     this.torso.position.y = 0.58 + Math.sin(time * 1.5 + phase) * 0.005;
     this.head.rotation.y = THREE.MathUtils.clamp(Math.atan2(cameraPosition.x - this.group.position.x, cameraPosition.z - this.group.position.z), -0.3, 0.3);
+    if(this.state==='working'){this.head.rotation.y=THREE.MathUtils.clamp(-this.group.position.x*.2,-.35,.35);}
     this.head.rotation.z = speaking ? Math.sin(time * 2.3 + phase) * 0.035 : Math.sin(time * 0.7 + phase) * 0.012;
-    this.head.rotation.x = this.state === 'thinking' ? -0.08 : Math.sin(time * (speaking ? 3 : 1.1) + phase) * (speaking ? 0.025 : 0.008);
+    this.head.rotation.x = this.state === 'working' ? .22 : this.state === 'thinking' ? -0.08 : Math.sin(time * (speaking ? 3 : 1.1) + phase) * (speaking ? 0.025 : 0.008);
     this.rightArm.rotation.x = speaking ? -0.55 - Math.sin(time * 2.1) * 0.16 : this.state === 'listening' ? -0.15 : -0.04;
     this.rightArm.rotation.z = -0.12 - (speaking ? Math.sin(time * 2.4) * 0.1 + 0.19 : 0);
     this.leftArm.rotation.x = -0.18 + Math.sin(time * 1.2 + phase) * 0.025;
+    if(this.state==='working'){this.rightArm.rotation.x=-.65+Math.sin(time*5+phase)*.12;this.leftArm.rotation.x=-.55+Math.sin(time*5+phase+Math.PI)*.12;}
     this.mouth.scale.y = 0.012 + energy * (0.035 + Math.abs(Math.sin(time * 19)) * 0.045);
     if (time > this.blinkAt + 0.14) this.blinkAt = time + 3 + Math.sin(time * 13 + phase) * 1.4;
     for (const eye of this.eyes) eye.scale.y = time > this.blinkAt ? 0.1 : 1;

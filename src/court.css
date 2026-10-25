@@ -125,3 +125,14 @@ body:has(#garden-overlay:not([hidden])) .conversation { visibility:hidden; }
 .garden-eyebrow { display:none; }
 .enter-vr { padding:10px 13px; font-size:11px; }
 @media(max-width:700px) { .conversation { bottom:16px; }.role-picker { gap:4px; }.role-button { padding:6px 10px; }.role-name { font-size:12px; }.dialogue-card p { font-size:15px; }.header-actions { gap:7px; } }
+
+#court-setup { width:520px; }
+#court-setup label { display:block;font-size:12px;color:#b2c6b8;margin:14px 0; }
+#court-setup input,#court-setup select { display:block;width:100%;margin-top:7px;padding:11px;border:1px solid #81947755;border-radius:7px;background:#10282d;color:#eee4d0; }
+.setup-actions { display:flex;flex-wrap:wrap;gap:10px;margin-top:15px; }
+.setup-provider { display:grid;grid-template-columns:1fr auto;gap:7px;border-top:1px solid #8b9b8133;padding:12px 0; }
+.setup-provider small,.setup-provider code { grid-column:1;color:#a4baa8;line-height:1.5; }
+.setup-provider button { grid-column:2;grid-row:1/4;align-self:center; }
+#setup-error { color:#e3b78f;font-size:12px; }
+#session-context { max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px; }
+@media(max-width:700px) { #session-context { max-width:110px;padding:7px; }.setup-provider { grid-template-columns:1fr; }.setup-provider button { grid-column:1;grid-row:auto; } }

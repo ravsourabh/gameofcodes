@@ -115,6 +115,7 @@ export function createProviderBridge({ root, execute = runProcess, locate = exec
         const state = checked?.state || (hasKey ? 'not-checked' : 'not-installed');
         return { ...provider, installed: hasKey, state, message: checked?.message || (hasKey ? 'API key set. Ready to use.' : 'API key not set in environment.') };
       }
+      if(provider.id==='gemini')return {...provider,installed:false,state:'disabled',message:'Gemini is available through cloud mode. Choose an installed local CLI here.'};
       const installed = !!locate(provider), checked = health.get(provider.id);
       return { ...provider, installed, state: !installed ? 'not-installed' : checked?.state || 'not-checked', message: !installed ? 'Install the official CLI on this computer, then restart Game of Codes.' : checked?.message || 'Installed. Sign in through its CLI, then check the connection.' };
     });

@@ -9,7 +9,7 @@ const charter = { idea:'A reading tracker for students', milestones:[{id:'m1',ti
 const proposal = { id:'ffffffff-1111-4111-8111-111111111111', title:'Reading tracker',requirements:['Add books','Save progress'],status:'awaiting-approval' };
 function wav(){const bytes=Buffer.alloc(44+4800);bytes.write('RIFF');bytes.writeUInt32LE(bytes.length-8,4);bytes.write('WAVEfmt ',8);bytes.writeUInt32LE(16,16);bytes.writeUInt16LE(1,20);bytes.writeUInt16LE(1,22);bytes.writeUInt32LE(24000,24);bytes.writeUInt32LE(48000,28);bytes.writeUInt16LE(2,32);bytes.writeUInt16LE(16,34);bytes.write('data',36);bytes.writeUInt32LE(4800,40);return bytes;}
 async function fixture(page:Page, returning=false,motion: 'reduce'|'no-preference'='reduce'){
-  const state:any={mode:'cloud',configured:true,selectedProvider:'gemini',provider:'Gemini',onboarded:returning,brains:{},history:[],checks:[],charter:returning?charter:null,proposal:returning?{...proposal}:null,providers:[
+  const state:any={mode:'cloud',configured:true,selectedProvider:'gemini',provider:'Gemini',setup:{profileId:id,profileName:'Test profile',mode:'cloud',activity:'plan',workspace:null},onboarded:returning,brains:{},history:[],checks:[],charter:returning?charter:null,proposal:returning?{...proposal}:null,providers:[
     {id:'muse',name:'Muse',installed:false,state:'disabled',message:'Meta API unavailable'},
     ...['gemini','claude','codex'].map(id=>({id,name:id,installed:true,state:'connected',message:'Ready'}))
   ]};
@@ -36,6 +36,8 @@ async function fixture(page:Page, returning=false,motion: 'reduce'|'no-preferenc
       if(body.provider==='muse'){await route.fulfill({status:503,json:{error:'Muse unavailable'}});return;}
       state.brains[body.role]=body.provider;result={...state};
     }
+    if(path==='setup'){state.setup={...body};result={setup:state.setup};}
+    if(path==='provider'){const provider=state.providers.find((p:any)=>p.id===body.provider);if(provider)provider.state='connected';result={...state};}
     if(path==='complete-onboarding'){state.onboarded=true;result={onboarded:true};}
     if(path==='build'){state.activeBuildRequestId=body.requestId;state.proposal.status='building';result={pending:true,requestId:body.requestId};}
     if(path==='build-status'){buildPolls++;if(state.holdBuild||buildPolls<2)result={status:'pending'};else{state.artifact={title:'Reading tracker',version:id};state.proposal.status='ready-for-review';state.activeBuildRequestId=null;result={status:'complete',result:{artifact:state.artifact,checks:[],speech:'Your reading tracker is built and ready to try.'}};}}
@@ -132,10 +134,10 @@ test('VR garden lets hands continue the guide, select an orb, and reach the keyb
   const { readFile }=await import('node:fs/promises');
   const runtime=await readFile('node_modules/iwer/build/iwer.min.js','utf8');
   await page.addInitScript({content:`${runtime}\nwindow.xrDevice = new IWER.XRDevice(IWER.metaQuest3); window.xrDevice.installRuntime({forceInstall:true}); window.xrDevice.primaryInputMode='hand'; window.xrDevice.position.set(0,1.6,0);`});
-  await fixture(page);
+  const {state}=await fixture(page);state.setup=null;await page.reload();
   await page.locator('#enter-vr').click();
   await expect(page.locator('body')).toHaveClass(/in-vr/);
-  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','brain');
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','setup');
   const pinch=async(x:number,y:number,z:number)=>{
     await page.evaluate(({x,y,z})=>{
       const hand=(window as any).xrDevice.hands.right;hand.position.set(.25,1.3,-.4);
@@ -153,6 +155,10 @@ test('VR garden lets hands continue the guide, select an orb, and reach the keyb
     const lx=(x/1400-.5)*2.65,ly=(.5-y/600)*1.136;
     await pinch(lx,(composer?1.3:1)+ly*Math.cos(-.13),(composer?3.8:3.65)+ly*Math.sin(-.13));
   };
+  await panel(1028,312); // Profile: Continue.
+  await panel(368,312); // Cloud mode.
+  await panel(1028,312); // Plan an idea.
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','brain');
   await panel(1132,382);
   await expect(page.locator('body')).toHaveAttribute('data-tour-stage','gesture');
   await pinch(0,1.85,3.4);
@@ -265,4 +271,88 @@ test('denied microphone permission turns hands-free off without retrying',async(
   await expect(page.locator('#hands-free')).toHaveAttribute('aria-pressed','false');
   await page.waitForTimeout(1500);
   expect(await page.evaluate(()=>(window as any).__starts)).toBe(1);
+});
+
+
+test('Virus asks profile and execution mode, hands off local honestly, and lets users explore without a build',async({page})=>{
+  test.setTimeout(100000);
+  const {state,requests}=await fixture(page);state.setup=null;await page.reload();
+  await page.locator('#begin-reign').click();
+  await expect(page.locator('#setup-title')).toHaveText('Who is taking the throne?');
+  await page.locator('#setup-name').fill('Sourabh');
+  await page.locator('[data-setup="profile-next"]').click();
+  await expect(page.locator('#setup-title')).toHaveText('Where shall we work?');
+  await page.locator('[data-setup="local"]').click();
+  await expect(page.locator('#setup-title')).toHaveText('Open your computer court');
+  await expect(page.locator('#court-setup a')).toHaveAttribute('href','http://localhost:5173/');
+  await expect(page.locator('#session-context')).toContainText('Cloud');
+  expect(requests.filter(r=>r.path==='setup')).toHaveLength(0);
+  await page.locator('[data-setup="stay"]').click();
+  await page.locator('[data-setup="explore"]').click();
+  await expect(page.locator('#session-context')).toHaveText('Cloud · Sourabh');
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','brain');
+  await page.locator('#tour-continue').click();
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','gesture');
+  await page.locator('#tour-continue').click();
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','ready',{timeout:30000});
+  await expect(page.locator('#caption')).toContainText('explore');
+  await page.locator('[data-role="virus"]').click();await send(page,'Hello, tell me about the court');
+  await expect.poll(()=>requests.filter(r=>r.path==='converse').length).toBe(1);
+  expect(requests.filter(r=>['plan-idea','build'].includes(r.path))).toHaveLength(0);
+  expect(state.setup.activity).toBe('explore');
+  await page.reload();await expect(page.locator('#session-context')).toHaveText('Cloud · Sourabh');
+});
+
+test('cloud brain swapping never asks for local account sign-in',async({page})=>{
+  const {state}=await fixture(page,true);state.providers.find((p:any)=>p.id==='codex').state='not-checked';await page.reload();
+  await page.locator('#settings').click();await page.locator('#settings-brain').click();
+  await page.locator('[data-brain="codex"]').click();
+  await expect(page.locator('#caption')).toContainText('server API is configured');
+  await expect(page.locator('#caption')).not.toContainText('sign-in');
+  await page.locator('#settings').click();await page.locator('#connect-provider').click();
+  await expect(page.locator('#provider-intro')).toContainText('server-managed APIs');
+  await expect(page.locator('.provider-command')).toHaveCount(0);
+});
+
+test('the table stages construction while the real build runs',async({page})=>{
+  const {state}=await fixture(page,true);state.holdBuild=true;
+  await page.locator('#begin-reign').click();await expect(page.locator('body')).toHaveAttribute('data-tour-stage','ready');
+  await page.locator('#approve-plan').click();
+  await expect(page.locator('body')).toHaveAttribute('data-construction-stage','generating');
+  await page.screenshot({path:'test-results/table-construction.png'});
+  state.holdBuild=false;await expect(page.locator('body')).toHaveClass(/is-preview/);
+  await expect(page.locator('body')).toHaveAttribute('data-construction-stage','idle');
+});
+
+
+test('local setup guides CLI sign-in and requires a verified account and workspace',async({page})=>{
+  const {state,requests}=await fixture(page);state.setup=null;state.mode='local';
+  state.providers.forEach((p:any)=>{p.state=p.id==='gemini'?'disabled':'not-checked';p.installed=p.id==='codex'||p.id==='claude';p.loginCommand=p.id==='codex'?'codex login':'claude';});
+  await page.reload();await page.locator('#begin-reign').click();
+  await page.locator('#setup-name').fill('Work');await page.locator('[data-setup="profile-next"]').click();
+  await page.locator('[data-setup="local"]').click();
+  await expect(page.locator('#setup-title')).toHaveText('Connect your local assistants');
+  await expect(page.locator('#court-setup')).toContainText('codex login');
+  await page.locator('#setup-workspace').fill('D:\\projects\\work');
+  await page.locator('[data-setup="providers-next"]').click();
+  await expect(page.locator('#setup-error')).toContainText('Verify at least one');
+  await page.locator('[data-setup="check:codex"]').click();
+  await expect(page.locator('#court-setup')).toContainText('Verified');
+  await page.locator('[data-setup="providers-next"]').click();await page.locator('[data-setup="explore"]').click();
+  await expect(page.locator('#session-context')).toHaveText('Local · Work');
+  expect(requests.find(r=>r.path==='setup')?.body.workspace).toBe('D:\\projects\\work');
+  expect(requests.some(r=>r.path==='provider'&&r.body.provider==='codex')).toBe(true);
+});
+
+
+test('cancelled local connection checks cannot reopen or overwrite a new setup wizard',async({page})=>{
+  const {state}=await fixture(page);state.setup=null;state.mode='local';await page.reload();
+  await page.locator('#begin-reign').click();await page.locator('[data-setup="profile-next"]').click();await page.locator('[data-setup="local"]').click();
+  let release:()=>void=()=>{};const gate=new Promise<void>(r=>release=r);
+  await page.route('**/api/court/provider',async route=>{await gate;await route.fulfill({json:state});});
+  await page.locator('[data-setup="check:codex"]').click();
+  await page.locator('[data-setup="cancel"]').click();await expect(page.locator('#court-setup')).toBeHidden();
+  await page.locator('#begin-reign').click();await expect(page.locator('#setup-title')).toHaveText('Who is taking the throne?');
+  release();await page.waitForTimeout(700);
+  await expect(page.locator('#setup-title')).toHaveText('Who is taking the throne?');
 });

@@ -17,6 +17,7 @@ export class SpatialDialogue {
   private upper = false;
   private tourContinue = false;
   private settings = false;
+  private setup: {title:string;text:string;choices:{label:string;action:string}[]}|null=null;
   private codeFiles: Record<string,string> | null = null;
   private codeFile = 0;
   private codePage = 0;
@@ -29,6 +30,7 @@ export class SpatialDialogue {
     this.mesh.userData.dialogue = true;
     this.draw();
   }
+  showSetup(value:typeof this.setup){this.setup=value;this.draw();}
   showSettings(show:boolean) { this.settings=show; this.draw(); }
   setTourContinue(show: boolean) { this.tourContinue = show; this.draw(); }
   showCode(files: Record<string,string>) { this.codeFiles=files; this.codeFile=0; this.codePage=0; this.draw(); }
@@ -72,12 +74,18 @@ export class SpatialDialogue {
     };
     ctx.textAlign = 'left'; ctx.fillStyle = COURT[this.role].color; ctx.font = '24px Arial'; ctx.fillText(`${COURT[this.role].name.toUpperCase()} · ${COURT[this.role].title.toUpperCase()}`, 40, 54);
     ctx.textAlign = 'right'; ctx.fillStyle = '#8aa292'; ctx.font = '18px Arial'; ctx.fillText(this.mode, 1360, 53);
-    if(this.settings){
+    if(this.setup&&!this.composer){
+      ctx.textAlign='left';ctx.fillStyle='#ede5d4';ctx.font='34px Georgia';ctx.fillText(this.setup.title,48,120);
+      ctx.fillStyle='#a8baaa';ctx.font='23px Arial';
+      const words=this.setup.text.split(' ');let line='',y=169;
+      for(const word of words){if(ctx.measureText(line+' '+word).width>1250){ctx.fillText(line,48,y);y+=30;line='';if(y>245)break;}line+=word+' ';}if(y<=245)ctx.fillText(line,48,y);
+      this.setup.choices.forEach((choice,i)=>button(choice.label,'setup:'+choice.action,48+(i%2)*660,280+Math.floor(i/2)*74,640,64,i===0));
+    }else if(this.settings){
       ctx.textAlign='left';ctx.fillStyle='#ede5d4';ctx.font='36px Georgia';ctx.fillText('Your court settings',48,132);
       ctx.fillStyle='#9fb49d';ctx.font='24px Arial';ctx.fillText('Choose a brain for the selected character, adjust sound, or recenter.',48,194);
       button('Open this brain',`brain-open:${this.role}`,48,280,410,72,true);
       button('Quiet / sound','mute',480,280,410,72);button('Center throne','recenter',912,280,440,72);
-      button('Restart guide','restart-guide',48,450,410,64);button('Close settings','settings-close',912,450,440,64);
+      button('Restart guide','restart-guide',48,450,410,64);button('Profile / mode','setup-open',480,450,410,64);button('Close settings','settings-close',912,450,440,64);
     }else if(this.codeFiles){
       const names=Object.keys(this.codeFiles), name=names[this.codeFile];
       const lines=(this.codeFiles[name]||'').split('\n').flatMap(line=>line.match(/.{1,100}/g)||['']);
@@ -90,7 +98,7 @@ export class SpatialDialogue {
     } else if (this.composer) {
       ctx.fillStyle = '#0b1a20'; ctx.beginPath(); ctx.roundRect(38, 79, 1324, 78, 12); ctx.fill();
       ctx.textAlign = 'left'; ctx.fillStyle = this.input ? '#e7e7d7' : '#6d8b7e'; ctx.font = '29px Arial'; ctx.fillText((this.input || `Tell ${COURT[this.role].name} what you have in mind…`).slice(-85), 60, 128);
-      const rows = ['1234567890', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+      const rows = ['1234567890-_', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm/\\:.'];
       rows.forEach((row, rowIndex) => {
         const offset = (1400 - row.length * 112) / 2;
         [...row].forEach((key, i) => button(this.upper ? key.toUpperCase() : key, `key:${key}`, offset + i * 112, 181 + rowIndex * 66, 100, 54));

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ConstructionStage, type BuildPhase } from './construction-stage';
 import { EnvironmentAssets } from './environment-assets';
 import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 import type { ConnectionState } from './preview';
@@ -31,6 +32,8 @@ export class CourtScene {
   readonly camera = new THREE.PerspectiveCamera(48, 1, 0.05, 80);
   readonly origin = new THREE.Group();
   private assets = new EnvironmentAssets();
+  private construction=new ConstructionStage();
+  private buildPhase:BuildPhase|null=null;
   private courtDetails = new THREE.Group();
   private board = new THREE.Group();
   readonly dialogue = new SpatialDialogue();
@@ -95,7 +98,7 @@ export class CourtScene {
     this.scene.add(new THREE.HemisphereLight(0xd0e5d8, 0x353b31, 1.65));
     const sun = new THREE.DirectionalLight(0xffdfb4, 2.5); sun.position.set(-5, 8, -5); this.scene.add(sun);
     const fill = new THREE.PointLight(0xa7c5ce, 18, 12); fill.position.set(0, 4, 3); this.scene.add(fill);
-    this.environment();
+    this.environment();this.scene.add(this.construction.group);
     this.assets.courtDetails(this.courtDetails);
     this.assets.batch(this.courtDetails);
     this.scene.add(this.courtDetails);
@@ -415,6 +418,7 @@ export class CourtScene {
   private buildGarden() {
     const g = this.gardenGroup, assets = this.assets;
     const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number) => assets.mesh(g, geo, mat, x, y, z);
+    const terrain=add(new THREE.PlaneGeometry(160,160),assets.soil,0,-.23,0);terrain.rotation.x=-Math.PI/2;
     const floor = add(new THREE.CircleGeometry(8.8, 48), assets.soil, 0, -.055, 4);
     floor.rotation.x = -Math.PI / 2;
     // Individually laid, slightly weathered paving stones and raised edging.
@@ -516,13 +520,23 @@ export class CourtScene {
     }
   }
 
+  setBuildStage(phase:BuildPhase|null){
+    this.construction.setPhase(phase);
+    if(phase){
+      this.characters.get('builder')?.setState('working');
+      this.characters.get('architect')?.setState('thinking');
+      this.characters.get('inspector')?.setState(phase==='checking'?'working':'thinking');
+      this.characters.get('artiste')?.setState('working');
+    }else if(this.buildPhase){for(const role of ['builder','architect','inspector','artiste'] as CourtRole[])this.characters.get(role)?.setState('idle');}
+    this.buildPhase=phase;
+  }
   playArrival(): Promise<void> {
     this.finishArrival();
     if (this.reducedMotion || this.renderer.xr.isPresenting) return Promise.resolve();
     this.showGarden(true);
     const path = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(10, 10, 20), new THREE.Vector3(5, 7, 15),
-      new THREE.Vector3(0, 4.2, 11), new THREE.Vector3(0, 1.45, 5.5)
+      new THREE.Vector3(3.8, 5.8, 12.5), new THREE.Vector3(1.8, 4.8, 10),
+      new THREE.Vector3(0, 2.7, 8), new THREE.Vector3(0, 1.45, 5.5)
     ]);
     this.camera.position.copy(path.getPoint(0)); this.camera.lookAt(0, 2.6, -1);
     return new Promise(resolve => { this.arrival = { path, start: performance.now(), done: resolve }; });
@@ -922,6 +936,7 @@ export class CourtScene {
     // render loop for the headset, independently of browser capture cadence.
     if (!this.renderer.xr.isPresenting && time - this.lastRender < 32) return;
     this.lastRender = time;
+    this.construction.animate(time/1000);
     this.frames++;
     if (time - this.fpsTime >= 1200) { this.fps = Math.round(this.frames * 1000 / (time - this.fpsTime)); this.onFps?.(this.fps); this.frames = 0; this.fpsTime = time; }
     if (this.renderer.xr.isPresenting) {

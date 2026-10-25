@@ -1,11 +1,12 @@
 import { createServer } from 'vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
-import { startPreviewServer } from '../server/preview.mjs';
 import { existsSync } from 'node:fs';
 import { loadEnvFile } from 'node:process';
 
 for (const file of ['.env.local', '.env']) if (existsSync(file)) loadEnvFile(file);
 
+// Provider modules capture execution mode at import time; load configuration first.
+const { startPreviewServer } = await import('../server/preview.mjs');
 const production = process.argv.includes('--production');
 const preview = await startPreviewServer();
 const proxy = {

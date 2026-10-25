@@ -25,3 +25,9 @@ render counts and browser errors, and does not call inference or speech APIs.
 
 This is a more detailed procedural environment, not a photogrammetry asset set.
 Headset frame rate still requires testing on physical Quest hardware.
+
+
+## Construction and arrival additions
+
+- `src/construction-stage.ts`: locally authored miniature table stage, abstract assembly blocks, wireframe and orbiting sparks; follows authoritative build phases and respects reduced motion. No downloaded assets.
+- `src/scene.ts`: closer castle arrival over extended continuous terrain, reusing the existing soil and stone materials.

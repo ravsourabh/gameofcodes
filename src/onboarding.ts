@@ -51,7 +51,7 @@ export class OnboardingManager {
   private wait() { return new Promise<boolean>(resolve => { this.waiter = resolve; }); }
   private async say(token: number, role: CourtRole, text: string) { await this.ready(token); await this.cb.speak(role, text); await this.ready(token); }
 
-  async start(options: { returning?: boolean; hasIdea?: boolean; hasBuild?: boolean; direct?: boolean } = {}) {
+  async start(options: { returning?: boolean; hasIdea?: boolean; hasBuild?: boolean; direct?: boolean; explore?: boolean } = {}) {
     if (this.active) return;
     this.active = true; const token = ++this.generation;
     try {
@@ -75,7 +75,7 @@ export class OnboardingManager {
         await this.say(token, 'virus', options.hasIdea ? "Welcome back. I'll take you to your court and pick up your saved project." : "Welcome back. Let's hear your idea and take it into the court.");
       }
       if (options.direct) { await this.cb.scene.guideToCourt(); await this.ready(token); }
-      if (!options.hasIdea) {
+      if (!options.hasIdea && !options.explore) {
         let planned = false;
         while (!planned) {
           this.setStage('idea', 'Tell Virus what you want to build. He will draft the milestones.');
@@ -96,7 +96,7 @@ export class OnboardingManager {
         }
       }
       this.setStage('entering', 'Virus is opening the gate and leading you to the court.');
-      await this.say(token, 'virus', 'Your plan is ready. Follow me into the court.');
+      await this.say(token, 'virus', options.explore&&!options.hasIdea?'Come meet your court. We can explore before deciding what to create.':'Your plan is ready. Follow me into the court.');
       await this.cb.scene.guideToCourt(); await this.ready(token);
       this.setStage('introductions', 'Meet the team who will work on your idea.');
       for (const [role, line] of [
@@ -109,7 +109,7 @@ export class OnboardingManager {
         if (!options.returning) await this.say(token, 'virus', line);
       }
       this.cb.scene.selectCharacter('architect');
-      await this.say(token, 'virus', options.hasBuild ? 'Your saved build is ready. Ask me to review the app or show the code. Tell the team what you would like to change next.' : 'Your court is ready. Review your plan, request a change, or approve it to build.');
+      await this.say(token, 'virus', options.explore&&!options.hasIdea ? 'Your court is yours to explore. We can talk, discuss an idea, or plan something when you are ready.' : options.hasBuild ? 'Your saved build is ready. Ask me to review the app or show the code. Tell the team what you would like to change next.' : 'Your court is ready. Review your plan, request a change, or approve it to build.');
       this.checkpoint(token);
       await this.cb.onComplete(); this.checkpoint(token);
       this.active = false; this.setStage('ready', 'Review your plan, request changes, or approve to build.');
