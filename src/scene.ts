@@ -53,6 +53,12 @@ export class CourtScene {
   private disposed = false;
   private large = false;
   private phase = 0;
+  // 360° zones
+  private zoneGroups = { meetingRoom: new THREE.Group(), workspace: new THREE.Group(), wallOfFame: new THREE.Group() };
+  private activeZone: 'court' | 'meetingRoom' | 'workspace' | 'wallOfFame' = 'court';
+  private meetingRoomScreen: THREE.Mesh | null = null;
+  private wallFameSlots: { frame: THREE.Mesh; canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; texture: THREE.CanvasTexture }[] = [];
+  private zoneLabels: { mesh: THREE.Mesh; zone: 'meetingRoom' | 'workspace' | 'wallOfFame' }[] = [];
   private frames = 0;
   private fpsTime = performance.now();
   private lastRender = 0;
@@ -76,6 +82,7 @@ export class CourtScene {
     const sun = new THREE.DirectionalLight(0xffd5a0, 3.1); sun.position.set(-5, 8, -5); this.scene.add(sun);
     const fill = new THREE.PointLight(0xa7c5ce, 18, 12); fill.position.set(0, 4, 3); this.scene.add(fill);
     this.environment();
+    this.buildZones();
     for (const [role, x, z] of [['builder', -1.12, -1.42], ['architect', 0, -1.65], ['inspector', 1.12, -1.42]] as const) {
       const character = new CourtCharacter(role, x, z); this.characters.set(role, character); this.scene.add(character.group); this.targets.push(character.hitbox as Target);
       this.targets.push(...character.brainTargets as Target[]);
@@ -227,6 +234,233 @@ export class CourtScene {
     }
   }
 
+  private buildZones() {
+    const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, group: THREE.Group) => {
+      const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); group.add(m); return m;
+    };
+    const stone = new THREE.MeshStandardMaterial({ color: 0x1e2e30, roughness: 0.9, metalness: 0.05 });
+    const wood  = new THREE.MeshStandardMaterial({ color: 0x3d2a14, roughness: 0.7, metalness: 0.1 });
+    const gold  = new THREE.MeshStandardMaterial({ color: 0x7a6535, roughness: 0.4, metalness: 0.6 });
+
+    // ── MEETING ROOM (right, +X) ─────────────────────────────────
+    const mr = this.zoneGroups.meetingRoom;
+    mr.position.set(6, 0, 0);
+    // Floor tile matching court
+    mesh(new THREE.CylinderGeometry(5, 5, 0.14, 32), stone, 0, -0.11, -2, mr);
+    // Round table
+    mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.08, 12), wood, 0, 0.7, -2, mr);
+    mesh(new THREE.CylinderGeometry(0.07, 0.13, 0.65, 8), wood, 0, 0.37, -2, mr);
+    mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.04, 16), gold, 0, 0.02, -2, mr);
+    // 4 chairs
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2, cx = Math.sin(a) * 1.6, cz = -2 + Math.cos(a) * 1.6;
+      mesh(new THREE.BoxGeometry(0.5, 0.06, 0.5), stone, cx, 0.48, cz, mr);
+      mesh(new THREE.BoxGeometry(0.5, 0.55, 0.06), stone, cx, 0.77, cz + Math.cos(a) * 0.22, mr);
+      for (const [lx, lz] of [[-0.19, 0], [0.19, 0]] as const)
+        mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.48, 6), wood, cx + lx, 0.24, cz + lz, mr);
+    }
+    // Meeting room wall + screen
+    mesh(new THREE.BoxGeometry(8, 5.5, 0.3), stone, 0, 2.5, -5.5, mr);
+    const mrScreenData = canvasTexture(1280, 800, ctx => {
+      ctx.fillStyle = '#0d1c20'; ctx.fillRect(0, 0, 1280, 800);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#4a8fa8'; ctx.font = '34px Georgia'; ctx.fillText('Application Preview', 640, 370);
+      ctx.fillStyle = '#5a7c80'; ctx.font = '18px Arial'; ctx.fillText('Comes alive when your team is building', 640, 420);
+    });
+    const mrScreen = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.88), new THREE.MeshBasicMaterial({ map: mrScreenData.texture, toneMapped: false }));
+    mrScreen.position.set(0, 1.83, -5.2); mr.add(mrScreen);
+    this.meetingRoomScreen = mrScreen;
+    mesh(new THREE.BoxGeometry(3.1, 1.98, 0.07), wood, 0, 1.83, -5.22, mr);
+    // Lights
+    const mrLight = new THREE.PointLight(0x8bc4d4, 10, 7); mrLight.position.set(0, 3.5, -2); mr.add(mrLight);
+    for (const sx of [-2.5, 2.5]) {
+      mesh(new THREE.SphereGeometry(0.13, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd09c }), sx, 3.1, -4.6, mr);
+      const l = new THREE.PointLight(0xffc377, 6, 4); l.position.set(sx, 3.1, -4.4); mr.add(l);
+    }
+    this.scene.add(mr);
+
+    // ── PERSONAL WORKSPACE (left, -X) ────────────────────────────
+    const ws = this.zoneGroups.workspace;
+    ws.position.set(-6, 0, 0);
+    mesh(new THREE.CylinderGeometry(5, 5, 0.14, 32), stone, 0, -0.11, -2, ws);
+    // Desk
+    mesh(new THREE.BoxGeometry(3.8, 0.09, 1.1), wood, 0, 0.56, -1, ws);
+    mesh(new THREE.BoxGeometry(3.84, 0.02, 1.14), gold, 0, 0.60, -1, ws);
+    for (const [lx] of [[-1.45], [1.45]] as const)
+      mesh(new THREE.CylinderGeometry(0.11, 0.18, 0.54, 8), stone, lx, 0.28, -1.1, ws);
+    // Blank canvas panel
+    const blankCanvas = canvasTexture(1024, 640, ctx => {
+      ctx.fillStyle = '#f2ede4'; ctx.fillRect(0, 0, 1024, 640);
+      ctx.strokeStyle = '#c9b88a'; ctx.lineWidth = 6; ctx.strokeRect(4, 4, 1016, 632);
+      ctx.fillStyle = '#9b8c6a'; ctx.font = '24px Georgia'; ctx.textAlign = 'center';
+      ctx.fillText('Your personal space', 512, 310); ctx.fillText('Think here before you address the court.', 512, 345);
+    });
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.5), new THREE.MeshBasicMaterial({ map: blankCanvas.texture, toneMapped: false }));
+    panel.position.set(0, 1.75, -1.9); ws.add(panel);
+    mesh(new THREE.BoxGeometry(2.5, 1.6, 0.05), wood, 0, 1.75, -1.92, ws);
+    // Workspace light
+    const wsLight = new THREE.PointLight(0xc8d4b8, 8, 6); wsLight.position.set(0, 3, -1); ws.add(wsLight);
+    // Books on desk
+    for (let i = 0; i < 5; i++) {
+      mesh(new THREE.BoxGeometry(0.07, 0.26 + i * 0.02, 0.2), new THREE.MeshStandardMaterial({ color: [0x4a6655, 0x5c4a2a, 0x3a4a60, 0x5a3a3a, 0x4a4a35][i], roughness: 0.8 }), -1.2 + i * 0.09, 0.73, -1.0, ws);
+    }
+    this.scene.add(ws);
+
+    // ── WALL OF FAME (behind, +Z) ─────────────────────────────────
+    const wof = this.zoneGroups.wallOfFame;
+    wof.position.set(0, 0, 6);
+    mesh(new THREE.BoxGeometry(9, 6, 0.35), stone, 0, 2.5, -2, wof);
+    mesh(new THREE.BoxGeometry(9.1, 0.12, 0.4), gold, 0, 0.04, -2, wof);
+    mesh(new THREE.BoxGeometry(9.1, 0.12, 0.4), gold, 0, 5.05, -2, wof);
+    // Crown motif above wall
+    mesh(new THREE.BoxGeometry(1.8, 0.08, 0.1), gold, 0, 5.14, -1.85, wof);
+    for (const cx of [-0.7, 0, 0.7])
+      mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.28, 6), gold, cx, 5.28, -1.85, wof);
+    // Title plate
+    const titleCanvas = canvasTexture(800, 120, ctx => {
+      ctx.fillStyle = '#0e1c20'; ctx.fillRect(0, 0, 800, 120);
+      ctx.strokeStyle = '#8b7040'; ctx.lineWidth = 3; ctx.strokeRect(3, 3, 794, 114);
+      ctx.fillStyle = '#d5b87a'; ctx.font = '28px Georgia'; ctx.textAlign = 'center'; ctx.fillText('WALL OF FAME', 400, 52);
+      ctx.fillStyle = '#7a8f82'; ctx.font = '16px Arial'; ctx.fillText('YOUR MILESTONES, REMEMBERED', 400, 88);
+    });
+    const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.42), new THREE.MeshBasicMaterial({ map: titleCanvas.texture, toneMapped: false }));
+    titleMesh.position.set(0, 4.55, -1.82); wof.add(titleMesh);
+    // 3 milestone frame slots (row, up to 3 visible at once)
+    for (let i = 0; i < 3; i++) {
+      const fx = (i - 1) * 2.8;
+      // Outer frame
+      mesh(new THREE.BoxGeometry(2.5, 1.7, 0.06), wood, fx, 2.8, -1.88, wof);
+      mesh(new THREE.BoxGeometry(2.44, 1.64, 0.04), stone, fx, 2.8, -1.84, wof);
+      // Canvas slot
+      const slot = canvasTexture(480, 300, ctx => {
+        ctx.fillStyle = '#0d1a1e'; ctx.fillRect(0, 0, 480, 300);
+        ctx.strokeStyle = '#3a4a4e'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.strokeRect(12, 12, 456, 276);
+        ctx.fillStyle = '#364a4e'; ctx.font = '18px Georgia'; ctx.textAlign = 'center'; ctx.fillText('Awaiting', 240, 140);
+        ctx.fillStyle = '#2a3c40'; ctx.font = '14px Arial'; ctx.fillText('— milestone not yet achieved —', 240, 168);
+      });
+      const slotMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 1.5), new THREE.MeshBasicMaterial({ map: slot.texture, toneMapped: false }));
+      slotMesh.position.set(fx, 2.8, -1.81); wof.add(slotMesh);
+      this.wallFameSlots.push({ frame: slotMesh, canvas: slot.canvas, ctx: slot.ctx, texture: slot.texture });
+    }
+    // Floor lighting for Wall of Fame
+    const wofLight = new THREE.PointLight(0xb0c4cc, 9, 7); wofLight.position.set(0, 3, -1); wof.add(wofLight);
+    for (const lx of [-3, 3]) {
+      mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd09c }), lx, 3.2, -1.5, wof);
+      const l = new THREE.PointLight(0xffc377, 5, 4); l.position.set(lx, 3.2, -1.3); wof.add(l);
+    }
+    this.scene.add(wof);
+
+    // ── ZONE TRANSITION LABELS ────────────────────────────────────
+    const makeLabel = (text: string, x: number, y: number, z: number, zone: typeof this.zoneLabels[number]['zone']) => {
+      const lc = canvasTexture(340, 72, ctx => {
+        rounded(ctx, 0, 0, 340, 72, 18, '#0e2228cc');
+        ctx.strokeStyle = '#4a8fa855'; ctx.lineWidth = 2; ctx.strokeRect(2, 2, 336, 68);
+        ctx.fillStyle = '#6ab8cc'; ctx.font = '22px Arial'; ctx.textAlign = 'center'; ctx.fillText(text, 170, 46);
+      });
+      const lm = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.23), new THREE.MeshBasicMaterial({ map: lc.texture, toneMapped: false, transparent: true, depthTest: false }));
+      lm.position.set(x, y, z); lm.renderOrder = 5;
+      this.scene.add(lm);
+      this.zoneLabels.push({ mesh: lm, zone });
+      return lm;
+    };
+    makeLabel('MEETING ROOM  ›', 3.8, 1.4, 0.5, 'meetingRoom');
+    makeLabel('‹  WORKSPACE', -3.8, 1.4, 0.5, 'workspace');
+    makeLabel('▾  WALL OF FAME', 0, 1.4, 3.8, 'wallOfFame');
+
+    // Initially hide all zones (court is active)
+    Object.values(this.zoneGroups).forEach(g => { g.visible = false; });
+    this.zoneLabels.forEach(({ mesh }) => { mesh.visible = false; });
+  }
+
+  private getHeadYaw(): number {
+    if (this.renderer.xr.isPresenting) {
+      const dir = this.renderer.xr.getCamera().getWorldDirection(new THREE.Vector3());
+      return Math.atan2(dir.x, -dir.z);
+    }
+    return this.view.yaw;
+  }
+
+  private updateZones() {
+    const yaw = this.getHeadYaw(); // radians, 0=toward court (-Z), +90°=right(+X)
+    const Q = Math.PI / 4; // 45° boundary
+
+    const prev = this.activeZone;
+    if (yaw > Q && yaw < Math.PI - Q)          this.activeZone = 'meetingRoom';
+    else if (yaw < -Q && yaw > -(Math.PI - Q)) this.activeZone = 'workspace';
+    else if (Math.abs(yaw) > Math.PI - Q)       this.activeZone = 'wallOfFame';
+    else                                          this.activeZone = 'court';
+
+    // Zone culling: show zone if within ±100° of current facing
+    const PAD = Math.PI * 100 / 180;
+    this.zoneGroups.meetingRoom.visible = Math.abs(yaw - Math.PI / 2) < PAD;
+    this.zoneGroups.workspace.visible   = Math.abs(yaw + Math.PI / 2) < PAD;
+    const absYaw = Math.abs(yaw); const wofAngle = Math.abs(absYaw > Math.PI ? Math.PI * 2 - absYaw : absYaw);
+    this.zoneGroups.wallOfFame.visible  = wofAngle > Math.PI - PAD;
+
+    // Zone transition labels: show the adjacent ones when near boundary
+    this.zoneLabels.forEach(({ mesh, zone }) => {
+      const threshold = Math.PI * 65 / 180; // labels visible within 65° of that zone
+      let angle = 0;
+      if (zone === 'meetingRoom') angle = Math.abs(yaw - Math.PI / 2);
+      else if (zone === 'workspace') angle = Math.abs(yaw + Math.PI / 2);
+      else { const a = Math.abs(yaw); angle = Math.min(a, Math.PI * 2 - a); angle = Math.abs(angle - Math.PI); }
+      mesh.visible = angle < threshold && this.activeZone !== zone;
+      if (mesh.visible) mesh.lookAt(this.camera.getWorldPosition(new THREE.Vector3()));
+    });
+
+    // Update meeting room screen to share preview frame
+    if (this.meetingRoomScreen && this.frame) {
+      (this.meetingRoomScreen.material as THREE.MeshBasicMaterial).map = this.texture;
+      (this.meetingRoomScreen.material as THREE.MeshBasicMaterial).needsUpdate = true;
+    }
+  }
+
+  updateWallOfFame(milestones: { title: string; achieved: string | null; thumbnail?: string | null }[]) {
+    milestones.slice(0, 3).forEach((m, i) => {
+      const slot = this.wallFameSlots[i];
+      if (!slot) return;
+      const { ctx, texture, canvas } = slot;
+      ctx.fillStyle = '#0d1a1e'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (m.achieved) {
+        rounded(ctx, 4, 4, canvas.width - 8, canvas.height - 8, 10, '#0f2a1e');
+        ctx.strokeStyle = '#4a8a6a'; ctx.lineWidth = 3; ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+        ctx.fillStyle = '#7ab89a'; ctx.font = 'bold 18px Georgia'; ctx.textAlign = 'center';
+        ctx.fillText('✦  ACHIEVED', canvas.width / 2, 54);
+        ctx.fillStyle = '#c8dece'; ctx.font = '17px Georgia';
+        const words = m.title.split(' '); let line = '', y = 110;
+        for (const w of words) {
+          const test = line + w + ' ';
+          if (ctx.measureText(test).width > canvas.width - 40 && line) { ctx.fillText(line.trim(), canvas.width / 2, y); line = w + ' '; y += 26; }
+          else line = test;
+        }
+        if (line) ctx.fillText(line.trim(), canvas.width / 2, y);
+        ctx.fillStyle = '#4a7060'; ctx.font = '14px Arial';
+        ctx.fillText(new Date(m.achieved).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), canvas.width / 2, canvas.height - 24);
+      } else {
+        ctx.strokeStyle = '#2a3c40'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+        ctx.fillStyle = '#3a5055'; ctx.font = '17px Georgia'; ctx.textAlign = 'center';
+        const words = m.title.split(' '); let line = '', y = canvas.height / 2 - 16;
+        for (const w of words) {
+          const test = line + w + ' ';
+          if (ctx.measureText(test).width > canvas.width - 50 && line) { ctx.fillText(line.trim(), canvas.width / 2, y); line = w + ' '; y += 24; }
+          else line = test;
+        }
+        if (line) ctx.fillText(line.trim(), canvas.width / 2, y);
+        ctx.fillStyle = '#2a3c40'; ctx.font = '13px Arial'; ctx.setLineDash([]);
+        ctx.fillText('— awaiting —', canvas.width / 2, canvas.height - 28);
+      }
+      texture.needsUpdate = true;
+    });
+    // Clear unused slots
+    for (let i = milestones.length; i < this.wallFameSlots.length; i++) {
+      const { ctx, texture, canvas } = this.wallFameSlots[i];
+      ctx.fillStyle = '#0d1a1e'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#1e2e32'; ctx.lineWidth = 1; ctx.setLineDash([6, 5]); ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+      ctx.setLineDash([]);
+      texture.needsUpdate = true;
+    }
+  }
+
   private configureInput() {
     const factory = new XRHandModelFactory();
     for (let i = 0; i < 2; i++) {
@@ -316,6 +550,7 @@ export class CourtScene {
     });
   }
 
+  get zone() { return this.activeZone; }
   selectCharacter(role: CourtRole) { this.characters.forEach((character, id) => character.setSelected(id === role)); }
   setCharacterState(role: CourtRole, state: CharacterState) { this.characters.get(role)?.setState(state); }
   setBrain(role: CourtRole, provider: BrainProvider) { this.characters.get(role)?.setBrain(provider); }
@@ -425,6 +660,7 @@ export class CourtScene {
     const material = this.surface.material as THREE.MeshBasicMaterial;
     const headPosition = this.renderer.xr.isPresenting ? this.renderer.xr.getCamera().getWorldPosition(new THREE.Vector3()) : this.camera.getWorldPosition(new THREE.Vector3());
     this.characters.forEach(character => character.animate(time / 1000, headPosition));
+    this.updateZones();
     if (this.status === 'ready') {
       const stale = !!this.lastFrame && performance.now() - this.lastFrame > 10_000;
       if (stale !== this.stale) this.setStatus('ready', stale);
