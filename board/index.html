@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The first build — Task board</title><link rel="stylesheet" href="/board.css"></head>
+<body>
+  <header class="topbar"><div class="app-mark">✦</div><span>FIELDNOTES</span><span class="top-divider"></span><span class="workspace">Your personal workspace</span><div class="avatar">Y</div></header>
+  <main>
+    <div class="eyebrow">A LITTLE SPACE TO MAKE THINGS HAPPEN</div>
+    <div class="heading"><div><h1>The first build<span>✳</span></h1><p>Small steps. Real progress. All yours.</p></div><button id="new-task" class="primary"><span>＋</span> New task</button></div>
+    <div class="toolbar"><div class="tabs"><button class="tab active" id="board-tab">▦ &nbsp; Board</button><button class="tab" id="activity-tab">◷ &nbsp; Activity</button></div><div class="filters"><button id="priority-filter">◇ &nbsp; All priorities <span>⌄</span></button><span id="task-count"></span></div></div>
+    <div id="board" class="board"></div><div id="activity" class="activity" hidden></div>
+    <footer><span><i></i> Saved to your project</span><span>Click a title to edit · Use the arrow to move a task</span></footer>
+  </main>
+  <dialog id="editor" aria-labelledby="editor-title">
+    <form id="task-form" method="dialog">
+      <div class="modal-header"><div><div class="eyebrow">MAKE ROOM FOR WHAT’S NEXT</div><h2 id="editor-title">A new task</h2></div><button id="close-editor" class="close" type="button" aria-label="Close">×</button></div>
+      <label for="title">Task title</label><input id="title" name="title" maxlength="120" required placeholder="What would you like to make happen?" autocomplete="off">
+      <div class="field-row"><div><label>Priority</label><div class="choices" id="priorities"><button type="button" data-priority="normal" class="selected">◇ Normal</button><button type="button" data-priority="urgent">⚑ Urgent</button></div></div><div><label>Status</label><div class="choices" id="statuses"><button type="button" data-status="todo">To do</button><button type="button" data-status="progress">In progress</button><button type="button" data-status="done">Done</button></div></div></div>
+      <div class="keyboard-heading"><span>HAND KEYBOARD</span><button type="button" id="keyboard-toggle">Hide keyboard</button></div>
+      <div id="keyboard" class="keyboard" aria-label="On-screen keyboard"></div>
+      <div class="modal-footer"><button type="button" id="delete-task" class="danger" hidden>Delete task</button><span class="modal-hint">Your changes are saved when you confirm.</span><button type="button" id="cancel-editor">Cancel</button><button type="submit" id="save-task" class="primary">Create task ↗</button></div>
+    </form>
+  </dialog>
+  <div id="toast" role="status"></div><script type="module" src="/board.js"></script>
+</body>
+</html>

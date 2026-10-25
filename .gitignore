@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.sovereign/
+.vite/
+test-results/
+playwright-report/
+*.local
+.env
+.env.*
+sovereign.env
+elevenlabs_models.json
