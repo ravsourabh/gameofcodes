@@ -8,9 +8,10 @@ const CLOUD_MODE = process.env.SOVEREIGN_MODE === 'cloud';
 const SESSION_LIMIT = CLOUD_MODE ? 300 : 30;
 
 export const PROVIDERS = [
-  { id: 'muse', name: 'Muse Code', command: 'muse', loginCommand: 'muse', installUrl: 'https://dev.meta.ai/docs/muse-code', description: 'Use your Meta account through Muse Code.' },
-  { id: 'codex', name: 'ChatGPT · Codex', command: 'codex', loginCommand: 'codex login', installUrl: 'https://learn.chatgpt.com/docs/cli', description: 'Use your ChatGPT account through the Codex CLI.' },
-  { id: 'claude', name: 'Claude Code', command: 'claude', loginCommand: 'claude auth login', installUrl: 'https://code.claude.com/docs/en/quickstart', description: 'Use your Claude account through Claude Code.' },
+  { id: 'muse',   name: 'Muse Code',      command: 'muse',   loginCommand: 'muse',             installUrl: 'https://dev.meta.ai/docs/muse-code',          description: 'Use your Meta account through Muse Code. (Cloud API pending verification.)' },
+  { id: 'codex',  name: 'ChatGPT · Codex',command: 'codex',  loginCommand: 'codex login',       installUrl: 'https://learn.chatgpt.com/docs/cli',          description: 'Use your ChatGPT account through the Codex CLI.' },
+  { id: 'claude', name: 'Claude Code',    command: 'claude', loginCommand: 'claude auth login', installUrl: 'https://code.claude.com/docs/en/quickstart',  description: 'Use your Claude account through Claude Code.' },
+  { id: 'gemini', name: 'Gemini',         command: 'gemini', loginCommand: '',                  installUrl: 'https://ai.google.dev/',                      description: 'Google Gemini via API — cloud mode only. No local CLI required.' },
 ];
 const providerError = (message, status = 503) => Object.assign(new Error(message), { status });
 
@@ -100,14 +101,15 @@ export function invocationFor(id, folder, schema) {
 
 export function createProviderBridge({ root, execute = runProcess, locate = executableFor } = {}) {
   const directory = path.join(root, '.sovereign'), preferenceFile = path.join(directory, 'connection.json');
-  let selected = 'muse', loaded = false, busy = false, selecting = false;
+  let selected = CLOUD_MODE ? 'gemini' : 'muse', loaded = false, busy = false, selecting = false;
   const health = new Map();
   async function loadPreference() { if (loaded) return; loaded = true; try { const data = JSON.parse(await readFile(preferenceFile, 'utf8')); if (PROVIDERS.some(item => item.id === data.provider)) selected = data.provider; } catch {} }
   async function status() {
     await loadPreference();
     const providers = PROVIDERS.map(provider => {
       if (CLOUD_MODE) {
-        const keyMap = { muse: 'META_LLAMA_API_KEY', codex: 'OPENAI_API_KEY', claude: 'ANTHROPIC_API_KEY' };
+        const keyMap = { muse: 'META_LLAMA_API_KEY', codex: 'OPENAI_API_KEY', claude: 'ANTHROPIC_API_KEY', gemini: 'GEMINI_API_KEY' };
+        if (provider.id === 'muse') return { ...provider, installed: false, state: 'not-installed', message: 'Muse (Meta Llama API) is pending key verification. Use Gemini, Claude, or ChatGPT instead.' };
         const hasKey = !!process.env[keyMap[provider.id]];
         const checked = health.get(provider.id);
         const state = checked?.state || (hasKey ? 'not-checked' : 'not-installed');
@@ -132,9 +134,11 @@ export function createProviderBridge({ root, execute = runProcess, locate = exec
     await loadPreference();
     const id = providerId || selected;
     const isBuild = schema && 'html' in (schema.properties || {});
-    // Gemini handles all brains in cloud mode; Claude/OpenAI available via brain picker
-    const fn = id === 'claude' ? claudeGenerate : id === 'codex' ? openaiGenerate
-      : (process.env.GEMINI_API_KEY ? (i, s) => geminiGenerate(i, s, { isBuild }) : llamaGenerate);
+    if (id === 'muse') throw providerError('Muse (Meta Llama API) is unavailable in cloud mode — API key pending verification. Switch this brain to Gemini, Claude, or ChatGPT.', 503);
+    const fn = id === 'claude' ? claudeGenerate
+      : id === 'codex' ? openaiGenerate
+      : id === 'gemini' ? (i, s) => geminiGenerate(i, s, { isBuild })
+      : llamaGenerate;
     if (busy || selecting) throw providerError('Your court is finishing the previous instruction. Please wait.', 409);
     busy = true;
     try {

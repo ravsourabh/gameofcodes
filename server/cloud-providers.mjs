@@ -73,7 +73,7 @@ export async function llamaGenerate(input, schema) {
   const key = process.env.META_LLAMA_API_KEY;
   if (!key) throw err('META_LLAMA_API_KEY not set', 503);
   const { system, user } = buildPrompt(input, schema);
-  const res = await post('api.llama.com', '/v1/chat/completions',
+  const res = await post('api.llama.com', '/compat/v1/chat/completions',
     { 'Authorization': `Bearer ${key}`, 'Accept': 'application/json' },
     JSON.stringify({ model: 'Llama-4-Scout-17B-16E-Instruct', messages: [{ role: 'system', content: system }, { role: 'user', content: user }], response_format: { type: 'json_object' } })
   );

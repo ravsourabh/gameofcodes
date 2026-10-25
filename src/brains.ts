@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import type { CourtRole } from './characters';
 
-export type BrainProvider = 'muse' | 'codex' | 'claude';
+export type BrainProvider = 'muse' | 'codex' | 'claude' | 'gemini';
 export const BRAINS = {
-  muse: { name: 'Muse', color: '#8fbfff', logo: '/brands/muse.svg' },
-  codex: { name: 'ChatGPT', color: '#98d8bc', logo: '/brands/codex.svg' },
-  claude: { name: 'Claude', color: '#e1ad8c', logo: '/brands/claude.svg' },
+  muse:   { name: 'Muse',    color: '#8fbfff', logo: '/brands/muse.svg'   },
+  codex:  { name: 'ChatGPT', color: '#98d8bc', logo: '/brands/codex.svg'  },
+  claude: { name: 'Claude',  color: '#e1ad8c', logo: '/brands/claude.svg' },
+  gemini: { name: 'Gemini',  color: '#4285f4', logo: '/brands/gemini.svg' },
 };
 export const brainIds = Object.keys(BRAINS) as BrainProvider[];
 export const isBrain = (id: unknown): id is BrainProvider => brainIds.includes(id as BrainProvider);
@@ -30,6 +31,6 @@ export function brainCommand(text: string, selected: CourtRole): { role: CourtRo
   const head = /^(?:open|close|shut)\b.*\b(?:head|brain|mind)\b/.test(value);
   const change = /^(?:change|swap|switch|replace)\b.*\b(?:brain|mind|model)\b/.test(value) || /^use\s+(?:muse|meta|claude|chat\s?gpt|codex|openai)\b/.test(value);
   if (!head && !change) return null;
-  const provider: BrainProvider | undefined = /\b(?:chat\s?gpt|codex|openai)\b/.test(value) ? 'codex' : /\bclaude\b/.test(value) ? 'claude' : /\b(?:muse|meta)\b/.test(value) ? 'muse' : undefined;
+  const provider: BrainProvider | undefined = /\b(?:chat\s?gpt|codex|openai)\b/.test(value) ? 'codex' : /\bclaude\b/.test(value) ? 'claude' : /\bgemini\b/.test(value) ? 'gemini' : /\b(?:muse|meta)\b/.test(value) ? 'muse' : undefined;
   return { role, open: !/^(?:close|shut)\b/.test(value), provider };
 }
