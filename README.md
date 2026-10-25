@@ -1,5 +1,7 @@
 # Game of Codes · Your royal court
 
+> Live at [gameofcodes.si](https://gameofcodes.si)
+
 A character-led WebXR workspace. You sit across from **Elara the architect, Bram the builder, and Iris the inspector**. Address a character by pointing and pinching, or select them on desktop. They speak, look toward you, gesture, and show when they are listening or considering your request. The application preview is brought forward when you choose to review the work.
 
 Select **Meet your court** to hear the spoken introduction. Enter an instruction in the conversation field or use the microphone. On Quest, an in-world conversation panel provides Speak, Write, approval, review, Quiet, and exit controls; Write opens a keyboard you can select with your hands.
