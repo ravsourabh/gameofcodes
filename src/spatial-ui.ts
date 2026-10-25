@@ -16,6 +16,7 @@ export class SpatialDialogue {
   private proposal: string[] = [];
   private upper = false;
   private tourContinue = false;
+  private settings = false;
   private codeFiles: Record<string,string> | null = null;
   private codeFile = 0;
   private codePage = 0;
@@ -28,6 +29,7 @@ export class SpatialDialogue {
     this.mesh.userData.dialogue = true;
     this.draw();
   }
+  showSettings(show:boolean) { this.settings=show; this.draw(); }
   setTourContinue(show: boolean) { this.tourContinue = show; this.draw(); }
   showCode(files: Record<string,string>) { this.codeFiles=files; this.codeFile=0; this.codePage=0; this.draw(); }
   codeAction(action:string) {
@@ -70,7 +72,13 @@ export class SpatialDialogue {
     };
     ctx.textAlign = 'left'; ctx.fillStyle = COURT[this.role].color; ctx.font = '24px Arial'; ctx.fillText(`${COURT[this.role].name.toUpperCase()} · ${COURT[this.role].title.toUpperCase()}`, 40, 54);
     ctx.textAlign = 'right'; ctx.fillStyle = '#8aa292'; ctx.font = '18px Arial'; ctx.fillText(this.mode, 1360, 53);
-    if(this.codeFiles){
+    if(this.settings){
+      ctx.textAlign='left';ctx.fillStyle='#ede5d4';ctx.font='36px Georgia';ctx.fillText('Your court settings',48,132);
+      ctx.fillStyle='#9fb49d';ctx.font='24px Arial';ctx.fillText('Choose a brain for the selected character, adjust sound, or recenter.',48,194);
+      button('Open this brain',`brain-open:${this.role}`,48,280,410,72,true);
+      button('Quiet / sound','mute',480,280,410,72);button('Center throne','recenter',912,280,440,72);
+      button('Restart guide','restart-guide',48,450,410,64);button('Close settings','settings-close',912,450,440,64);
+    }else if(this.codeFiles){
       const names=Object.keys(this.codeFiles), name=names[this.codeFile];
       const lines=(this.codeFiles[name]||'').split('\n').flatMap(line=>line.match(/.{1,100}/g)||['']);
       this.codePage=Math.min(this.codePage,Math.max(0,Math.ceil(lines.length/13)-1));

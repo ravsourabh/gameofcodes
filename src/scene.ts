@@ -561,7 +561,7 @@ export class CourtScene {
     const colors = [0x7ec8c0, 0xd4a0d0, 0xe8c87a];
     for (let i = 0; i < 3; i++) {
       const orb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 10), new THREE.MeshStandardMaterial({ color: colors[i], emissive: colors[i], emissiveIntensity: 0.4, roughness: 0.25, metalness: 0.3 }));
-      orb.position.set((i - 1) * 0.6, 1.55, 3.4);
+      orb.position.set((i - 1) * 0.6, 1.85, 3.4);
       const target = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })) as Target;
       target.position.copy(orb.position);
       target.userData.action = 'orb-pinched';

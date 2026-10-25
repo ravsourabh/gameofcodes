@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: gameofcodes-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -26,21 +30,12 @@ jobs:
             cd ~/sovereign
 
             # Pull latest code from GitHub
-            git pull origin main
+            git pull --ff-only origin main
 
-            # Rebuild Docker image
-            docker build -t sovereign:latest .
-
-            # Replace container
-            docker stop sovereign || true
-            docker rm sovereign || true
-            docker run -d \
-              --name sovereign \
-              --restart always \
-              -p 5443:5443 \
-              --env-file ~/sovereign/sovereign.env \
-              -v sovereign-data:/app/.sovereign \
-              sovereign:latest
+            # Compose owns the service name and its existing project data volume.
+            docker compose build sovereign
+            docker compose up -d --no-deps sovereign
+            docker compose ps
 
             echo "Deployed $(git rev-parse --short HEAD) at $(date)"
           ENDSSH

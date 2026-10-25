@@ -20,4 +20,3 @@ await page.screenshot({path:'test-results/court-assets.png'});
 console.log('Court:',await page.evaluate(()=>({calls:assetReview.renderer.info.render.calls,triangles:assetReview.renderer.info.render.triangles})));
 console.log('Errors:',errors);
 await browser.close();
-

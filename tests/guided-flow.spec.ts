@@ -123,3 +123,46 @@ test('cancelled or paused guides cannot finish onboarding behind a dialog',async
   expect(revealed).toEqual(['virus']);expect(completed).toBe(false);
   guide.stop();await run;expect(completed).toBe(false);
 });
+
+test('VR garden lets hands continue the guide, select an orb, and reach the keyboard',async({page})=>{
+  test.setTimeout(90000);
+  const { readFile }=await import('node:fs/promises');
+  const runtime=await readFile('node_modules/iwer/build/iwer.min.js','utf8');
+  await page.addInitScript({content:`${runtime}\nwindow.xrDevice = new IWER.XRDevice(IWER.metaQuest3); window.xrDevice.installRuntime({forceInstall:true}); window.xrDevice.primaryInputMode='hand'; window.xrDevice.position.set(0,1.6,0);`});
+  await fixture(page);
+  await page.locator('#enter-vr').click();
+  await expect(page.locator('body')).toHaveClass(/in-vr/);
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','brain');
+  const pinch=async(x:number,y:number,z:number)=>{
+    await page.evaluate(({x,y,z})=>{
+      const hand=(window as any).xrDevice.hands.right;hand.position.set(.25,1.3,-.4);
+      const dx=x-.25,dy=y-1.3,dz=z-5.1,length=Math.hypot(dx,dy,dz);
+      const vx=dx/length,vy=dy/length,vz=dz/length,w=1-vz,ql=Math.hypot(vy,-vx,w);
+      hand.quaternion.set(vy/ql,-vx/ql,0,w/ql);
+    },{x,y,z});
+    await page.waitForTimeout(180);
+    await page.evaluate(()=>(window as any).xrDevice.hands.right.updatePinchValue(1));
+    await page.waitForTimeout(180);
+    await page.evaluate(()=>(window as any).xrDevice.hands.right.updatePinchValue(0));
+    await page.waitForTimeout(180);
+  };
+  const panel=async(x:number,y:number,composer=false)=>{
+    const lx=(x/1400-.5)*2.65,ly=(.5-y/600)*1.136;
+    await pinch(lx,(composer?1.3:1)+ly*Math.cos(-.13),(composer?3.8:3.65)+ly*Math.sin(-.13));
+  };
+  await panel(1132,382);
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','gesture');
+  await pinch(0,1.85,3.4);
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','idea');
+  await panel(685,382);
+  await panel(806,340,true);await panel(974,274,true);
+  await expect(page.locator('#instruction')).toHaveValue('hi');
+  await panel(250,556,true);
+  await page.evaluate(()=>(window as any).__transcript='open settings');
+  await panel(253,382);
+  await expect(page.locator('body')).toHaveAttribute('data-settings-open','true');
+  await panel(1132,482);
+  await expect(page.locator('body')).toHaveAttribute('data-settings-open','false');
+  await panel(1190,489);
+  await expect(page.locator('body')).not.toHaveClass(/in-vr/);
+});
