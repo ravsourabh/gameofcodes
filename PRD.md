@@ -46,8 +46,8 @@ Directing a team by physically turning to face them, the embodiment of being the
 
 | Area | Current | Target (Nov 18) |
 | --- | --- | --- |
-| Characters | 3 (Elara, Bram, Iris) | 4 (+ Edmund the Steward) |
-| Onboarding | Cold start, no guidance | Edmund-guided 8-step setup + project charter |
+| Characters | 3 (Elara, Bram, Iris) | 5 (+ Virus the Advisor, Mira the Artiste) |
+| Onboarding | Cold start, no guidance | Virus-guided 10-step cinematic arc — starts in castle garden |
 | Deployment | Local LAN only (Windows) | Docker on `167.71.227.218:5443` |
 | AI backend | Local CLIs only | Dual-mode: local CLIs + cloud REST APIs |
 | Spatial layout | Single forward-facing court | 360°: Court · Meeting Room · Workspace · Wall of Fame |
@@ -117,30 +117,136 @@ Each wave is one focused Claude Code conversation with a clear deliverable. Wave
 
 ---
 
-### Wave 3 — Edmund (4th Character + Onboarding) *(Week 2: Nov 2 – Nov 8)*
+### Wave 4 — 360° Spatial Layout *(Must ship BEFORE Wave 3 onboarding narrative)*
 
-**Goal:** A new character who guides the user from cold start to first instruction. Targets the $25k Best First Five Minutes award.
+**Goal:** Four zones accessible by physically turning. Virus guides the user through them in the onboarding, so the zones must exist first.
 
-**Deliverables:**
-- Add `'steward'` to `CourtRole` union in `src/characters.ts`
-- Edmund character model — formal court attire (herald tabard), carries a glowing staff
-- Position: forward-centre of court at app load; moves to throne-left after seating
-- `stewardCommand()` parser — responds to "Edmund, help me", "Edmund, open settings", milestone commands
-- Onboarding state: `onboarded: true` in `.sovereign/connection.json`
-- Onboarding sequence (skipped if `onboarded: true`):
-  1. Edmund greets, introduces the court
-  2. Names and gestures toward Elara, Bram, Iris
-  3. Guides WebXR recenter (throne seating)
-  4. Asks: local computer or cloud?
-  5. Local → opens brain picker per character, checks connections, prompts sign-in commands
-  6. Local → prompts workspace directory
-  7. Cloud → confirms API keys loaded
-  8. Project charter → what are you building? up to 5 milestones
-  9. Announces court is open, steps aside
+| Direction | Zone | Content |
+| --- | --- | --- |
+| Front (0°) | The Court | Virus, Elara, Bram, Iris, Mira. Conversation, proposal, approval. ✅ Exists (partially) |
+| Right (90°) | Meeting Room | Round table, all characters, wall-mounted live preview screen |
+| Left (270°) | Personal Workspace | Your desk, passthrough enabled, scratch surface |
+| Behind (180°) | Wall of Fame | Milestone achievement cards — empty frames until achieved |
 
-**Project charter / milestone data model:**
+**Implementation tasks:**
+- [ ] Zone offsets in `src/scene.ts` (Meeting Room: +8m X, Workspace: -8m X, Wall of Fame: -8m Z)
+- [ ] Zone detection: track yaw from seated origin, zone change event at ±45° boundaries
+- [ ] Zone culling: `visible = false` outside active ±90° arc
+- [ ] Meeting Room geometry: round table, chairs, wall screen (reuse board UV mapping)
+- [ ] Reposition `PreviewConnection` frame to Meeting Room screen when zone active
+- [ ] Wall of Fame geometry: gallery wall, card slots loaded from milestone JSON
+- [ ] Personal Workspace geometry: desk surface, blank panel, Quest passthrough enabled
+- [ ] Zone transition indicator: glow/arrow at FoV edge pointing to adjacent zones
+- [ ] Desktop fallback: compass rose at viewport edge to rotate camera
+
+**Wall of Fame card:** title, achievement date, build thumbnail, linked build. Unachieved = dark empty frames with milestone title engraved.
+
+---
+
+### Wave 3 — Virus + Onboarding + The Artiste *(Week 2: Nov 2 – Nov 8, after Wave 4)*
+
+**Goal:** A cinematic 10-step onboarding arc beginning outside the castle. Targets the $25k Best First Five Minutes award. Wave 4 spatial zones must exist before this wave ships.
+
+---
+
+#### Character: Virus (formerly Edmund)
+
+**Inspiration:** Varys from Game of Thrones — the whispering court advisor. Bald, robed, soft-spoken, knows everything, speaks in measured wisdom. Not a herald; a spider.
+
+**Visual design:**
+- Bald head (no hair — visually distinct from the three workers)
+- Deep purple/charcoal court robes, flowing
+- Carries a carved bone staff with a softly pulsing tip (replaces the herald's glowing staff)
+- Soft, knowing smile; eyes that look like they see through walls
+- Smaller frame than Bram; moves with deliberate quiet
+
+**Voice — ElevenLabs:**
+- Target: whispery, smooth, slightly conspiratorial British male
+- Current candidate: **George** (`JBFqnCBsd6RMkjVDRZzb`) — raspy, distinctive
+- Voice settings: `stability: 0.85` (very consistent), `similarity: 0.90`, `style: 0.10` (restrained, no theatrical peaks)
+- Note: if a softer/more whispery voice is found in ElevenLabs library, swap. George is the best available British male from the pre-made set.
+
+**Role:** `'virus'` in `CourtRole`. Onboarding guide, court advisor, milestone tracker, settings helper. Does not write code or generate assets.
+
+**Voice commands:** `"Virus, help me"` · `"Virus, open settings"` · `"Virus, mark milestone done"` · `"Virus, what's next"`
+
+---
+
+#### The Onboarding Arc — 10 Steps
+
+**Starting position:** The user spawns outside the castle, in the **castle garden** (exterior courtyard). The castle gates are visible ahead. Virus stands among the hedges, facing the user. This is FPV — you are the King arriving.
+
+| Step | Time | Scene | What happens |
+| --- | --- | --- | --- |
+| **1** | 0:00 | Garden exterior | Virus appears from the hedges. Heavy opening line delivered slowly: *"Your Grace… I have been expecting you. The realm has need of a sovereign who builds — not merely rules."* Long pause. Then: *"Welcome to the Game of Codes."* |
+| **2** | 0:45 | Garden | Virus gestures to his own head: *"Before we enter, I must show you something curious about us all. Say: 'Virus, open your head.'"* — waits for the user to speak the command. Virus lifts his hair (none — the robe hood falls back) and reveals his glowing brain. *"You see? We carry our intelligence visibly. Each of us can be… reconfigured."* Closes head. |
+| **3** | 1:30 | Garden | Virus: *"Now tell me — what great thing are you here to build?"* — listens for free-form voice or text. Then: *"And what would make it complete? Give me three milestones — the signposts of your ambition."* Captures idea + up to 3 milestones. Stores in project charter. |
+| **4** | 2:30 | Garden | Virus: *"One last matter before we enter. Your court runs on minds — local ones, or those borrowed from the cloud."* Walks through mode selection: local (checks CLI connections, prompts sign-in commands, prompts workspace directory) or cloud (confirms keys loaded). If cloud: *"The minds are ready. No sign-in required."* |
+| **5** | 3:30 | Garden → Gate | Virus: *"The court awaits. But first — the gestures."* Teaches hand gestures: pinch to select, point to aim, open palm to pause. For VR Glasses: gaze + pinch. User practices each gesture on floating targets Virus conjures. |
+| **6** | 4:30 | Gate → Court | Virus walks toward the gates; they open. *"Follow me."* The user crosses the threshold into the court interior. Virus stops at the centre. |
+| **7** | 5:00 | Court (front) | Virus gestures toward the three working characters in turn: *"Elara, your architect — she shapes ideas into plans."* · *"Bram, your builder — he turns plans into living applications."* · *"Iris, your inspector — she ensures nothing escapes her attention."* Each character nods and speaks one greeting line in their ElevenLabs voice. Then Virus gestures to the Artiste: *"And Mira — your artiste. She gives the court its face."* |
+| **8** | 6:00 | Court | Virus: *"But the court is larger than this room, Your Grace. Turn to your right."* — waits. User turns right → **Meeting Room** appears (Wave 4). Virus: *"Where your team gathers to show their work."* Then: *"And to your left."* — user turns left → **Personal Workspace** (Wave 4). *"Where you think alone."* |
+| **9** | 7:00 | Court | Virus: *"Now — the idea you shared with me in the garden."* A soft light pulses behind the user. *"Turn around."* User turns 180° → **Wall of Fame** (Wave 4). The milestones captured in Step 3 appear as **empty engraved frames** on the wall. *"These are your milestones, waiting to be filled. Each one a conquest. Each one a reason to return."* |
+| **10** | 7:45 | Court | Virus moves to the side. *"The throne is yours, Sovereign. Address your court."* The user is now fully onboarded. Virus recedes but glows softly when summoned. |
+
+**Onboarding state:** `onboarded: true` written to `.sovereign/connection.json` after Step 10. Steps 1–10 are skipped on subsequent launches.
+
+**10-minute first session map** (Best First Five Minutes test):
+
+| Minute | What happens |
+| --- | --- |
+| 0:00–1:30 | Garden: Virus greeting + head-open demo |
+| 1:30–2:30 | Garden: project charter (idea + milestones) |
+| 2:30–3:30 | Garden: mode setup (local or cloud) |
+| 3:30–4:30 | Garden: gesture practice |
+| 4:30–5:00 | Enter the castle |
+| 5:00–6:00 | Meet the team (Elara, Bram, Iris, Mira) |
+| 6:00–7:00 | Turn right (Meeting Room), left (Workspace) |
+| 7:00–7:45 | Turn around → Wall of Fame + milestones |
+| 7:45–10:00 | First instruction to Elara → Proposal appears |
+
+---
+
+#### Character: Mira — The Artiste (5th Character)
+
+Mira is the court's visual creator. She generates logos, icons, brand marks, and illustrations on request. She does not write code — she makes things beautiful.
+
+**Visual design:** Feminine, ink-stained robes, carries a floating canvas. Quick hands, always sketching. Positioned at the edge of the court (right side, near where the Meeting Room arch begins).
+
+**Voice — ElevenLabs:** Lily (`pFZP5JQG7iQjIQuC4Bku`) — warm, raspy. Currently used for Elara. Mira needs a different voice. **Candidate: Dorothy** (`ThT5KcBeYPX3keUQqHPh`) — pleasant, young British female. Alternatively a new voice from the ElevenLabs library.
+
+**Role:** `'artiste'` in `CourtRole`.
+
+**Brain assignments:**
+
+| Brain | Provider | What it does |
+| --- | --- | --- |
+| **Nano Banana Pro** (default) | `models/gemini-3-pro-image` via Gemini API key | Image generation — logos, icons, illustrations |
+| **ChatGPT** | DALL-E 3 via OpenAI API | Alternative image generation with different style |
+
+**What Mira produces:**
+- PNG images saved to `.sovereign/builds/<project>/assets/<uuid>.png`
+- Displayed in the court on a floating canvas surface (texture plane in Three.js)
+- Also shown in the Meeting Room on a dedicated panel
+- User says: *"Mira, make a logo for [project name]"* or *"Mira, draw [description]"*
+
+**Technical requirements:**
+- New `/api/court/generate-asset` endpoint
+- Gemini image API call: `POST /v1beta/models/gemini-3-pro-image:generateContent` with image response type
+- DALL-E 3 fallback: `POST /v1/images/generations` (OpenAI API)
+- Response: base64 PNG → save to disk → return URL
+- Display: Three.js `TextureLoader` loads the PNG onto Mira's canvas surface
+- Output schema: `{ imageUrl: string, description: string, speech: string }`
+
+**Milestone connection:** If Mira generates a logo and the user approves it, that can be tagged as a milestone achievement (e.g., "Brand identity complete").
+
+---
+
+#### Project Charter — Data Model
+
 ```json
 {
+  "idea": "A task management app for indie developers",
   "milestones": [
     {
       "id": "m1",
@@ -149,58 +255,42 @@ Each wave is one focused Claude Code conversation with a clear deliverable. Wave
       "achieved": null,
       "buildVersion": null,
       "thumbnail": null
+    },
+    {
+      "id": "m2",
+      "title": "Brand identity (logo + colours)",
+      "created": "2026-10-25T14:00:00Z",
+      "achieved": null,
+      "assetUrl": null,
+      "thumbnail": null
     }
   ]
 }
 ```
-Stored in `.sovereign/projects/<id>.json`. Milestone marked `achieved` when user says "Milestone [name] is done" or approves a build tagged to it. Edmund confirms aloud.
 
-**The 10-minute first session map** (Best First Five Minutes test):
-
-| Minute | What happens |
-| --- | --- |
-| 0:00 | App opens. Edmund visible, greets. |
-| 0:30 | Edmund names the team, gestures toward each character. |
-| 1:00 | User sits on throne (WebXR recenter prompt). |
-| 1:30 | Edmund walks through model connection (or confirms cloud is ready). |
-| 2:30 | Project charter: user states their idea + 2–3 milestones. |
-| 3:30 | Edmund steps aside. User addresses Elara. |
-| 4:00 | Elara proposes a plan. Proposal card appears. |
-| 5:00 | User approves (Royal Seal stamp — see Wave 5). |
-| 5:30 | Bram begins building. Characters animate. |
-| 8:00 | Bram delivers build (physical card on table). |
-| 8:30 | User enters Meeting Room (right turn) to review. |
-| 9:30 | Iris reports checks. First milestone achievable. |
-| 10:00 | Edmund announces first achievement. Wall of Fame card appears. |
+Milestones marked `achieved` when: user says *"Milestone [name] is done"*, Virus confirms, Bram tags a build to it, or Mira's asset is approved.
 
 ---
 
-### Wave 4 — 360° Spatial Layout *(Week 2: Nov 2 – Nov 8)*
+#### Wave 3 Implementation Tasks
 
-**Goal:** Four zones accessible by physically turning. Core spatial differentiator.
-
-| Direction | Zone | Content |
-| --- | --- | --- |
-| Front (0°) | The Court | Elara, Bram, Iris, Edmund. Current setup. ✅ Exists |
-| Right (90°) | Meeting Room | Round table, 4 characters, wall-mounted live preview screen |
-| Left (270°) | Personal Workspace | Your desk, passthrough enabled, scratch surface |
-| Behind (180°) | Wall of Fame | Milestone achievement cards, empty frames for pending |
-
-**Implementation tasks:**
-- [ ] Define zone offsets in `src/scene.ts` (Meeting Room: +8m X, Workspace: -8m X, Wall of Fame: -8m Z)
-- [ ] Zone detection: track yaw from seated origin, emit zone change event at ±45° boundaries
-- [ ] Zone culling: `visible = false` for objects outside active ±90° arc (performance)
-- [ ] Meeting Room geometry: round table, 4 chairs, wall screen (reuse board UV mapping)
-- [ ] Reposition `PreviewConnection` frame to Meeting Room screen when zone active
-- [ ] Wall of Fame geometry: gallery wall, card slots from milestone JSON
-- [ ] Personal Workspace geometry: desk surface, blank panel
-- [ ] Passthrough: enable Quest passthrough in Personal Workspace zone
-- [ ] Zone transition indicator: faint glow/arrow at FoV edge pointing to adjacent zones
-- [ ] Desktop fallback: compass rose at viewport edge to rotate camera
-- [ ] Edmund first-visit zone announcements
-
-**Wall of Fame card:**
-Each card = one achieved milestone. Title, date, build link, preview thumbnail. Unachieved milestones = dark empty frames (visual hook to return).
+- [ ] Rename `steward` role → `virus` in `CourtRole`, `characters.ts`, `brains.ts`, `court.mjs`
+- [ ] Add `artiste` role → `CourtRole`, `characters.ts`
+- [ ] Virus character model: bald, robed, bone staff, purple/charcoal palette
+- [ ] Mira character model: ink robes, floating canvas, positioned court-right
+- [ ] Garden exterior scene: courtyard geometry, hedges, castle gate visible ahead
+- [ ] Spawn point at garden (not inside court) on first launch
+- [ ] 10-step onboarding state machine (`onboardingStep: 0–10` in session state)
+- [ ] `stewardCommand()` / `virusCommand()` parser for voice commands
+- [ ] Milestone capture UI (voice + text input during Step 3)
+- [ ] Hand gesture practice targets (floating interactive orbs, Step 5)
+- [ ] Castle gate opening animation (Step 6 transition)
+- [ ] `/api/court/generate-asset` endpoint (Nano Banana Pro + DALL-E fallback)
+- [ ] Mira canvas surface texture display in Three.js
+- [ ] ElevenLabs voice for Virus: George (`JBFqnCBsd6RMkjVDRZzb`) with low style (0.10)
+- [ ] ElevenLabs voice for Mira: Dorothy (`ThT5KcBeYPX3keUQqHPh`) or new voice
+- [ ] `onboarded: true` written to `connection.json` after Step 10
+- [ ] Wall of Fame pre-population with empty milestone frames after Step 3
 
 ---
 
