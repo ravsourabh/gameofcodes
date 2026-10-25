@@ -36,6 +36,7 @@ try {
   await page.goto(new URL(`/?project=${project}`, site).href);
   await page.waitForFunction(() => document.body.dataset.appReady === 'true');
   await page.locator('#review-work').click();
+  assert.equal(await page.locator('#garden-overlay').isVisible(), false, 'Entry CTA must close in preview');
   await page.locator('#connection-status').filter({ hasText: 'Live browser · saved to your project' }).waitFor({ timeout: 25000 });
   await mkdir('test-results', { recursive: true });
   await page.screenshot({ path: 'test-results/public-preview.png' });
