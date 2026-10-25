@@ -11,9 +11,14 @@ export class SpatialDialogue {
   private text = 'Welcome to your court. Select a member of your team, then tell them what you would like to create.';
   private mode = 'Ready when you are';
   private composer = false;
+  private garden = false;
   private input = '';
   private proposal: string[] = [];
   private upper = false;
+  private tourContinue = false;
+  private codeFiles: Record<string,string> | null = null;
+  private codeFile = 0;
+  private codePage = 0;
 
   constructor() {
     this.canvas.width = 1400; this.canvas.height = 600;
@@ -23,11 +28,21 @@ export class SpatialDialogue {
     this.mesh.userData.dialogue = true;
     this.draw();
   }
+  setTourContinue(show: boolean) { this.tourContinue = show; this.draw(); }
+  showCode(files: Record<string,string>) { this.codeFiles=files; this.codeFile=0; this.codePage=0; this.draw(); }
+  codeAction(action:string) {
+    if(action==='code:close')this.codeFiles=null;
+    if(action==='code:file'){this.codeFile=(this.codeFile+1)%Object.keys(this.codeFiles||{}).length;this.codePage=0;}
+    if(action==='code:next')this.codePage++;
+    if(action==='code:back')this.codePage=Math.max(0,this.codePage-1);
+    this.draw();
+  }
   update(role: CourtRole, text: string, mode = 'Your court is listening') { this.role = role; this.text = text; this.mode = mode; this.draw(); }
   showProposal(requirements: string[]) { this.proposal = requirements.slice(0, 3); this.draw(); }
+  setGarden(garden: boolean) { this.garden=garden; this.showComposer(this.composer,this.input); }
   showComposer(show: boolean, input = '') {
     this.composer = show; this.input = input;
-    this.mesh.position.y = show ? 1.23 : 0.66; this.mesh.position.z = show ? 0.1 : -0.05;
+    this.mesh.position.y = this.garden ? (show ? 1.3 : 1) : (show ? 1.23 : .66); this.mesh.position.z = this.garden ? (show ? 3.8 : 3.65) : (show ? .1 : -.05);
     this.draw();
   }
   setInput(input: string) { this.input = input; this.draw(); }
@@ -55,7 +70,16 @@ export class SpatialDialogue {
     };
     ctx.textAlign = 'left'; ctx.fillStyle = COURT[this.role].color; ctx.font = '24px Arial'; ctx.fillText(`${COURT[this.role].name.toUpperCase()} · ${COURT[this.role].title.toUpperCase()}`, 40, 54);
     ctx.textAlign = 'right'; ctx.fillStyle = '#8aa292'; ctx.font = '18px Arial'; ctx.fillText(this.mode, 1360, 53);
-    if (this.composer) {
+    if(this.codeFiles){
+      const names=Object.keys(this.codeFiles), name=names[this.codeFile];
+      const lines=(this.codeFiles[name]||'').split('\n').flatMap(line=>line.match(/.{1,100}/g)||['']);
+      this.codePage=Math.min(this.codePage,Math.max(0,Math.ceil(lines.length/13)-1));
+      ctx.textAlign='left';ctx.fillStyle='#dfc48b';ctx.font='24px monospace';ctx.fillText(`${name} — page ${this.codePage+1}`,48,100);
+      ctx.fillStyle='#e0e5da';ctx.font='19px monospace';
+      lines.slice(this.codePage*13,this.codePage*13+13).forEach((line,i)=>ctx.fillText(line,48,137+i*27));
+      button('Previous','code:back',48,510,260,60);button('Next','code:next',328,510,260,60);
+      button('Change file','code:file',608,510,330,60);button('Close code','code:close',958,510,390,60);
+    } else if (this.composer) {
       ctx.fillStyle = '#0b1a20'; ctx.beginPath(); ctx.roundRect(38, 79, 1324, 78, 12); ctx.fill();
       ctx.textAlign = 'left'; ctx.fillStyle = this.input ? '#e7e7d7' : '#6d8b7e'; ctx.font = '29px Arial'; ctx.fillText((this.input || `Tell ${COURT[this.role].name} what you have in mind…`).slice(-85), 60, 128);
       const rows = ['1234567890', 'qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
@@ -84,7 +108,7 @@ export class SpatialDialogue {
       } else {
         button('●  Speak to me', 'talk', 48, 344, 410, 76, true);
         button('Write an instruction', 'write', 480, 344, 410, 76);
-        button('Review our work', 'preview', 912, 344, 440, 76);
+        button(this.tourContinue?'Continue guide':'Review our work', this.tourContinue?'tour-continue':'preview', 912, 344, 440, 76);
         button('Hear that again', 'repeat', 48, 456, 340, 66);
         button('Quiet', 'mute', 410, 456, 270, 66);
         button('Center court', 'recenter', 702, 456, 310, 66);

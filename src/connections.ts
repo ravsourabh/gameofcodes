@@ -1,5 +1,5 @@
 type Provider = { id: string; name: string; description: string; installed: boolean; state: string; message: string; loginCommand: string; installUrl: string };
-export type ConnectionState = { configured: boolean; provider: string; selectedProvider: string; providers: Provider[]; brains?: Record<string,string> };
+export type ConnectionState = { configured: boolean; provider: string; selectedProvider: string; providers: Provider[]; mode?: 'local'|'cloud'; brains?: Record<string,string> };
 const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 
 export class ConnectionPanel {
@@ -16,10 +16,10 @@ export class ConnectionPanel {
     this.changed(state);
     document.querySelector('#provider-cards')!.innerHTML = state.providers.map(provider => `
       <article class="provider-card ${provider.id === state.selectedProvider ? 'chosen' : ''}">
-        <div class="provider-card-heading"><h3>${escape(provider.name)}</h3><span class="provider-badge ${provider.state === 'connected' ? 'verified' : ''}">${provider.state === 'connected' ? 'Verified' : provider.installed ? 'Installed' : 'Not installed'}</span></div>
+        <div class="provider-card-heading"><h3>${escape(provider.name)}</h3><span class="provider-badge ${provider.state === 'connected' ? 'verified' : ''}">${provider.state==='disabled'?'Unavailable':provider.state === 'connected' ? 'Verified' : provider.installed ? 'Ready' : 'Not available'}</span></div>
         <p>${escape(provider.description)}</p><p class="provider-detail">${escape(provider.message)}</p>
         <div class="provider-command"><span>Sign in in your terminal</span><code>${escape(provider.loginCommand)}</code></div>
-        <div class="provider-card-actions"><button class="secondary-button" data-provider="${escape(provider.id)}" data-action="select" ${provider.id === state.selectedProvider ? 'disabled' : ''}>${provider.id === state.selectedProvider ? 'Selected' : 'Use this assistant'}</button><button class="secondary-button" data-provider="${escape(provider.id)}" data-action="check" ${!provider.installed ? 'disabled' : ''}>Check connection</button><a href="${escape(provider.installUrl)}" target="_blank" rel="noopener noreferrer">Setup guide ↗</a></div>
+        <div class="provider-card-actions"><button class="secondary-button" data-provider="${escape(provider.id)}" data-action="select" ${provider.id === state.selectedProvider || !provider.installed || provider.state==='disabled' ? 'disabled' : ''}>${!provider.installed||provider.state==='disabled'?'Unavailable':provider.id === state.selectedProvider ? 'Selected' : 'Use this assistant'}</button><button class="secondary-button" data-provider="${escape(provider.id)}" data-action="check" ${!provider.installed ? 'disabled' : ''}>Check connection</button><a href="${escape(provider.installUrl)}" target="_blank" rel="noopener noreferrer">Setup guide ↗</a></div>
       </article>`).join('');
     document.querySelector('#provider-description')!.textContent = state.configured ? `${state.provider} is selected. Replies use its local sign-in and account allowance.` : 'Select an installed assistant and complete its official sign-in on this computer.';
   }

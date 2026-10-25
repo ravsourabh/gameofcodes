@@ -6,6 +6,46 @@ import { tmpdir } from 'node:os';
 import { accountEnvironment, createProviderBridge, parseAssistantOutput, PROVIDERS, runProcess } from '../server/providers.mjs';
 
 const schema={type:'object',properties:{connected:{type:'boolean'}},required:['connected'],additionalProperties:false};
+test('cloud Muse is disabled and cannot be selected, checked or used, including saved preferences', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'sovereign-provider-test-'));
+  const previousMode = process.env.SOVEREIGN_MODE;
+  try {
+    process.env.SOVEREIGN_MODE = 'cloud';
+    const { createProviderBridge: createCloudBridge } = await import('../server/providers.mjs?cloud-disabled-test');
+    if (previousMode === undefined) delete process.env.SOVEREIGN_MODE; else process.env.SOVEREIGN_MODE = previousMode;
+    const bridge = createCloudBridge({ root, execute: () => assert.fail('Disabled provider must not execute') });
+    const initial = await bridge.status();
+    assert.equal(initial.mode, 'cloud');
+    assert.equal(initial.providers.find(item => item.id === 'muse').state, 'disabled');
+    await assert.rejects(bridge.select('muse'), /disabled/);
+    assert.equal((await bridge.status()).selectedProvider, initial.selectedProvider);
+    await assert.rejects(bridge.generate([], { schema, providerId: 'muse' }), /unavailable/);
+    await assert.rejects(bridge.check('muse'), /unavailable/);
+    await assert.rejects(bridge.generate([], { schema, providerId: 'unknown' }), /supported cloud assistant/);
+    const { mkdir, writeFile } = await import('node:fs/promises');
+    await mkdir(path.join(root, '.sovereign'), { recursive: true });
+    await writeFile(path.join(root, '.sovereign', 'connection.json'), JSON.stringify({ provider: 'muse' }));
+    const saved = createCloudBridge({ root });
+    assert.equal((await saved.status()).selectedProvider, 'muse');
+    assert.equal((await saved.status()).configured, false);
+    await assert.rejects(saved.generate([], { schema }), /unavailable/);
+    const previousKey = process.env.GEMINI_API_KEY;
+    try {
+      delete process.env.GEMINI_API_KEY;
+      await assert.rejects(bridge.generate([], { schema, providerId: 'gemini' }), /GEMINI_API_KEY not set/);
+      process.env.GEMINI_API_KEY = 'test-only-no-network';
+      const failed = await bridge.status();
+      assert.equal(failed.providers.find(item => item.id === 'gemini').state, 'error');
+      assert.equal(failed.configured, false, 'A present key must not conceal a failed health check');
+    } finally {
+      if (previousKey === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = previousKey;
+    }
+  } finally {
+    if (previousMode === undefined) delete process.env.SOVEREIGN_MODE; else process.env.SOVEREIGN_MODE = previousMode;
+    assert.ok(path.resolve(root).startsWith(path.resolve(tmpdir()) + path.sep + 'sovereign-provider-test-'));
+    await rm(root, { recursive: true, force: true });
+  }
+});
 test('local bridge selects and persists providers, uses CLI account auth, and isolates prompts',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'sovereign-provider-test-'));
   let fail=false,authenticated=true;const calls=[];
@@ -15,7 +55,7 @@ test('local bridge selects and persists providers, uses CLI account auth, and is
     if(args[0]==='login')return{code:authenticated?0:1,stdout:authenticated?'Logged in using ChatGPT':'Not logged in',stderr:''};
     if(args[0]==='auth')return{code:0,stdout:JSON.stringify({loggedIn:true,authMethod:'claude.ai'}),stderr:''};
     if(fail)return{code:1,stdout:'',stderr:'authentication failed SECRET-MUST-NOT-LEAK'};
-    assert.match(options.cwd,/turn-/);assert.ok(options.input.includes('Sovereign local application request'));
+    assert.match(options.cwd,/turn-/);assert.ok(options.input.includes('Game of Codes local application request'));
     assert.ok(args.includes(command==='codex.exe'?'--ignore-user-config':'--tools'));
     assert.equal(JSON.parse(await readFile(path.join(options.cwd,'schema.json'),'utf8')).properties.connected.type,'boolean');
     return{code:0,stdout:command==='codex.exe'?JSON.stringify({type:'item.completed',item:{type:'agent_message',text:'{"connected":true}'}}):JSON.stringify({type:'result',is_error:false,structured_output:{connected:true}}),stderr:''};

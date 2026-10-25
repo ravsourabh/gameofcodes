@@ -9,7 +9,7 @@
     "start": "node scripts/dev.mjs --production",
     "test": "node node_modules/@playwright/test/cli.js test",
     "setup:browser": "node node_modules/@playwright/test/cli.js install chromium",
-    "test:unit": "node --test tests/protocol.test.mjs tests/court.test.mjs tests/providers.test.mjs"
+    "test:unit": "node --test tests/protocol.test.mjs tests/court.test.mjs tests/providers.test.mjs tests/speech.test.mjs"
   },
   "dependencies": {
     "three": "0.186.1",

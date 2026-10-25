@@ -7,11 +7,12 @@ export class CourtVoice {
   private controller?: AbortController;
   private sequence = 0;
   private meter = 0;
+  private finishPlayback?: () => void;
   muted = false;
   constructor(private events: VoiceEvents) {}
   async unlock() { this.context ??= new AudioContext(); await this.context.resume(); }
   stop() {
-    this.sequence++; this.controller?.abort(); this.source?.stop(); this.source = undefined;
+    this.sequence++; this.controller?.abort(); this.finishPlayback?.(); this.finishPlayback = undefined; this.source?.stop(); this.source = undefined;
     cancelAnimationFrame(this.meter); window.speechSynthesis?.cancel(); this.events.state(false); this.events.amplitude(0);
   }
   async speak(role: CourtRole, text: string) {
@@ -28,8 +29,17 @@ export class CourtVoice {
       source.connect(analyser); analyser.connect(this.context!.destination); this.source = source;
       const samples = new Uint8Array(analyser.frequencyBinCount);
       const tick = () => { if (sequence !== this.sequence) return; analyser.getByteTimeDomainData(samples); const level = Math.sqrt(samples.reduce((sum, sample) => sum + ((sample - 128) / 128) ** 2, 0) / samples.length); this.events.amplitude(Math.min(1, level * 6)); this.meter = requestAnimationFrame(tick); };
-      source.onended = () => { if (sequence !== this.sequence) return; cancelAnimationFrame(this.meter); this.source = undefined; this.events.state(false); this.events.amplitude(0); };
-      this.events.state(true); source.start(); tick();
+      // Await audio completion so callers block until the line finishes speaking
+      await new Promise<void>(resolve => {
+        this.finishPlayback = resolve;
+        source.onended = () => {
+          if(sequence!==this.sequence){resolve();return;}
+          this.finishPlayback=undefined;cancelAnimationFrame(this.meter); this.source = undefined;
+          if (sequence === this.sequence) { this.events.state(false); this.events.amplitude(0); }
+          resolve();
+        };
+        this.events.state(true); source.start(); tick();
+      });
     } catch (error) {
       if (sequence !== this.sequence || this.controller?.signal.aborted) return;
       if ('speechSynthesis' in window) {
@@ -37,9 +47,13 @@ export class CourtVoice {
         utterance.voice = voices.find(voice => role === 'builder' ? /David|George|Mark/i.test(voice.name) : /Zira|Hazel|Susan|Samantha/i.test(voice.name)) || voices[0] || null;
         utterance.rate = role === 'builder' ? 0.9 : 0.98; utterance.pitch = role === 'inspector' ? 1.1 : 1;
         utterance.onstart = () => { this.events.state(true); this.events.amplitude(0.5); };
-        utterance.onend = utterance.onerror = () => { this.events.state(false); this.events.amplitude(0); };
-        speechSynthesis.speak(utterance);
-      } else this.events.error('Voice output is unavailable in this browser. The character’s reply is shown in captions.');
+        await new Promise<void>(resolve => {
+          this.finishPlayback=resolve;
+          utterance.onend = () => { if(sequence===this.sequence){this.finishPlayback=undefined;this.events.state(false);this.events.amplitude(0);} resolve(); };
+          utterance.onerror = utterance.onend;
+          speechSynthesis.speak(utterance);
+        });
+      } else this.events.error("Voice output is unavailable in this browser. The character's reply is shown in captions.");
     }
   }
 }

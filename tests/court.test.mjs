@@ -7,6 +7,55 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createCourtService } from '../server/court.mjs';
 
+test('Virus plans with its assigned brain, validates before saving, and onboarding belongs to each project', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'sovereign-court-test-'));
+  const project = randomUUID(), other = randomUUID();
+  let calls = 0, reply = { speech: 'Start with a book list, then add progress tracking.', title: 'Reading tracker', milestones: ['Create book list', 'Track reading progress'], requirements: ['Add books', 'Save progress'] };
+  const bridge = {
+    async status() { return { providers: [{ id: 'claude', installed: true, state: 'not-checked' }, { id: 'muse', installed: false, state: 'disabled' }, { id: 'codex', installed: true, state: 'error' }, { id: 'gemini', installed: false, state: 'not-installed' }] }; },
+    async generate(input, options) { calls++; assert.equal(options.providerId, 'claude'); assert.deepEqual(options.schema.required, ['speech', 'title', 'milestones', 'requirements']); assert.match(input[0].content, /no poetry or riddles/); return reply; },
+  };
+  let court = createCourtService({ root, bridge });
+  const server = http.createServer((req, res) => court.handle(req, res, new URL(req.url, 'http://localhost')));
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = `http://127.0.0.1:${server.address().port}`;
+  const post = async (endpoint, data) => { const response = await fetch(`${address}/api/court/${endpoint}`, { method: 'POST', headers: { Origin: address, 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); return { status: response.status, data: await response.json() }; };
+  const status = async id => fetch(`${address}/api/court/status${id ? `?project=${id}` : ''}`).then(res => res.json());
+  try {
+    for (const provider of ['muse', 'codex', 'gemini']) assert.equal((await post('brain', { project, role: 'virus', provider })).status, 503);
+    assert.equal((await post('brain', { project, role: 'virus', provider: 'claude' })).status, 200);
+    assert.equal(calls, 0);
+    const input = { project, idea: 'Build a reading tracker', requestId: randomUUID() };
+    const planned = await post('plan-idea', input);
+    assert.equal(planned.status, 200); assert.equal(planned.data.role, 'virus');
+    assert.equal(planned.data.proposal.status, 'awaiting-approval');
+    assert.deepEqual(planned.data.proposal.requirements, reply.requirements);
+    assert.deepEqual(planned.data.charter.milestones.map(item => item.title), reply.milestones);
+    assert.deepEqual((await post('plan-idea', input)).data, planned.data); assert.equal(calls, 1);
+    const file = path.join(root, '.sovereign', 'court', `${project}.json`);
+    const before = await readFile(file, 'utf8');
+    assert.equal(JSON.parse(before).history.length, 2);
+    for (const malformed of [null, { ...reply, speech: '' }, { ...reply, title: 1 }, { ...reply, milestones: [''] }, { ...reply, requirements: ['ok', 12] }, { ...reply, requirements: [] }, { ...reply, extra: true }]) {
+      reply = malformed;
+      assert.equal((await post('plan-idea', { ...input, requestId: randomUUID() })).status, 502);
+      assert.equal(await readFile(file, 'utf8'), before);
+      assert.deepEqual((await status(project)).charter, planned.data.charter);
+    }
+    assert.equal((await post('complete-onboarding', {})).status, 400);
+    assert.equal((await post('complete-onboarding', { project })).status, 200);
+    court = createCourtService({ root, bridge });
+    assert.equal((await status(project)).onboarded, true);
+    assert.equal((await status(other)).onboarded, false);
+    assert.equal((await status(project)).mode, 'local');
+    assert.equal(Object.hasOwn(await status(), 'onboarded'), false);
+    await assert.rejects(readFile(path.join(root, '.sovereign', 'connection.json')), { code: 'ENOENT' });
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    assert.ok(path.resolve(root).startsWith(path.resolve(tmpdir()) + path.sep + 'sovereign-court-test-'));
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('court uses the local assistant bridge, plan versions, idempotency and source boundaries', async () => {
   const root=await mkdtemp(path.join(tmpdir(),'sovereign-court-test-'));
   const originalFetch=globalThis.fetch;let upstreamCalls=0,loadedUrl='',connected=false;const routedProviders=[];
@@ -15,7 +64,7 @@ test('court uses the local assistant bridge, plan versions, idempotency and sour
     {speech:'Here is the revised plan.',proposal:{title:'Revised reading tracker',requirements:['Add books','Mark favorites','Save the list']}},
     {html:'<h1>My books</h1><button id="add">Add book</button>',css:'body{background:#faf5e9}',js:'document.querySelector("#add").addEventListener("click",()=>{});',summary:'Ready to review.'},
   ];
-  const bridge={async status(){return{configured:connected,selectedProvider:'codex',provider:'ChatGPT · Codex',providers:[]};},async select(id){assert.equal(id,'codex');connected=true;},async check(){},async generate(input,options){if(!connected)throw Object.assign(new Error('Connect a local assistant.'),{status:503});routedProviders.push(options.providerId);assert.ok(input[0].content);assert.equal(options.schema.type,'object');const data=responses[upstreamCalls++];assert.ok(data,'Unexpected assistant call');return data;}};
+  const bridge={async status(){return{configured:connected,selectedProvider:'codex',provider:'ChatGPT · Codex',providers:['codex','claude','muse'].map(id=>({id,installed:true,state:'not-checked'}))};},async select(id){assert.equal(id,'codex');connected=true;},async check(){},async generate(input,options){if(!connected)throw Object.assign(new Error('Connect a local assistant.'),{status:503});routedProviders.push(options.providerId);assert.ok(input[0].content);assert.equal(options.schema.type,'object');const data=responses[upstreamCalls++];assert.ok(data,'Unexpected assistant call');return data;}};
   const room={queue:Promise.resolve(),page:{on(){},off(){},url(){return loadedUrl||'http://127.0.0.1:4174/';},async goto(url){loadedUrl=url;},locator(){return{async innerText(){return'My books Add book';}};}}};
   const court=createCourtService({root,getRoom:async()=>room,saveRoom:async()=>{},broadcast:()=>{},bridge});
   const server=http.createServer(async(req,res)=>{if(!await court.handle(req,res,new URL(req.url,'http://localhost')))res.writeHead(404).end();});
@@ -45,6 +94,13 @@ test('court uses the local assistant bridge, plan versions, idempotency and sour
     const folder=path.join(root,'.sovereign','builds',project,built.data.artifact.version);
     assert.match(await readFile(path.join(folder,'index.html'),'utf8'),/<script src="app.js" defer>/);
     assert.match(await readFile(path.join(folder,'app.js'),'utf8'),/addEventListener/);
+    const filesResponse=await originalFetch(`${address}/api/court/files?project=${project}`);
+    assert.equal(filesResponse.status,200);
+    const {files}=await filesResponse.json();
+    assert.deepEqual(Object.keys(files),['index.html','app.css','app.js']);
+    for(const [name,content] of Object.entries(files)) assert.equal(content,await readFile(path.join(folder,name),'utf8'));
+    assert.equal((await originalFetch(`${address}/api/court/files?project=../outside`)).status,400);
+    assert.equal((await originalFetch(`${address}/api/court/files?project=${randomUUID()}`)).status,404);
     const archiveResponse=await originalFetch(`${address}/api/court/source?project=${project}`);
     assert.equal(archiveResponse.status,200);assert.equal(archiveResponse.headers.get('content-type'),'application/zip');
     const archive=Buffer.from(await archiveResponse.arrayBuffer());assert.equal(archive.readUInt32LE(0),0x04034b50);

@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, statSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, writeFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { claudeGenerate, openaiGenerate, llamaGenerate, geminiGenerate } from './cloud-providers.mjs';
+import { claudeGenerate, openaiGenerate, geminiGenerate } from './cloud-providers.mjs';
 
 const CLOUD_MODE = process.env.SOVEREIGN_MODE === 'cloud';
 const SESSION_LIMIT = CLOUD_MODE ? 300 : 30;
@@ -109,7 +109,7 @@ export function createProviderBridge({ root, execute = runProcess, locate = exec
     const providers = PROVIDERS.map(provider => {
       if (CLOUD_MODE) {
         const keyMap = { muse: 'META_LLAMA_API_KEY', codex: 'OPENAI_API_KEY', claude: 'ANTHROPIC_API_KEY', gemini: 'GEMINI_API_KEY' };
-        if (provider.id === 'muse') return { ...provider, installed: false, state: 'not-installed', message: 'Muse (Meta Llama API) is pending key verification. Use Gemini, Claude, or ChatGPT instead.' };
+        if (provider.id === 'muse') return { ...provider, installed: false, state: 'disabled', message: 'Muse (Meta Llama API) is pending key verification. Use Gemini, Claude, or ChatGPT instead.' };
         const hasKey = !!process.env[keyMap[provider.id]];
         const checked = health.get(provider.id);
         const state = checked?.state || (hasKey ? 'not-checked' : 'not-installed');
@@ -119,13 +119,16 @@ export function createProviderBridge({ root, execute = runProcess, locate = exec
       return { ...provider, installed, state: !installed ? 'not-installed' : checked?.state || 'not-checked', message: !installed ? 'Install the official CLI on this computer, then restart Game of Codes.' : checked?.message || 'Installed. Sign in through its CLI, then check the connection.' };
     });
     const current = providers.find(item => item.id === selected);
-    return { selectedProvider: selected, provider: current.name, configured: CLOUD_MODE ? !!current.installed : current.installed && current.state !== 'error', providers, running: busy };
+    return { mode: CLOUD_MODE ? 'cloud' : 'local', selectedProvider: selected, provider: current.name, configured: current.installed && !['disabled', 'error'].includes(current.state), providers, running: busy };
   }
   async function select(id) {
     if (!PROVIDERS.some(item => item.id === id)) throw providerError('Choose Muse Code, ChatGPT, or Claude Code.', 400);
     if (busy || selecting) throw providerError('Wait for the current instruction to finish before switching assistants.', 409);
     selecting = true;
-    try { await loadPreference(); await mkdir(directory, { recursive: true });
+    try { await loadPreference();
+      const provider = (await status()).providers.find(item => item.id === id);
+      if (provider.state === 'disabled') throw providerError(`${provider.name} is disabled in cloud mode. Choose Gemini, Claude, or ChatGPT.`);
+      await mkdir(directory, { recursive: true });
       await writeFile(`${preferenceFile}.tmp`, JSON.stringify({ provider: id })); await rename(`${preferenceFile}.tmp`, preferenceFile); selected = id;
       return status();
     } finally { selecting = false; }
@@ -133,12 +136,12 @@ export function createProviderBridge({ root, execute = runProcess, locate = exec
   async function cloudGenerate(input, { schema, providerId } = {}) {
     await loadPreference();
     const id = providerId || selected;
+    if (!PROVIDERS.some(provider => provider.id === id)) throw providerError('Choose a supported cloud assistant.', 400);
     const isBuild = schema && 'html' in (schema.properties || {});
     if (id === 'muse') throw providerError('Muse (Meta Llama API) is unavailable in cloud mode — API key pending verification. Switch this brain to Gemini, Claude, or ChatGPT.', 503);
     const fn = id === 'claude' ? claudeGenerate
       : id === 'codex' ? openaiGenerate
-      : id === 'gemini' ? (i, s) => geminiGenerate(i, s, { isBuild })
-      : llamaGenerate;
+      : (i, s) => geminiGenerate(i, s, { isBuild });
     if (busy || selecting) throw providerError('Your court is finishing the previous instruction. Please wait.', 409);
     busy = true;
     try {

@@ -81,6 +81,37 @@ export async function llamaGenerate(input, schema) {
   return parseJson(extractText(res), 'Muse');
 }
 
+// Image generation — Gemini multimodal first, DALL-E 3 fallback
+export async function generateImage(prompt) {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      const body = JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+      });
+      const imgPath = `/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`;
+      const res = await post('generativelanguage.googleapis.com', imgPath, { 'Accept': 'application/json' }, body, 45_000);
+      if (res.status === 200) {
+        const parts = res.body?.candidates?.[0]?.content?.parts ?? [];
+        const imgPart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
+        if (imgPart) return `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
+      }
+    } catch { /* fall through to DALL-E */ }
+  }
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) throw err('No image generation API key available (GEMINI_API_KEY or OPENAI_API_KEY required).', 503);
+  const res = await post('api.openai.com', '/v1/images/generations',
+    { 'Authorization': `Bearer ${openaiKey}`, 'Accept': 'application/json' },
+    JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: '1024x1024', response_format: 'b64_json' }),
+    60_000
+  );
+  if (res.status !== 200) throw err(`Image generation failed: ${res.body?.error?.message ?? res.status}`, 502);
+  const b64 = res.body?.data?.[0]?.b64_json;
+  if (!b64) throw err('Image generation returned no data', 502);
+  return `data:image/png;base64,${b64}`;
+}
+
 // Gemini — primary cloud brain for all providers
 // Flash Lite for conversation (fast, cheap); Flash for builds (code quality matters)
 export async function geminiGenerate(input, schema, { isBuild = false } = {}) {

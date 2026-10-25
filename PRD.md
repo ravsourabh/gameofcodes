@@ -145,7 +145,7 @@ Each wave is one focused Claude Code conversation with a clear deliverable. Wave
 
 ### Wave 3 — Virus + Onboarding + The Artiste *(Week 2: Nov 2 – Nov 8, after Wave 4)*
 
-**Goal:** A cinematic 10-step onboarding arc beginning outside the castle. Targets the $25k Best First Five Minutes award. Wave 4 spatial zones must exist before this wave ships.
+**Goal:** A continuous, action-driven introduction beginning in the garden. Virus leads the user from an idea to a reviewable plan without long scripted pauses. Targets the $25k Best First Five Minutes award. Wave 4 spatial zones must exist before this wave ships.
 
 ---
 
@@ -162,7 +162,7 @@ Each wave is one focused Claude Code conversation with a clear deliverable. Wave
 
 **Voice — ElevenLabs:**
 - Target: whispery, smooth, slightly conspiratorial British male
-- Current candidate: **George** (`JBFqnCBsd6RMkjVDRZzb`) — raspy, distinctive
+- Current voice: **Daniel** (`onwK4e9ZLuTAKqWW03F9`) — British, measured; distinct from Bram’s George voice
 - Voice settings: `stability: 0.85` (very consistent), `similarity: 0.90`, `style: 0.10` (restrained, no theatrical peaks)
 - Note: if a softer/more whispery voice is found in ElevenLabs library, swap. George is the best available British male from the pre-made set.
 
@@ -172,38 +172,26 @@ Each wave is one focused Claude Code conversation with a clear deliverable. Wave
 
 ---
 
-#### The Onboarding Arc — 10 Steps
+#### Guided first visit and returning sessions (revised 2026-10-25)
 
-**Starting position:** The user spawns outside the castle, in the **castle garden** (exterior courtyard). The castle gates are visible ahead. Virus stands among the hedges, facing the user. This is FPV — you are the King arriving.
+1. Only Virus and his role button appear at the entrance. The user clicks or pinches to begin and enable audio.
+2. Virus opens his own head and demonstrates the available brains. The user can swap by selecting a symbol or saying its name; “cloud” is treated as Claude in this specific context. Continue is always visible during this lesson.
+3. Virus demonstrates point-and-pinch on visible orbs. Desktop users can click. Neither demonstration silently succeeds after a timeout.
+4. Virus asks for the idea and intended audience. His assigned brain drafts 1–3 milestones and requirements through `/api/court/plan-idea`. The user is not required to invent milestones. Invalid model output is rejected before saving.
+5. Virus opens the gate and visibly moves into the court. The camera transitions on desktop; VR uses a seated recenter rather than a forced moving camera. Reduced-motion mode skips travel animation.
+6. Characters and their role buttons appear as Virus introduces them. The plan and suggested milestones are then shown for review, revision, or explicit build approval. A finished build opens the running preview.
 
-| Step | Time | Scene | What happens |
-| --- | --- | --- | --- |
-| **1** | 0:00 | Garden exterior | Virus appears from the hedges. Heavy opening line delivered slowly: *"Your Grace… I have been expecting you. The realm has need of a sovereign who builds — not merely rules."* Long pause. Then: *"Welcome to the Game of Codes."* |
-| **2** | 0:45 | Garden | Virus gestures to his own head: *"Before we enter, I must show you something curious about us all. Say: 'Virus, open your head.'"* — waits for the user to speak the command. Virus lifts his hair (none — the robe hood falls back) and reveals his glowing brain. *"You see? We carry our intelligence visibly. Each of us can be… reconfigured."* Closes head. |
-| **3** | 1:30 | Garden | Virus: *"Now tell me — what great thing are you here to build?"* — listens for free-form voice or text. Then: *"And what would make it complete? Give me three milestones — the signposts of your ambition."* Captures idea + up to 3 milestones. Stores in project charter. |
-| **4** | 2:30 | Garden | Virus: *"One last matter before we enter. Your court runs on minds — local ones, or those borrowed from the cloud."* Walks through mode selection: local (checks CLI connections, prompts sign-in commands, prompts workspace directory) or cloud (confirms keys loaded). If cloud: *"The minds are ready. No sign-in required."* |
-| **5** | 3:30 | Garden → Gate | Virus: *"The court awaits. But first — the gestures."* Teaches hand gestures: pinch to select, point to aim, open palm to pause. For VR Glasses: gaze + pinch. User practices each gesture on floating targets Virus conjures. |
-| **6** | 4:30 | Gate → Court | Virus walks toward the gates; they open. *"Follow me."* The user crosses the threshold into the court interior. Virus stops at the centre. |
-| **7** | 5:00 | Court (front) | Virus gestures toward the three working characters in turn: *"Elara, your architect — she shapes ideas into plans."* · *"Bram, your builder — he turns plans into living applications."* · *"Iris, your inspector — she ensures nothing escapes her attention."* Each character nods and speaks one greeting line in their ElevenLabs voice. Then Virus gestures to the Artiste: *"And Mira — your artiste. She gives the court its face."* |
-| **8** | 6:00 | Court | Virus: *"But the court is larger than this room, Your Grace. Turn to your right."* — waits. User turns right → **Meeting Room** appears (Wave 4). Virus: *"Where your team gathers to show their work."* Then: *"And to your left."* — user turns left → **Personal Workspace** (Wave 4). *"Where you think alone."* |
-| **9** | 7:00 | Court | Virus: *"Now — the idea you shared with me in the garden."* A soft light pulses behind the user. *"Turn around."* User turns 180° → **Wall of Fame** (Wave 4). The milestones captured in Step 3 appear as **empty engraved frames** on the wall. *"These are your milestones, waiting to be filled. Each one a conquest. Each one a reason to return."* |
-| **10** | 7:45 | Court | Virus moves to the side. *"The throne is yours, Sovereign. Address your court."* The user is now fully onboarded. Virus recedes but glows softly when summoned. |
+**Returning:** Completion belongs to the project, not the shared server or provider settings. A returning user selects Continue with Virus to resume the saved plan or build. An unfinished project receives guidance rather than an idle advisor. Virus remains available after onboarding.
 
-**Onboarding state:** `onboarded: true` written to `.sovereign/connection.json` after Step 10. Steps 1–10 are skipped on subsequent launches.
+**Action commands:** “Take me to court”, “show code”, “review the app”, “open settings”, “show milestones”, and zone navigation execute application actions before ordinary AI conversation. Generated code is readable in a desktop source dialog and a paged in-world VR panel. Before a build exists, the guide explains the next step instead of pretending there is code to show.
 
-**10-minute first session map** (Best First Five Minutes test):
+**Availability:** Cloud Muse is visibly disabled in the desktop picker, omitted from selectable in-world tokens, and rejected by the brain-assignment API. It never silently uses Gemini. Local Muse remains available when its CLI is installed. Virus uses his actual assigned provider for planning.
 
-| Minute | What happens |
-| --- | --- |
-| 0:00–1:30 | Garden: Virus greeting + head-open demo |
-| 1:30–2:30 | Garden: project charter (idea + milestones) |
-| 2:30–3:30 | Garden: mode setup (local or cloud) |
-| 3:30–4:30 | Garden: gesture practice |
-| 4:30–5:00 | Enter the castle |
-| 5:00–6:00 | Meet the team (Elara, Bram, Iris, Mira) |
-| 6:00–7:00 | Turn right (Meeting Room), left (Workspace) |
-| 7:00–7:45 | Turn around → Wall of Fame + milestones |
-| 7:45–10:00 | First instruction to Elara → Proposal appears |
+**Interruptions:** Opening settings pauses the guide. Closing the dialog resumes it. Restarting the tour cancels pending waits and scene travel. Navigation requests made during a model request are carried out immediately where possible or visibly queued. A cancelled guide cannot mark onboarding complete.
+
+**Speech:** Each narration beat completes before the next starts; unnecessary timed pauses are removed. ElevenLabs PCM output is requested through its query parameter and validated before WAV wrapping. Stopping playback releases the old narration wait without affecting a newer speaker.
+
+**Verification:** Automated browser coverage exercises the first visit, transcription context, milestones, progressive introductions, re-entry, approval, preview and source viewing. Backend tests cover per-project completion, assigned-brain planning, output validation, and unavailable-provider rejection. Physical Quest comfort and microphone recognition remain hardware-validation tasks.
 
 ---
 
@@ -280,7 +268,7 @@ Milestones marked `achieved` when: user says *"Milestone [name] is done"*, Virus
 - [ ] Mira character model: ink robes, floating canvas, positioned court-right
 - [ ] Garden exterior scene: courtyard geometry, hedges, castle gate visible ahead
 - [ ] Spawn point at garden (not inside court) on first launch
-- [ ] 10-step onboarding state machine (`onboardingStep: 0–10` in session state)
+- [x] Action-driven guided flow with explicit demonstration steps and per-project completion
 - [ ] `stewardCommand()` / `virusCommand()` parser for voice commands
 - [ ] Milestone capture UI (voice + text input during Step 3)
 - [ ] Hand gesture practice targets (floating interactive orbs, Step 5)

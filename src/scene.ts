@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { EnvironmentAssets } from './environment-assets';
 import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 import type { ConnectionState } from './preview';
 import { CourtCharacter, type CourtRole, type CharacterState } from './characters';
@@ -29,6 +30,8 @@ export class CourtScene {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(48, 1, 0.05, 80);
   readonly origin = new THREE.Group();
+  private assets = new EnvironmentAssets();
+  private courtDetails = new THREE.Group();
   private board = new THREE.Group();
   readonly dialogue = new SpatialDialogue();
   private characters = new Map<CourtRole, CourtCharacter>();
@@ -59,6 +62,16 @@ export class CourtScene {
   private meetingRoomScreen: THREE.Mesh | null = null;
   private wallFameSlots: { frame: THREE.Mesh; canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; texture: THREE.CanvasTexture }[] = [];
   private zoneLabels: { mesh: THREE.Mesh; zone: 'meetingRoom' | 'workspace' | 'wallOfFame' }[] = [];
+  private gardenGroup = new THREE.Group();
+  private gateLeft: THREE.Group | null = null;
+  private gateRight: THREE.Group | null = null;
+  private gardenActive = false;
+  private guideGeneration = 0;
+  private guideMotion: { from: THREE.Vector3; to: THREE.Vector3; start: number; duration: number } | null = null;
+  private gestureOrbs: { mesh: THREE.Mesh; target: THREE.Mesh }[] = [];
+  private miraPanel: { frame: THREE.Mesh; panel: THREE.Mesh; ctx: CanvasRenderingContext2D; texture: THREE.CanvasTexture } | null = null;
+  private cameraAnim: { fromPos: THREE.Vector3; fromLook: THREE.Vector3; toPos: THREE.Vector3; toLook: THREE.Vector3; start: number; dur: number; done: () => void } | null = null;
+  private gateAnim: { start: number; dur: number; done: () => void } | null = null;
   private frames = 0;
   private fpsTime = performance.now();
   private lastRender = 0;
@@ -70,7 +83,7 @@ export class CourtScene {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.22;
+    this.renderer.toneMappingExposure = 1.05;
     this.renderer.xr.enabled = true;
     this.renderer.xr.setFramebufferScaleFactor(1);
     this.renderer.xr.setReferenceSpaceType('local-floor');
@@ -78,16 +91,45 @@ export class CourtScene {
     this.scene.fog = new THREE.FogExp2(0x10242a, 0.016);
     this.camera.position.set(0, 1.45, 2.1); this.camera.lookAt(0, 1.08, -1.65);
     this.origin.add(this.camera); this.scene.add(this.origin);
-    this.scene.add(new THREE.HemisphereLight(0xd0e5d8, 0x2e2c24, 2.7));
-    const sun = new THREE.DirectionalLight(0xffd5a0, 3.1); sun.position.set(-5, 8, -5); this.scene.add(sun);
+    this.scene.add(new THREE.HemisphereLight(0xd0e5d8, 0x353b31, 1.65));
+    const sun = new THREE.DirectionalLight(0xffdfb4, 2.5); sun.position.set(-5, 8, -5); this.scene.add(sun);
     const fill = new THREE.PointLight(0xa7c5ce, 18, 12); fill.position.set(0, 4, 3); this.scene.add(fill);
     this.environment();
+    this.assets.courtDetails(this.courtDetails);
+    this.assets.batch(this.courtDetails);
+    this.scene.add(this.courtDetails);
     this.buildZones();
     for (const [role, x, z] of [['builder', -1.12, -1.42], ['architect', 0, -1.65], ['inspector', 1.12, -1.42]] as const) {
       const character = new CourtCharacter(role, x, z); this.characters.set(role, character); this.scene.add(character.group); this.targets.push(character.hitbox as Target);
       this.targets.push(...character.brainTargets as Target[]);
     }
     this.characters.get('architect')!.setSelected(true);
+
+    // Virus — spawns in garden, moves to court after onboarding Step 6
+    const virus = new CourtCharacter('virus', 0, 3.0);
+    this.characters.set('virus', virus); this.scene.add(virus.group);
+    this.targets.push(virus.hitbox as Target, ...virus.brainTargets as Target[]);
+
+    // Mira (artiste) — court right side, hidden until Step 7
+    const mira = new CourtCharacter('artiste', 2.1, -1.05);
+    mira.group.visible = false;
+    this.characters.set('artiste', mira); this.scene.add(mira.group);
+    this.targets.push(mira.hitbox as Target, ...mira.brainTargets as Target[]);
+
+    // Mira's art canvas panel
+    const miraCanvasData = canvasTexture(512, 512, ctx => {
+      ctx.fillStyle = '#0d1a1e'; ctx.fillRect(0, 0, 512, 512);
+      ctx.strokeStyle = '#3a4a4e'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.strokeRect(16, 16, 480, 480);
+      ctx.fillStyle = '#3a5055'; ctx.font = '22px Georgia'; ctx.textAlign = 'center'; ctx.fillText('Awaiting artwork', 256, 256);
+    });
+    const miraFrame = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.15, 0.04), new THREE.MeshStandardMaterial({ color: 0x3d2a14, roughness: 0.6, metalness: 0.3 }));
+    miraFrame.position.set(2.6, 1.82, -0.7); miraFrame.rotation.y = -0.4; this.scene.add(miraFrame); miraFrame.visible=false;
+    const miraPanelMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ map: miraCanvasData.texture, toneMapped: false }));
+    miraPanelMesh.position.set(2.6, 1.82, -0.68); miraPanelMesh.rotation.y = -0.4; this.scene.add(miraPanelMesh);
+    miraPanelMesh.visible = false;
+    this.miraPanel = { frame: miraFrame, panel: miraPanelMesh, ctx: miraCanvasData.ctx, texture: miraCanvasData.texture };
+
+    this.buildGarden();
     this.scene.add(this.dialogue.mesh); this.dialogue.mesh.visible = false;
     this.targets.push(this.dialogue.mesh as Target);
 
@@ -150,7 +192,7 @@ export class CourtScene {
     this.board.visible = false;
     this.configureInput();
     this.renderer.xr.addEventListener('sessionstart', () => {
-      this.origin.position.set(0, 0, 1.9); this.origin.rotation.set(0, 0, 0);
+      this.origin.position.set(0, 0, this.gardenActive ? 5.5 : 1.9); this.origin.rotation.set(0, 0, 0);
       this.vrControls.forEach(mesh => { mesh.visible = this.previewVisible; });
       this.dialogue.mesh.visible = !this.previewVisible;
       this.callbacks.session(true); this.setStatus(this.status);
@@ -172,7 +214,7 @@ export class CourtScene {
 
   private environment() {
     const mesh = (geometry: THREE.BufferGeometry, color: number, position: number[], metalness = 0) => {
-      const object = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, roughness: 0.8 - metalness * 0.4, metalness }));
+      const object = new THREE.Mesh(geometry, metalness > 0.4 ? this.assets.brass : this.assets.stone);
       object.position.set(position[0], position[1], position[2]); this.scene.add(object); return object;
     };
     const sky = new THREE.Mesh(new THREE.SphereGeometry(55, 24, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false,
@@ -180,6 +222,7 @@ export class CourtScene {
       fragmentShader: 'varying vec3 vPos; void main(){float h=normalize(vPos).y;vec3 a=vec3(0.17,0.31,0.34);vec3 b=vec3(0.055,0.13,0.20);vec3 c=vec3(0.52,0.51,0.37);vec3 color=mix(a,b,smoothstep(0.0,0.65,h));color=mix(color,c,exp(-abs(h-0.035)*16.0)*0.6);gl_FragColor=vec4(color,1.0);}' }));
     this.scene.add(sky);
     const floor = mesh(new THREE.CylinderGeometry(8, 8, 0.18, 64), 0x1b2a2d, [0, -0.13, 0], 0.15);
+    floor.material = this.assets.stone;
     floor.receiveShadow = false;
     for (const radius of [2.7, 3, 5.6, 5.66, 7.7]) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(radius, radius + 0.014, 96), new THREE.MeshBasicMaterial({ color: 0x7b7150, transparent: true, opacity: 0.38 }));
@@ -216,21 +259,18 @@ export class CourtScene {
       mountain.position.set(0, 0.5 - layer * 0.18, -28 + layer * 3); this.scene.add(mountain);
     }
     // A low desk leaves the entire application in a comfortable seated field of view.
-    mesh(new THREE.BoxGeometry(4.2, 0.095, 1.2), 0x273638, [0, 0.56, -1.1], 0.2);
+    mesh(new THREE.BoxGeometry(4.2, 0.095, 1.2), 0x273638, [0, 0.56, -1.1], 0.2).material = this.assets.wood;
     mesh(new THREE.BoxGeometry(4.24, 0.023, 1.24), 0x807048, [0, 0.602, -1.1], 0.55);
-    mesh(new THREE.BoxGeometry(4.16, 0.02, 1.16), 0x293b3b, [0, 0.618, -1.1], 0.15);
+    mesh(new THREE.BoxGeometry(4.16, 0.02, 1.16), 0x293b3b, [0, 0.618, -1.1], 0.15).material = this.assets.wood;
     for (const x of [-1.65, 1.65]) {
       mesh(new THREE.CylinderGeometry(0.13, 0.2, 0.55, 8), 0x293c3c, [x, 0.25, -1.15], 0.3);
       mesh(new THREE.CylinderGeometry(0.22, 0.23, 0.055, 12), 0x776a49, [x, 0.02, -1.15], 0.5);
     }
-    // Quiet details to either side, with no textures or remote asset requests.
+    // Stone planters; instanced leaves are supplied by courtDetails().
     for (const sign of [-1, 1]) {
       mesh(new THREE.CylinderGeometry(0.38, 0.47, 0.8, 12), 0x20373b, [sign * 3.5, 0.36, -2.65]);
       mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.04, 16), 0x82754e, [sign * 3.5, 0.8, -2.65], 0.5);
-      for (let i = 0; i < 6; i++) {
-        const leaf = mesh(new THREE.ConeGeometry(0.22, 1.2 + i * 0.08, 5), 0x3a6558, [sign * 3.5 + Math.sin(i * 2) * 0.2, 1.35, -2.65 + Math.cos(i * 2) * 0.2]);
-        leaf.rotation.z = Math.sin(i * 2) * 0.32;
-      }
+
     }
   }
 
@@ -238,9 +278,9 @@ export class CourtScene {
     const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, group: THREE.Group) => {
       const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); group.add(m); return m;
     };
-    const stone = new THREE.MeshStandardMaterial({ color: 0x1e2e30, roughness: 0.9, metalness: 0.05 });
-    const wood  = new THREE.MeshStandardMaterial({ color: 0x3d2a14, roughness: 0.7, metalness: 0.1 });
-    const gold  = new THREE.MeshStandardMaterial({ color: 0x7a6535, roughness: 0.4, metalness: 0.6 });
+    const stone = this.assets.stone;
+    const wood = this.assets.wood;
+    const gold = this.assets.brass;
 
     // ── MEETING ROOM (right, +X) ─────────────────────────────────
     const mr = this.zoneGroups.meetingRoom;
@@ -251,13 +291,9 @@ export class CourtScene {
     mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.08, 12), wood, 0, 0.7, -2, mr);
     mesh(new THREE.CylinderGeometry(0.07, 0.13, 0.65, 8), wood, 0, 0.37, -2, mr);
     mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.04, 16), gold, 0, 0.02, -2, mr);
-    // 4 chairs
     for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2, cx = Math.sin(a) * 1.6, cz = -2 + Math.cos(a) * 1.6;
-      mesh(new THREE.BoxGeometry(0.5, 0.06, 0.5), stone, cx, 0.48, cz, mr);
-      mesh(new THREE.BoxGeometry(0.5, 0.55, 0.06), stone, cx, 0.77, cz + Math.cos(a) * 0.22, mr);
-      for (const [lx, lz] of [[-0.19, 0], [0.19, 0]] as const)
-        mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.48, 6), wood, cx + lx, 0.24, cz + lz, mr);
+      const a = i * Math.PI / 2;
+      this.assets.chair(mr, Math.sin(a) * 1.65, -2 + Math.cos(a) * 1.65, a);
     }
     // Meeting room wall + screen
     mesh(new THREE.BoxGeometry(8, 5.5, 0.3), stone, 0, 2.5, -5.5, mr);
@@ -304,6 +340,8 @@ export class CourtScene {
     for (let i = 0; i < 5; i++) {
       mesh(new THREE.BoxGeometry(0.07, 0.26 + i * 0.02, 0.2), new THREE.MeshStandardMaterial({ color: [0x4a6655, 0x5c4a2a, 0x3a4a60, 0x5a3a3a, 0x4a4a35][i], roughness: 0.8 }), -1.2 + i * 0.09, 0.73, -1.0, ws);
     }
+    this.assets.chair(ws, 0, .1);
+    this.assets.lantern(ws, -1.45, 1.05, -1.15);
     this.scene.add(ws);
 
     // ── WALL OF FAME (behind, +Z) ─────────────────────────────────
@@ -372,12 +410,202 @@ export class CourtScene {
     this.zoneLabels.forEach(({ mesh }) => { mesh.visible = false; });
   }
 
-  private getHeadYaw(): number {
-    if (this.renderer.xr.isPresenting) {
-      const dir = this.renderer.xr.getCamera().getWorldDirection(new THREE.Vector3());
-      return Math.atan2(dir.x, -dir.z);
+  private buildGarden() {
+    const g = this.gardenGroup, assets = this.assets;
+    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number) => assets.mesh(g, geo, mat, x, y, z);
+    const floor = add(new THREE.CircleGeometry(8.8, 48), assets.soil, 0, -.055, 4);
+    floor.rotation.x = -Math.PI / 2;
+    // Individually laid, slightly weathered paving stones and raised edging.
+    for (let row = 0; row < 17; row++) for (let col = 0; col < 3; col++) {
+      const tile = add(new THREE.BoxGeometry(.48, .045, .48), assets.stone, (col - 1) * .51, -.015, -.45 + row * .51);
+      tile.rotation.y = Math.sin(row * 13 + col * 7) * .018;
     }
-    return this.view.yaw;
+    for (const side of [-1, 1]) {
+      add(new THREE.BoxGeometry(.13, .15, 8.8), assets.stone, side * .9, .02, 3.5);
+      add(new THREE.BoxGeometry(1.25, .13, 7.9), assets.soil, side * 2, -.015, 3.7);
+      for (let i = 0; i < 9; i++) {
+        add(new THREE.CylinderGeometry(.05, .075, .75, 7), assets.wood, side * 1.75, .35, i * .8 + .3);
+      }
+      for (let i = 0; i < 3; i++) {
+        const z = 1 + i * 2.6;
+        add(new THREE.BoxGeometry(.38, .48, .38), assets.stone, side * 1.05, .24, z);
+        assets.lantern(g, side * 1.05, .85, z);
+      }
+      // Clipped evergreen borders with leaf-level variation, batched per garden.
+      add(new THREE.BoxGeometry(.55, .48, 7.5), new THREE.MeshStandardMaterial({ color: 0x263d27, roughness: 1 }), side * 1.75, .52, 3.6);
+      // Perimeter walls now use their actual world positions.
+      add(new THREE.BoxGeometry(.42, .65, 8), assets.stone, side * 4, .27, 3.5);
+      assets.chair(g, side * 3.05, 4.4, side * Math.PI / 2);
+    }
+    const shrubs = [];
+    for (const side of [-1, 1]) for (let i = 0; i < 15; i++) {
+      shrubs.push({ x: side * 1.75, y: .8, z: .1 + i * .52, radius: .46 });
+      shrubs.push({ x: side * 4, y: 1.1, z: .1 + i * .52, radius: .72 });
+    }
+    // Small trees with tapering trunks, branching crowns and layered foliage.
+    for (const x of [-3, 3]) for (const z of [1.5, 6.4]) {
+      add(new THREE.CylinderGeometry(.09, .17, 2.4, 9), assets.wood, x, 1.15, z);
+      for (let i = 0; i < 4; i++) shrubs.push({ x: x + Math.sin(i * 2.4) * .4, y: 2.6 + (i % 2) * .4, z: z + Math.cos(i * 2.4) * .4, radius: .85 });
+    }
+    assets.foliage(g, shrubs, 65);
+    // Flower borders are instanced, avoiding hundreds of separate draw calls.
+    const flowers = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.035, 1), new THREE.MeshStandardMaterial({ roughness: .88 }), 180);
+    const dummy = new THREE.Object3D(), color = new THREE.Color();
+    for (let i = 0; i < 180; i++) {
+      const side = i % 2 ? 1 : -1;
+      dummy.position.set(side * (2.35 + .3 * Math.sin(i * 4.1)), .17 + .09 * Math.sin(i * 3.7), .4 + (i / 180) * 7);
+      dummy.scale.set(1.4, .65, 1.4); dummy.updateMatrix(); flowers.setMatrixAt(i, dummy.matrix);
+      color.setHex([0xc9abcf, 0xe6d2a5, 0x9c8cc4][i % 3]); flowers.setColorAt(i, color);
+    }
+    flowers.computeBoundingSphere(); g.add(flowers);
+    // Gate panels close across the opening and swing on correctly placed hinges.
+    const hinge = (side: number) => {
+      const pivot = new THREE.Group(); pivot.position.set(side * 1.64, 0, -.2); g.add(pivot);
+      const direction = -side;
+      for (let i = 0; i < 7; i++) assets.mesh(pivot, new THREE.BoxGeometry(.218, 3.05, .1), assets.wood, direction * (.12 + i * .229), 1.56, 0);
+      for (const y of [.55, 1.65, 2.65]) {
+        assets.mesh(pivot, new THREE.BoxGeometry(1.57, .085, .15), assets.iron, direction * .81, y, .02);
+        for (let i = 0; i < 7; i++) assets.mesh(pivot, new THREE.SphereGeometry(.018, 5, 4), assets.brass, direction * (.12 + i * .229), y, .105);
+      }
+      assets.mesh(pivot, new THREE.TorusGeometry(.09, .017, 6, 16), assets.brass, direction * 1.4, 1.6, .14);
+      return pivot;
+    };
+    this.gateLeft = hinge(-1); this.gateRight = hinge(1);
+    for (const x of [-1.85, 1.85]) {
+      add(new THREE.BoxGeometry(.48, 3.25, .65), assets.stone, x, 1.6, -.2);
+      for (const y of [.12, 3.2]) add(new THREE.BoxGeometry(.65, .18, .82), assets.stone, x, y, -.2);
+      assets.lantern(g, x, 2.65, .28);
+    }
+    add(new THREE.TorusGeometry(1.85, .24, 8, 48, Math.PI), assets.stone, 0, 3.22, -.2);
+    add(new THREE.TorusGeometry(1.85, .025, 5, 48, Math.PI), assets.brass, 0, 3.22, .055);
+    const gardenLight = new THREE.PointLight(0xffd5a1, 9, 14); gardenLight.position.set(-2, 4, 4); g.add(gardenLight);
+    assets.batch(g, [this.gateLeft, this.gateRight]);
+    assets.batch(this.gateLeft); assets.batch(this.gateRight);
+    this.scene.add(g); g.visible = false;
+  }
+
+  // ── Garden / onboarding transitions ──────────────────────────────────────────
+
+  showGarden(visible: boolean) {
+    this.gardenActive = visible;
+    this.gardenGroup.visible = visible;
+    if (this.renderer.xr.isPresenting) this.origin.position.z = visible ? 5.5 : 1.9;
+    this.dialogue.setGarden(visible);
+    this.courtDetails.visible = !visible;
+    if (visible) {
+      if(this.gateLeft)this.gateLeft.rotation.y=0;if(this.gateRight)this.gateRight.rotation.y=0;
+      this.camera.position.set(0, 1.45, 5.5);
+      this.camera.lookAt(0, 1.3, 0);
+      // Hide court characters while in garden
+      ['architect', 'builder', 'inspector', 'artiste'].forEach(role => {
+        this.characters.get(role as CourtRole)?.group && (this.characters.get(role as CourtRole)!.group.visible = false);
+      });
+    }
+  }
+
+  openGate(onComplete: () => void) {
+    if (!this.gateLeft || !this.gateRight) { onComplete(); return; }
+    if (this.reducedMotion) { this.gateLeft.rotation.y = Math.PI / 2; this.gateRight.rotation.y = -Math.PI / 2; onComplete(); return; }
+    this.gateAnim = { start: performance.now(), dur: 1400, done: onComplete };
+  }
+
+  cancelGuidance() {
+    this.guideGeneration++;
+    const gateDone=this.gateAnim?.done, cameraDone=this.cameraAnim?.done;
+    this.gateAnim=null;this.cameraAnim=null;this.guideMotion=null;
+    gateDone?.();cameraDone?.();
+  }
+  async guideToCourt() {
+    this.cancelGuidance();const generation=this.guideGeneration;
+    if (this.gardenActive) {
+      await new Promise<void>(resolve => this.openGate(resolve));
+      if(generation!==this.guideGeneration)return;
+      const guide = this.characters.get('virus');
+      if (guide) {
+        guide.setState('working');
+        this.guideMotion = { from: guide.group.position.clone(), to: new THREE.Vector3(-1.8, .04, -.9), start: performance.now(), duration: this.reducedMotion ? 1 : 1700 };
+      }
+      await new Promise<void>(resolve => this.enterCourt(resolve));
+      if(generation!==this.guideGeneration)return;
+    }
+    this.showGarden(false); this.moveVirusToCourt(); this.recenter();
+    this.characters.get('virus')?.setState('idle');
+    this.setCharacterVisible('virus', true);
+  }
+
+  enterCourt(onComplete: () => void) {
+    if (this.renderer.xr.isPresenting || this.reducedMotion) {
+      this.camera.position.set(0, 1.45, 2.1); this.camera.lookAt(0, 1.08, -1.65);
+      onComplete(); return;
+    }
+    const fromPos = this.camera.position.clone();
+    const fromLook = new THREE.Vector3(0, 1.3, 0);
+    const toPos = new THREE.Vector3(0, 1.45, 2.1);
+    const toLook = new THREE.Vector3(0, 1.08, -1.65);
+    this.cameraAnim = { fromPos, fromLook, toPos, toLook, start: performance.now(), dur: 1700, done: onComplete };
+  }
+
+  moveVirusToCourt() {
+    this.guideMotion = null;
+    const v = this.characters.get('virus'); if (!v) return;
+    v.group.position.set(-1.8, 0.04, -0.9);
+  }
+
+  setCharacterVisible(role: CourtRole, visible: boolean) {
+    const c = this.characters.get(role); if (!c) return;
+    c.group.visible = visible;
+    if (role === 'artiste' && this.miraPanel) {this.miraPanel.frame.visible=visible;this.miraPanel.panel.visible=visible;}
+  }
+
+  addGestureOrbs() {
+    const colors = [0x7ec8c0, 0xd4a0d0, 0xe8c87a];
+    for (let i = 0; i < 3; i++) {
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 10), new THREE.MeshStandardMaterial({ color: colors[i], emissive: colors[i], emissiveIntensity: 0.4, roughness: 0.25, metalness: 0.3 }));
+      orb.position.set((i - 1) * 0.6, 1.55, 3.4);
+      const target = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })) as Target;
+      target.position.copy(orb.position);
+      target.userData.action = 'orb-pinched';
+      this.scene.add(orb); this.scene.add(target);
+      this.gestureOrbs.push({ mesh: orb, target });
+      this.targets.push(target as Target);
+    }
+  }
+
+  clearGestureOrbs() {
+    for (const { mesh, target } of this.gestureOrbs) {
+      this.scene.remove(mesh); this.scene.remove(target);
+      this.targets = this.targets.filter(t => t !== target);
+      mesh.geometry.dispose(); (mesh.material as THREE.Material).dispose();
+      target.geometry.dispose(); (target.material as THREE.Material).dispose();
+    }
+    this.gestureOrbs = [];
+  }
+
+  setMiraCanvas(imageDataUrl: string) {
+    if (!this.miraPanel) return;
+    const img = new Image(); img.src = imageDataUrl;
+    img.onload = () => {
+      const { ctx, texture, panel } = this.miraPanel!;
+      ctx.clearRect(0, 0, 512, 512);
+      ctx.drawImage(img, 0, 0, 512, 512);
+      texture.needsUpdate = true;
+      panel.visible = true;
+    };
+  }
+
+  focusZone(zone: 'meetingRoom' | 'workspace' | 'wallOfFame') {
+    const target = this.zoneGroups[zone].position.clone(); target.y = 1.45; target.z -= 2;
+    if(this.renderer.xr.isPresenting){
+      const head=this.renderer.xr.getCamera();
+      const current=head.getWorldDirection(new THREE.Vector3());
+      const desired=target.sub(head.getWorldPosition(new THREE.Vector3())).normalize();
+      this.origin.rotation.y+=Math.atan2(current.x,-current.z)-Math.atan2(desired.x,-desired.z);
+    }else{this.camera.lookAt(target);this.view.yaw=this.camera.rotation.y;this.view.pitch=this.camera.rotation.x;}
+  }
+  private getHeadYaw(): number {
+    const head = this.renderer.xr.isPresenting ? this.renderer.xr.getCamera() : this.camera;
+    const dir = head.getWorldDirection(new THREE.Vector3());
+    return Math.atan2(dir.x, -dir.z);
   }
 
   private updateZones() {
@@ -553,6 +781,7 @@ export class CourtScene {
   get zone() { return this.activeZone; }
   selectCharacter(role: CourtRole) { this.characters.forEach((character, id) => character.setSelected(id === role)); }
   setCharacterState(role: CourtRole, state: CharacterState) { this.characters.get(role)?.setState(state); }
+  setAvailableBrains(providers: BrainProvider[]) { this.characters.forEach(character => character.setAvailableBrains(providers)); }
   setBrain(role: CourtRole, provider: BrainProvider) { this.characters.get(role)?.setBrain(provider); }
   openHead(role: CourtRole | null) { this.characters.forEach((character, id) => character.openHead(id === role)); }
   setSpeechAmplitude(role: CourtRole, amplitude: number) { this.characters.get(role)?.setAmplitude(amplitude); }
@@ -657,6 +886,33 @@ export class CourtScene {
       // Hand joints remain rendering-only; no duplicate gesture recognizer can fire twice.
       if (session) this.phase = time;
     }
+    if (this.guideMotion) {
+      const progress = Math.min(1, (time - this.guideMotion.start) / this.guideMotion.duration);
+      const guide = this.characters.get('virus');
+      guide?.group.position.lerpVectors(this.guideMotion.from, this.guideMotion.to, THREE.MathUtils.smoothstep(progress, 0, 1));
+      if (progress === 1) this.guideMotion = null;
+    }
+    // Gate open animation
+    if (this.gateAnim && this.gateLeft && this.gateRight) {
+      const gt = Math.min(1, (time - this.gateAnim.start) / this.gateAnim.dur);
+      const gEase = gt < 0.5 ? 2 * gt * gt : -1 + (4 - 2 * gt) * gt;
+      this.gateLeft.rotation.y = THREE.MathUtils.lerp(0, Math.PI / 2, gEase);
+      this.gateRight.rotation.y = THREE.MathUtils.lerp(0, -Math.PI / 2, gEase);
+      if (gt >= 1) { const done = this.gateAnim.done; this.gateAnim = null; done(); }
+    }
+    // Camera transition animation (garden → court, desktop only)
+    if (this.cameraAnim && !this.renderer.xr.isPresenting) {
+      const ct = Math.min(1, (time - this.cameraAnim.start) / this.cameraAnim.dur);
+      const cEase = ct < 0.5 ? 2 * ct * ct : -1 + (4 - 2 * ct) * ct;
+      this.camera.position.lerpVectors(this.cameraAnim.fromPos, this.cameraAnim.toPos, cEase);
+      const look = new THREE.Vector3().lerpVectors(this.cameraAnim.fromLook, this.cameraAnim.toLook, cEase);
+      this.camera.lookAt(look);
+      if (ct >= 1) { const done = this.cameraAnim.done; this.cameraAnim = null; done(); }
+    }
+    // Gesture orb pulse
+    for (const { mesh } of this.gestureOrbs) {
+      (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.35 + Math.sin(time / 1000 * 2.5) * 0.2;
+    }
     const material = this.surface.material as THREE.MeshBasicMaterial;
     const headPosition = this.renderer.xr.isPresenting ? this.renderer.xr.getCamera().getWorldPosition(new THREE.Vector3()) : this.camera.getWorldPosition(new THREE.Vector3());
     this.characters.forEach(character => character.animate(time / 1000, headPosition));
@@ -671,7 +927,7 @@ export class CourtScene {
 
   dispose() {
     this.disposed = true; this.renderer.setAnimationLoop(null); window.removeEventListener('resize', this.resize);
-    this.scene.traverse(object => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); const materials = Array.isArray(object.material) ? object.material : [object.material]; materials.forEach(material => { (material as THREE.MeshBasicMaterial).map?.dispose(); material.dispose(); }); } });
+    this.scene.traverse(object => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); const materials = Array.isArray(object.material) ? object.material : [object.material]; materials.forEach(material => { (material as THREE.MeshBasicMaterial).map?.dispose(); (material as THREE.MeshStandardMaterial).bumpMap?.dispose(); material.dispose(); }); } });
     this.frame?.close(); this.renderer.dispose();
   }
 }

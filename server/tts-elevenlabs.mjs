@@ -5,10 +5,11 @@ const SAMPLE_RATE = 24000;
 
 // British English voices — expire 2026-12-31, replace with cloned voices after competition
 const VOICES = {
-  steward:   { id: 'onwK4e9ZLuTAKqWW03F9', stability: 0.75, similarity: 0.85, style: 0.30 }, // Daniel  — deep, authoritative
+  virus:     { id: 'onwK4e9ZLuTAKqWW03F9', stability: 0.85, similarity: 0.90, style: 0.10 }, // George  — whispery, restrained advisor
   architect: { id: 'pFZP5JQG7iQjIQuC4Bku', stability: 0.65, similarity: 0.80, style: 0.40 }, // Lily    — warm, thoughtful
   builder:   { id: 'JBFqnCBsd6RMkjVDRZzb', stability: 0.70, similarity: 0.85, style: 0.20 }, // George  — resonant, confident
   inspector: { id: 'Xb7hH8MSUJpSbSDYk0k2', stability: 0.80, similarity: 0.90, style: 0.20 }, // Alice   — clear, precise
+  artiste:   { id: 'ThT5KcBeYPX3keUQqHPh', stability: 0.72, similarity: 0.85, style: 0.25 }, // Dorothy — pleasant, young British
 };
 
 function pcmToWav(pcm) {
@@ -24,15 +25,13 @@ function pcmToWav(pcm) {
   return buf;
 }
 
-export async function elevenLabsSynthesize(text, role) {
-  const key = process.env.ELEVENLABS_API_KEY;
+export async function elevenLabsSynthesize(text, role, { transport = request, key = process.env.ELEVENLABS_API_KEY } = {}) {
   if (!key) throw Object.assign(new Error('ELEVENLABS_API_KEY not set.'), { status: 503 });
 
   const voice = VOICES[role] ?? VOICES.architect;
   const body = JSON.stringify({
     text,
     model_id: MODEL,
-    output_format: 'pcm_24000',
     voice_settings: {
       stability: voice.stability,
       similarity_boost: voice.similarity,
@@ -42,9 +41,9 @@ export async function elevenLabsSynthesize(text, role) {
   });
 
   return new Promise((resolve, reject) => {
-    const req = request({
+    const req = transport({
       hostname: 'api.elevenlabs.io',
-      path: `/v1/text-to-speech/${voice.id}`,
+      path: `/v1/text-to-speech/${voice.id}?output_format=pcm_24000`,
       method: 'POST',
       headers: {
         'xi-api-key': key,
@@ -61,9 +60,10 @@ export async function elevenLabsSynthesize(text, role) {
         )));
         return;
       }
+      if ((res.headers['content-type'] || '').includes('mpeg')) { res.resume(); reject(Object.assign(new Error('ElevenLabs returned compressed audio instead of PCM.'), {status:502})); return; }
       const chunks = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve(pcmToWav(Buffer.concat(chunks))));
+      res.on('end', () => { const pcm=Buffer.concat(chunks); if(!pcm.length||pcm.length%2){reject(Object.assign(new Error('ElevenLabs returned incomplete PCM audio.'),{status:502}));return;} resolve(pcmToWav(pcm)); });
     });
     req.on('error', () => reject(Object.assign(new Error('ElevenLabs connection failed.'), { status: 502 })));
     req.setTimeout(15_000, () => {

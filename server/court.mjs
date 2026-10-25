@@ -6,10 +6,15 @@ import { synthesize, localSpeechAvailable } from './speech.mjs';
 import { sourceArchive } from './source-archive.mjs';
 import { createProviderBridge, PROVIDERS } from './providers.mjs';
 import { transcribe } from './speech.mjs';
+import { generateImage } from './cloud-providers.mjs';
 
-const roles = ['architect', 'builder', 'inspector'];
-const names = { architect: 'Elara', builder: 'Bram', inspector: 'Iris' };
+const roles = ['architect', 'builder', 'inspector', 'virus', 'artiste'];
+const workRoles = ['architect', 'builder', 'inspector'];
+const names = { architect: 'Elara', builder: 'Bram', inspector: 'Iris', virus: 'Virus', artiste: 'Mira' };
 const SYSTEM = `You are one member of Game of Codes, a seated fantasy court where a human directs a team to create real small web applications. Elara is the architect and coordinator: clarify intent and propose a short plan. Bram is the practical builder: explain implementation and what is actually available. Iris is the inspector: report recorded checks and limitations. Be warm, concise, natural, and useful. Speak directly to the human, in the selected role. No theatrical monologues. Answer questions freely. Ask only necessary clarifying questions. For a concrete request to build or revise an application, return a proposal with at most three requirements; never say anything has been built unless authoritative project state proves it. Model agreement is not a test. Return JSON only with keys speech (plain text, <= 650 chars), proposal (null or {title:string, requirements:string[1..3]}). Do not invent executed tools, prices, progress, tests, or access to files. The supported build engine writes self-contained HTML, CSS, and browser JavaScript in an isolated browser context with no network access. Authentication, payments, databases, and deployment are outside this local build's scope.`;
+const VIRUS_SYSTEM = `You are Virus, the practical court advisor of Game of Codes. Help the user turn ideas into actionable milestones. Use clear, concise, direct language, no poetry or riddles. Never claim work has been executed. Never write code. Return JSON only with key speech (string).`;
+const ideaSchema = { type: 'object', properties: { speech: { type: 'string', minLength: 1, maxLength: 900 }, title: { type: 'string', minLength: 1, maxLength: 120 }, milestones: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', minLength: 1, maxLength: 120 } }, requirements: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', minLength: 1, maxLength: 220 } } }, required: ['speech', 'title', 'milestones', 'requirements'], additionalProperties: false };
+const ARTISTE_SYSTEM = `You are Mira, the court artiste of Game of Codes. You create logos, icons, and illustrations — you do not write code. When given a request, confirm what you will create with warmth. Under 250 chars. Return JSON with speech (string) and prompt (string — a detailed DALL-E/Gemini image prompt, include style: flat design, clean, professional illustration).`;
 
 const dialogueSchema = { type: 'object', properties: { speech: { type: 'string' }, proposal: { anyOf: [{ type: 'null' }, { type: 'object', properties: { title: { type: 'string' }, requirements: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 3 } }, required: ['title', 'requirements'], additionalProperties: false }] } }, required: ['speech', 'proposal'], additionalProperties: false };
 const buildSchema = { type: 'object', properties: { html: { type: 'string' }, css: { type: 'string' }, js: { type: 'string' }, summary: { type: 'string' } }, required: ['html', 'css', 'js', 'summary'], additionalProperties: false };
@@ -18,7 +23,7 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
   const store = path.join(root, '.sovereign', 'court');
   const projects = new Map(); const locks = new Map(); const requests = new Map();
   let sessionCalls = 0;
-  const configuration = async () => ({ ...await bridge.status(), localSpeechAvailable, callsUsed: sessionCalls, callLimit: 30 });
+  const configuration = async (id) => ({ ...await bridge.status(), mode: process.env.SOVEREIGN_MODE === 'cloud' ? 'cloud' : 'local', localSpeechAvailable, callsUsed: sessionCalls, callLimit: process.env.SOVEREIGN_MODE === 'cloud' ? 300 : 30, ...(id ? { charter: (await state(id)).charter, onboarded: (await state(id)).onboarded } : {}) });
   const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
   async function state(id) {
     if (!isProjectId(id)) fail('Invalid project.');
@@ -26,6 +31,8 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
     let data;
     try { data = JSON.parse(await readFile(path.join(store, `${id}.json`), 'utf8')); } catch { data = { history: [], proposal: null, artifact: null, checks: [], version: 0 }; }
     data.brains ||= {};
+    data.charter ||= null;
+    data.onboarded = data.onboarded === true;
     projects.set(id, data); return data;
   }
   async function persist(id, data) {
@@ -68,13 +75,14 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
       try {
         if (url.pathname === '/api/court/status' && req.method === 'GET') {
           const id = url.searchParams.get('project');
-          json(res, 200, { ...await configuration(), ...(id ? await state(id) : {}) }); return true;
+          json(res, 200, { ...await configuration(id), ...(id ? await state(id) : {}) }); return true;
         }
-        if (url.pathname === '/api/court/source' && req.method === 'GET') {
+        if (['/api/court/source', '/api/court/files'].includes(url.pathname) && req.method === 'GET') {
           const id = url.searchParams.get('project'), data = await state(id);
           if (!data.artifact || !isProjectId(data.artifact.version)) fail('Build an application before exporting its source.', 404);
           const folder = path.join(root, '.sovereign', 'builds', id, data.artifact.version);
           const files = Object.fromEntries(await Promise.all(['index.html', 'app.css', 'app.js'].map(async name => [name, await readFile(path.join(folder, name), 'utf8')])));
+          if (url.pathname === '/api/court/files') { json(res, 200, { files }); return true; }
           files['README.txt'] = `${data.artifact.title}\nGame of Codes application version ${data.artifact.number}\n\nOpen index.html in a browser. No package install is required. The application uses browser localStorage.\n\nRecorded startup checks:\n${data.checks.map(check => `${check.name}: ${check.passed === null ? 'needs review' : check.passed ? 'passed' : 'failed'}${check.detail ? ` — ${check.detail}` : ''}`).join('\n')}\n`;
           const archive = sourceArchive(files);
           res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Length': archive.length, 'Content-Disposition': `attachment; filename="sovereign-source-${data.artifact.number}.zip"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }).end(archive); return true;
@@ -86,6 +94,8 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
           if (!isProjectId(input.project) || !roles.includes(input.role) || !PROVIDERS.some(provider => provider.id === input.provider)) fail('Choose a court member and a supported brain.');
           if (locks.has(input.project)) fail('Wait for the current instruction to finish before changing a brain.', 409);
           const data = await exclusive(input.project, randomUUID(), async () => {
+            const provider = (await bridge.status()).providers.find(item => item.id === input.provider);
+            if (!provider?.installed || ['disabled', 'error', 'not-installed'].includes(provider.state)) fail('That brain is unavailable. Choose an installed, available provider.', 503);
             const project = await state(input.project); project.brains[input.role] = input.provider; await persist(input.project, project); return project;
           });
           json(res, 200, { ...await configuration(), brains: data.brains }); return true;
@@ -98,7 +108,9 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
           json(res, 200, { transcript }); return true;
         }
         if (url.pathname === '/api/court/voice') {
-          const input = await body(req); if (!roles.includes(input.role) || typeof input.text !== 'string' || input.text.length > 900) fail('Invalid spoken reply.');
+          const input = await body(req);
+          const allVoiceRoles = ['architect', 'builder', 'inspector', 'virus', 'artiste'];
+          if (!allVoiceRoles.includes(input.role) || typeof input.text !== 'string' || input.text.length > 900) fail('Invalid spoken reply.');
           const audio = await synthesize(input.text, input.role);
           res.writeHead(200, { 'Content-Type': 'audio/wav', 'Content-Length': audio.length, 'Cache-Control': 'no-store' }).end(audio); return true;
         }
@@ -114,6 +126,13 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
           const input = await body(req); if (!isProjectId(input.project) || !roles.includes(input.role) || typeof input.message !== 'string' || !input.message.trim() || input.message.length > 2000 || !isProjectId(input.requestId)) fail('Invalid instruction.');
           const result = await exclusive(input.project, input.requestId, async () => {
             const data = await state(input.project);
+            // Virus: advisor role — no proposal capability
+            if (input.role === 'virus') {
+              const virusReply = await assistant([{ role: 'system', content: VIRUS_SYSTEM }, { role: 'user', content: JSON.stringify({ instruction: input.message, charter: data.charter }) }], { type: 'object', properties: { speech: { type: 'string' } }, required: ['speech'], additionalProperties: false }, data.brains.virus);
+              const msg = { role: 'virus', speech: (virusReply.speech || '').slice(0, 900), proposal: null };
+              data.history.push({ speaker: 'user', text: input.message }, { speaker: 'virus', text: msg.speech }); data.history = data.history.slice(-60); await persist(input.project, data);
+              return msg;
+            }
             const reply = await assistant([{ role: 'system', content: SYSTEM }, { role: 'user', content: JSON.stringify({ selectedRole: input.role, selectedName: names[input.role], authoritativeState: { artifact: data.artifact, checks: data.checks, proposal: data.proposal }, conversation: data.history.slice(-16), instruction: input.message }) }], dialogueSchema, data.brains[input.role]);
             if (typeof reply.speech !== 'string' || !reply.speech.trim()) fail('The local assistant returned an empty reply. Please try again.', 502);
             let proposal = null;
@@ -162,6 +181,48 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
             } catch (error) { data.proposal.status = 'awaiting-approval'; await persist(input.project, data); throw error; }
           });
           json(res, 200, result); return true;
+        }
+        if (url.pathname === '/api/court/plan-idea') {
+          const input = await body(req);
+          if (!isProjectId(input.project) || !isProjectId(input.requestId) || typeof input.idea !== 'string' || !input.idea.trim() || input.idea.length > 2000) fail('Invalid idea.');
+          const result = await exclusive(input.project, input.requestId, async () => {
+            const data = await state(input.project);
+            const reply = await assistant([{ role: 'system', content: 'You are Virus, a practical application planning advisor. Turn the idea into a concrete title, actionable milestones and build requirements for a small browser application. Speak plainly, no poetry or riddles. Do not claim anything is built. Return JSON matching the supplied schema.' }, { role: 'user', content: JSON.stringify({ idea: input.idea, charter: data.charter }) }], ideaSchema, data.brains.virus);
+            const validText = (value, max) => typeof value === 'string' && !!value.trim() && value.length <= max;
+            const validList = (value, max) => Array.isArray(value) && value.length >= 1 && value.length <= 3 && value.every(item => validText(item, max));
+            if (!reply || typeof reply !== 'object' || Object.keys(reply).some(key => !ideaSchema.required.includes(key)) || !validText(reply.speech, 900) || !validText(reply.title, 120) || !validList(reply.milestones, 120) || !validList(reply.requirements, 220)) fail('The assistant returned an invalid plan. Please try again.', 502);
+            const charter = { idea: input.idea.trim(), milestones: reply.milestones.map((title, i) => ({ id: `m${i + 1}`, title: title.trim(), created: new Date().toISOString(), achieved: null })) };
+            const proposal = { id: randomUUID(), title: reply.title.trim(), requirements: reply.requirements.map(item => item.trim()), status: 'awaiting-approval' };
+            const next = { ...data, charter, proposal, history: [...data.history, { speaker: 'user', text: input.idea }, { speaker: 'virus', text: reply.speech.trim() }].slice(-60) };
+            await persist(input.project, next); projects.set(input.project, next);
+            return { role: 'virus', speech: reply.speech.trim(), charter, proposal };
+          });
+          json(res, 200, result); return true;
+        }
+        if (url.pathname === '/api/court/charter') {
+          const input = await body(req);
+          if (!isProjectId(input.project) || typeof input.idea !== 'string' || !Array.isArray(input.milestones)) fail('Invalid charter.');
+          const data = await state(input.project);
+          data.charter = { idea: input.idea.slice(0, 300), milestones: input.milestones.filter(m => typeof m === 'string').slice(0, 3).map((m, i) => ({ id: `m${i + 1}`, title: m.slice(0, 120), created: new Date().toISOString(), achieved: null })) };
+          await persist(input.project, data);
+          json(res, 200, { charter: data.charter }); return true;
+        }
+        if (url.pathname === '/api/court/generate-asset') {
+          const input = await body(req);
+          if (!isProjectId(input.project) || typeof input.prompt !== 'string' || !input.prompt.trim()) fail('Invalid asset request.');
+          const artiste = await assistant([{ role: 'system', content: ARTISTE_SYSTEM }, { role: 'user', content: input.prompt }], { type: 'object', properties: { speech: { type: 'string' }, prompt: { type: 'string' } }, required: ['speech', 'prompt'], additionalProperties: false });
+          const imageDataUrl = await generateImage(artiste.prompt || input.prompt);
+          json(res, 200, { speech: (artiste.speech || 'Here is your creation.').slice(0, 400), imageDataUrl }); return true;
+        }
+        if (url.pathname === '/api/court/complete-onboarding') {
+          const input = await body(req);
+          if (!isProjectId(input.project)) fail('Invalid project.');
+          await exclusive(input.project, randomUUID(), async () => {
+            const data = await state(input.project);
+            const next = { ...data, onboarded: true };
+            await persist(input.project, next); projects.set(input.project, next);
+          });
+          json(res, 200, { onboarded: true }); return true;
         }
         fail('Unknown court action.', 404);
       } catch (error) { json(res, error.status || 500, { error: error.status ? error.message : 'The court could not finish that action. Your project is preserved.' }); }
