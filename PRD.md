@@ -480,3 +480,12 @@ Workspace            (table + screen)
 Cloud builds run as background jobs. The browser polls progress through short requests, so a long model response does not exceed the public proxy request window. Reloading reconnects to a project's active build request. Failed jobs retain the previous application and show a retryable error.
 
 When Gemini is assigned to Bram, code generation uses `gemini-3.8-flash` (overridable with `GEMINI_BUILD_MODEL`), low thinking, and an explicit output schema; conversational planning still uses Flash Lite. This is internal Gemini routing and does not override another provider assigned to Bram. Truncated model output is rejected instead of being reported as a completed app.
+
+### Arrival, conversation and waiting experience (October 25 revision)
+
+- Paint a lightweight loading screen before the 3D bundle executes. Rotate original coding-court sayings every four seconds; show retry when loading fails or takes unusually long.
+- On a fresh desktop visit, descend from a wide castle aerial view to the garden gate in a skippable 6.5-second shot. Reduced-motion users and immersive VR enter without camera travel.
+- Keep one compact caption and instruction bar. Hide duplicate character nameplates on desktop; show only introduced characters. Brain settings and conversation history remain available in Settings. Show the tutorial’s Continue action only when needed.
+- Selecting the microphone enables hands-free conversation for the current page session. Listen again after each reply; pause capture during speech generation/playback, build work, noninteractive tour stages, hidden pages and settings dialogs. Selecting the microphone again or saying “stop listening” disables it. Browser permission is required once; recognition errors stop automatic retries. Speech input accepts the user's own accent.
+- Approving a plan immediately collapses its details and shows elapsed time with actual server stages: queued, generating files, saving files, and browser checks. Decorative quotes do not represent percentage completion. Open the application as soon as checks finish, without waiting for narration.
+- Preview WebSockets validate the public forwarded hostname behind the deployment proxy. Disconnection and missing frames must show a recovery state rather than an endless opening message.

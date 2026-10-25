@@ -38,8 +38,11 @@ for (const failure of [false, true]) test(`async build ${failure ? 'reports fail
   const input = { project, proposalId, requestId, async: true };
   try {
     assert.deepEqual(await post(input), { status: 202, data: { pending: true, requestId } });
-    assert.deepEqual(await poll(), { status: 200, data: { status: 'pending' } });
+    const initial = await poll();
+    assert.equal(initial.status, 200);assert.equal(initial.data.status, 'pending');
+    assert.ok(['queued','generating'].includes(initial.data.stage));assert.ok(initial.data.startedAt > 0);
     await generating;
+    assert.equal((await poll()).data.stage, 'generating');
     const pending = JSON.parse(await readFile(path.join(folder, `${project}.json`), 'utf8'));
     assert.equal(pending.activeBuildRequestId, requestId);
     const activeStatus = await fetch(`${address}/api/court/status?project=${project}`).then(response => response.json());

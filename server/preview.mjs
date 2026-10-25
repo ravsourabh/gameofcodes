@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { networkInterfaces } from 'node:os';
 import { WebSocketServer, WebSocket } from 'ws';
 import { chromium } from '@playwright/test';
-import { WIDTH, HEIGHT, isProjectId, parseInput } from './protocol.mjs';
+import { WIDTH, HEIGHT, isProjectId, parseInput, validPreviewOrigin } from './protocol.mjs';
 import { createCourtService } from './court.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -132,9 +132,7 @@ export async function startPreviewServer() {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 8192 });
   server.on('upgrade', (req, socket, head) => {
     const url = new URL(req.url, 'http://localhost');
-    const origin = req.headers.origin;
-    let validOrigin = false;
-    try { validOrigin = new URL(origin).host === req.headers.host; } catch { /* Browser origins are required. */ }
+    const validOrigin = validPreviewOrigin(req.headers);
     if (url.pathname !== '/preview' || !validOrigin || !isProjectId(url.searchParams.get('project'))) {
       socket.end('HTTP/1.1 403 Forbidden\r\n\r\n'); return;
     }

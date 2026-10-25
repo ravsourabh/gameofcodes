@@ -71,6 +71,7 @@ export class CourtScene {
   private gestureOrbs: { mesh: THREE.Mesh; target: THREE.Mesh }[] = [];
   private miraPanel: { frame: THREE.Mesh; panel: THREE.Mesh; ctx: CanvasRenderingContext2D; texture: THREE.CanvasTexture } | null = null;
   private cameraAnim: { fromPos: THREE.Vector3; fromLook: THREE.Vector3; toPos: THREE.Vector3; toLook: THREE.Vector3; start: number; dur: number; done: () => void } | null = null;
+  private arrival: { path: THREE.CatmullRomCurve3; start: number; done: () => void } | null = null;
   private gateAnim: { start: number; dur: number; done: () => void } | null = null;
   private frames = 0;
   private fpsTime = performance.now();
@@ -192,6 +193,7 @@ export class CourtScene {
     this.board.visible = false;
     this.configureInput();
     this.renderer.xr.addEventListener('sessionstart', () => {
+      this.finishArrival();
       this.origin.position.set(0, 0, this.gardenActive ? 5.5 : 1.9); this.origin.rotation.set(0, 0, 0);
       this.vrControls.forEach(mesh => { mesh.visible = this.previewVisible; });
       this.dialogue.mesh.visible = !this.previewVisible;
@@ -458,6 +460,17 @@ export class CourtScene {
       color.setHex([0xc9abcf, 0xe6d2a5, 0x9c8cc4][i % 3]); flowers.setColorAt(i, color);
     }
     flowers.computeBoundingSphere(); g.add(flowers);
+    // Exterior silhouette reads as a castle during the aerial arrival.
+    for (const side of [-1, 1]) {
+      add(new THREE.CylinderGeometry(1.15, 1.35, 6.4, 12), assets.stone, side * 5.5, 3.15, -2.8);
+      add(new THREE.CylinderGeometry(1.36, 1.17, .4, 12), assets.stone, side * 5.5, 6.5, -2.8);
+      for (let i = 0; i < 10; i++) {
+        const angle = i / 10 * Math.PI * 2;
+        add(new THREE.BoxGeometry(.4, .55, .4), assets.stone, side * 5.5 + Math.cos(angle) * 1.15, 6.9, -2.8 + Math.sin(angle) * 1.15);
+      }
+      add(new THREE.BoxGeometry(2.8, 3.6, .7), assets.stone, side * 3.65, 1.75, -1.4);
+      for (let i = 0; i < 6; i++) add(new THREE.BoxGeometry(.3, .45, .8), assets.stone, side * (2.4 + i * .5), 3.72, -1.4);
+    }
     // Gate panels close across the opening and swing on correctly placed hinges.
     const hinge = (side: number) => {
       const pivot = new THREE.Group(); pivot.position.set(side * 1.64, 0, -.2); g.add(pivot);
@@ -503,6 +516,24 @@ export class CourtScene {
     }
   }
 
+  playArrival(): Promise<void> {
+    this.finishArrival();
+    if (this.reducedMotion || this.renderer.xr.isPresenting) return Promise.resolve();
+    this.showGarden(true);
+    const path = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(10, 10, 20), new THREE.Vector3(5, 7, 15),
+      new THREE.Vector3(0, 4.2, 11), new THREE.Vector3(0, 1.45, 5.5)
+    ]);
+    this.camera.position.copy(path.getPoint(0)); this.camera.lookAt(0, 2.6, -1);
+    return new Promise(resolve => { this.arrival = { path, start: performance.now(), done: resolve }; });
+  }
+  finishArrival() {
+    if (!this.arrival) return;
+    const done = this.arrival.done; this.arrival = null;
+    this.camera.position.set(0, 1.45, 5.5); this.camera.lookAt(0, 1.3, 0);
+    this.view = { yaw: this.camera.rotation.y, pitch: this.camera.rotation.x }; done();
+  }
+
   openGate(onComplete: () => void) {
     if (!this.gateLeft || !this.gateRight) { onComplete(); return; }
     if (this.reducedMotion) { this.gateLeft.rotation.y = Math.PI / 2; this.gateRight.rotation.y = -Math.PI / 2; onComplete(); return; }
@@ -510,6 +541,7 @@ export class CourtScene {
   }
 
   cancelGuidance() {
+    this.finishArrival();
     this.guideGeneration++;
     const gateDone=this.gateAnim?.done, cameraDone=this.cameraAnim?.done;
     this.gateAnim=null;this.cameraAnim=null;this.guideMotion=null;
@@ -711,11 +743,13 @@ export class CourtScene {
     }
     let startX = 0, startY = 0, dragging = false, moved = false;
     this.canvas.addEventListener('pointerdown', event => {
+      if (this.arrival) return;
       startX = event.clientX; startY = event.clientY; moved = false;
       dragging = event.button === 2 || event.altKey;
       if (dragging) this.canvas.setPointerCapture(event.pointerId);
     });
     this.canvas.addEventListener('pointermove', event => {
+      if (this.arrival) return;
       if (dragging) {
         this.view.yaw -= event.movementX * 0.002; this.view.pitch = THREE.MathUtils.clamp(this.view.pitch - event.movementY * 0.002, -0.25, 0.25);
         this.camera.rotation.set(this.view.pitch, this.view.yaw, 0, 'YXZ');
@@ -786,6 +820,8 @@ export class CourtScene {
   openHead(role: CourtRole | null) { this.characters.forEach((character, id) => character.openHead(id === role)); }
   setSpeechAmplitude(role: CourtRole, amplitude: number) { this.characters.get(role)?.setAmplitude(amplitude); }
   showPreview(visible: boolean) {
+    this.cancelGuidance();
+    this.view = { yaw: 0, pitch: 0 };
     this.previewVisible = visible; this.board.visible = visible;
     this.characters.forEach(character => { character.group.visible = !visible; });
     this.dialogue.mesh.visible = !visible && this.renderer.xr.isPresenting;
@@ -804,6 +840,15 @@ export class CourtScene {
   setStatus(status: ConnectionState, stale = false) {
     this.status = status;
     this.stale = stale;
+    if (!this.frame && this.texture.image instanceof HTMLCanvasElement) {
+      const canvas = this.texture.image, ctx = canvas.getContext('2d')!;
+      ctx.fillStyle='#151e22';ctx.fillRect(0,0,WIDTH,HEIGHT);ctx.textAlign='center';
+      ctx.fillStyle='#d9bd8a';ctx.font='34px Georgia';
+      ctx.fillText(status==='error'||status==='offline'?'Preview disconnected':'Opening your application',WIDTH/2,HEIGHT/2-15);
+      ctx.fillStyle='#a4b2aa';ctx.font='18px Arial';
+      ctx.fillText(status==='error'||status==='offline'?'Reconnecting — your project is saved.':'Waiting for the first browser frame…',WIDTH/2,HEIGHT/2+34);
+      this.texture.needsUpdate=true;
+    }
     const { ctx, texture } = this.statusPanel;
     ctx.fillStyle = '#102125'; ctx.fillRect(0, 0, 1280, 110);
     ctx.beginPath(); ctx.arc(33, 39, 5, 0, Math.PI * 2); ctx.fillStyle = status === 'ready' && !stale ? '#9cb38b' : '#d0aa6b'; ctx.fill();
@@ -892,6 +937,13 @@ export class CourtScene {
       guide?.group.position.lerpVectors(this.guideMotion.from, this.guideMotion.to, THREE.MathUtils.smoothstep(progress, 0, 1));
       if (progress === 1) this.guideMotion = null;
     }
+    if (this.arrival) {
+      const t = Math.min(1, (time - this.arrival.start) / 6500);
+      const eased = t * t * (3 - 2 * t);
+      this.camera.position.copy(this.arrival.path.getPoint(eased));
+      this.camera.lookAt(0, THREE.MathUtils.lerp(2.6, 1.3, eased), THREE.MathUtils.lerp(-1, 0, eased));
+      if (t === 1) this.finishArrival();
+    }
     // Gate open animation
     if (this.gateAnim && this.gateLeft && this.gateRight) {
       const gt = Math.min(1, (time - this.gateAnim.start) / this.gateAnim.dur);
@@ -915,7 +967,7 @@ export class CourtScene {
     }
     const material = this.surface.material as THREE.MeshBasicMaterial;
     const headPosition = this.renderer.xr.isPresenting ? this.renderer.xr.getCamera().getWorldPosition(new THREE.Vector3()) : this.camera.getWorldPosition(new THREE.Vector3());
-    this.characters.forEach(character => character.animate(time / 1000, headPosition));
+    this.characters.forEach(character => character.animate(time / 1000, headPosition, this.renderer.xr.isPresenting));
     this.updateZones();
     if (this.status === 'ready') {
       const stale = !!this.lastFrame && performance.now() - this.lastFrame > 10_000;
@@ -926,6 +978,7 @@ export class CourtScene {
   };
 
   dispose() {
+    this.finishArrival();
     this.disposed = true; this.renderer.setAnimationLoop(null); window.removeEventListener('resize', this.resize);
     this.scene.traverse(object => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); const materials = Array.isArray(object.material) ? object.material : [object.material]; materials.forEach(material => { (material as THREE.MeshBasicMaterial).map?.dispose(); (material as THREE.MeshStandardMaterial).bumpMap?.dispose(); material.dispose(); }); } });
     this.frame?.close(); this.renderer.dispose();

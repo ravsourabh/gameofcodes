@@ -24,21 +24,21 @@ const roles: CourtRole[] = ['builder','architect','inspector','virus','artiste']
 document.querySelector('#app')!.innerHTML = `
 <main class="court" aria-label="Game of Codes royal court">
  <canvas id="world" tabindex="0" aria-label="Your court and guide"></canvas><div class="vignette"></div>
- <header class="court-header"><a class="brand" href="/"><img src="/logo.png" alt="Game of Codes" class="brand-logo"></a><div class="header-actions"><button id="quiet" class="icon-button" aria-label="Mute character voices">${icon('sound')}</button><button id="settings" class="icon-button" aria-label="Court settings">${icon('settings')}</button></div></header>
- <div class="court-intro"><span class="eyebrow">THE SEAT IS YOURS</span><h1>A court at your command.</h1><p>Speak your idea. Let your team bring it to life.</p></div>
+ <header class="court-header"><a class="brand" href="/"><img src="/logo.png" alt="Game of Codes" class="brand-logo"></a><div class="header-actions"><button id="quiet" class="icon-button" aria-label="Mute character voices">${icon('sound')}</button><button id="hands-free" class="icon-button" aria-label="Enable hands-free conversation" aria-pressed="false" title="Hands-free conversation">${icon('mic')}</button><button id="settings" class="icon-button" aria-label="Court settings">${icon('settings')}</button></div></header>
+ <button id="skip-arrival" class="secondary-button" hidden>Skip arrival</button><div class="court-intro"><span class="eyebrow">THE SEAT IS YOURS</span><h1>A court at your command.</h1><p>Speak your idea. Let your team bring it to life.</p></div>
  <button id="review-work" class="review-button" hidden>Review starter ${icon('arrow',16)}</button><button id="return-court" class="back-button" hidden>← Return to your court</button>
  <div class="preview-tools" hidden><button id="reload" class="icon-button" aria-label="Reload application">${icon('reload')}</button><button id="resize-board" class="icon-button" aria-label="Resize review surface">↔</button><button id="recenter" class="icon-button" aria-label="Recenter view">⊙</button></div>
  <section class="conversation" aria-label="Talk to your court"><div class="role-picker" aria-label="Choose whom to address">${roles.map(role=>`<button ${role==='virus'?'':'hidden'} data-role="${role}" aria-pressed="${role==='virus'}" class="role-button ${role==='virus'?'selected':''}" style="--role:${COURT[role].color}"><i></i><span class="role-name">${COURT[role].name}</span><span class="role-title">${COURT[role].title.replace('Your ','')}</span></button>`).join('')}</div>
  <div class="dialogue-card" role="status" aria-live="polite"><div class="dialogue-meta"><span id="speaker-name">VIRUS · YOUR GUIDE</span><span id="speech-state">Ready when you are</span></div><p id="caption">Welcome to Game of Codes. Start with Virus, your guide.</p><button id="begin-conversation" class="begin-button">Meet your court ${icon('sound',16)}</button><button id="repeat" class="repeat-button" aria-label="Hear the character again" hidden>${icon('sound',16)}</button></div>
  <div id="proposal-card" class="proposal-card" hidden><div class="eyebrow">A PLAN FOR YOUR APPROVAL</div><h2 id="proposal-title"></h2><ul id="proposal-requirements"></ul><div id="plan-milestones"></div><div class="proposal-actions"><button id="review-milestones" class="secondary-button" type="button">Review milestones</button><button id="approve-plan" class="gold-button">Approve this plan ${icon('arrow',16)}</button><button id="change-plan" class="secondary-button">Request a change</button></div></div>
  <form id="instruction-form" class="instruction-form"><button id="microphone" type="button" aria-label="Speak to the selected character">${icon('mic',21)}</button><input id="instruction" maxlength="2000" autocomplete="off" aria-label="Your instruction" placeholder="Tell Elara what you would like to create…"><button id="send-instruction" aria-label="Send instruction" type="submit">${icon('arrow',21)}</button></form>
- <div id="tour-controls" class="tour-controls" hidden><span id="tour-hint"></span><button id="tour-continue" type="button" class="secondary-button" hidden>Continue</button></div>
+ <div id="work-status" role="status" hidden><span id="work-stage">Preparing</span><span id="work-elapsed"></span><div class="work-track" aria-hidden="true"><i></i></div><p id="waiting-quote">A crown is earned. A build must pass.</p></div><div id="tour-controls" class="tour-controls" hidden><span id="tour-hint"></span><button id="tour-continue" type="button" class="secondary-button" hidden>Continue</button></div>
  <div class="conversation-footnote"><span id="input-hint">Select a character · Speak or write an instruction</span><button id="history-button">Conversation history</button></div></section>
  <div class="preview-connection" hidden><i id="connection-dot"></i><span id="connection-status">Preview is available on request</span><button id="reconnect" hidden>Reconnect</button></div>
  <button id="enter-vr" class="enter-vr">${icon('headset',21)} Enter VR <span>↗</span></button><span id="device-note" class="device-note">A seated experience · Hands welcome</span>
  <div id="garden-overlay" class="garden-overlay" hidden><p class="garden-eyebrow">YOUR COURT AWAITS</p><button id="begin-reign" class="gold-button">Enter the Game of Codes ${icon('arrow',18)}</button></div>
 </main><div id="toast" role="status"></div>
-<dialog id="settings-dialog" aria-labelledby="settings-title"><button class="dialog-close icon-button" data-close="settings-dialog" aria-label="Close settings">${icon('close')}</button><span class="eyebrow">YOUR COURT</span><h2 id="settings-title">Make yourself at home.</h2><label class="setting-row"><span>Character voices</span><input id="sound-toggle" type="checkbox" checked aria-label="Enable character voices"></label><button id="connect-provider" class="setting-action">Connect assistant ${icon('arrow',16)}</button><p id="provider-description">Choose Muse Code, ChatGPT through Codex, or Claude Code on this computer. Sign in with the official CLI.</p><button id="copy-link" class="setting-action">Copy Quest project link ${icon('arrow',16)}</button><button id="export-data" class="setting-action">Export starter task data ${icon('arrow',16)}</button><button id="help" class="setting-action">How to direct your court ${icon('arrow',16)}</button><div class="diagnostics"><span>WORKSPACE</span><dl><div><dt>Render rate</dt><dd id="fps">Measuring…</dd></div><div><dt>Preview input round trip</dt><dd id="latency">—</dd></div><div><dt>Project</dt><dd id="project-id"></dd></div></dl></div></dialog>
+<dialog id="settings-dialog" aria-labelledby="settings-title"><button class="dialog-close icon-button" data-close="settings-dialog" aria-label="Close settings">${icon('close')}</button><span class="eyebrow">YOUR COURT</span><h2 id="settings-title">Make yourself at home.</h2><label class="setting-row"><span>Character voices</span><input id="sound-toggle" type="checkbox" checked aria-label="Enable character voices"></label><button id="settings-brain" class="setting-action">Change selected character’s brain</button><button id="settings-history" class="setting-action">Conversation history</button><button id="connect-provider" class="setting-action">Connect assistant ${icon('arrow',16)}</button><p id="provider-description">Choose Muse Code, ChatGPT through Codex, or Claude Code on this computer. Sign in with the official CLI.</p><button id="copy-link" class="setting-action">Copy Quest project link ${icon('arrow',16)}</button><button id="export-data" class="setting-action">Export starter task data ${icon('arrow',16)}</button><button id="help" class="setting-action">How to direct your court ${icon('arrow',16)}</button><div class="diagnostics"><span>WORKSPACE</span><dl><div><dt>Render rate</dt><dd id="fps">Measuring…</dd></div><div><dt>Preview input round trip</dt><dd id="latency">—</dd></div><div><dt>Project</dt><dd id="project-id"></dd></div></dl></div></dialog>
 <dialog id="provider-dialog" aria-labelledby="provider-title"><button class="dialog-close icon-button" data-close="provider-dialog" aria-label="Close provider setup">${icon('close')}</button><span class="eyebrow">YOUR ACCOUNT. YOUR COURT.</span><h2 id="provider-title">Choose your assistant.</h2><p>Connect Muse Code, ChatGPT through Codex, or Claude Code installed on this computer. Complete sign-in through the official CLI. Game of Codes does not ask for an API key.</p><div id="provider-cards">Looking for local assistants…</div><p>Check connection sends a short test request using that assistant's account allowance. Conversations and approved builds use the selected assistant. The local session allows up to 30 conversation and build requests.</p><button id="provider-refresh" class="setting-action">Refresh installed assistants ${icon('reload',16)}</button><p id="provider-error" class="form-error" role="status"></p></dialog>
 <dialog id="history-dialog" aria-labelledby="history-title"><button class="dialog-close icon-button" data-close="history-dialog" aria-label="Close history">${icon('close')}</button><span class="eyebrow">THE CONVERSATION SO FAR</span><h2 id="history-title">Your court remembers.</h2><div id="history-list"></div></dialog>
 <dialog id="guide-dialog" aria-labelledby="guide-title"><button class="dialog-close icon-button" data-close="guide-dialog" aria-label="Close field guide">${icon('close')}</button><span class="eyebrow">YOU DIRECT. THEY CREATE.</span><h2 id="guide-title">Meet your court.</h2><p><strong>Elara, your architect</strong>, shapes your idea and proposes a plan.</p><p><strong>Bram, your builder</strong>, builds the approved application and brings it forward for review.</p><p><strong>Iris, your inspector</strong>, shows recorded checks and what still needs your attention.</p><p>Point and pinch on a character in VR, or select them on desktop. Use <strong>Speak to me</strong> or <strong>Write an instruction</strong>. Quiet stops the voice.</p><p>Choose <strong>Review our work</strong> when you want to inspect the application. Return to the court to request another change.</p><button class="gold-button" data-close="guide-dialog">Back to my court ${icon('arrow',16)}</button></dialog>
@@ -69,6 +69,34 @@ const introduced = new Set<CourtRole>(['virus']);
 let hasArtifact = false, onboarded = false;
 let operation=0;
 let handlingTranscript=false;
+let handsFree=false, handsFreeAfter=0, cinematic=false, building=false, workStarted=0, spatialWork='';
+function setHandsFree(enabled:boolean){
+  handsFree=enabled;handsFreeAfter=performance.now()+650;
+  document.body.dataset.handsFree=String(enabled);
+  $('#hands-free').setAttribute('aria-pressed',String(enabled));
+  $('#hands-free').setAttribute('aria-label',enabled?'Disable hands-free conversation':'Enable hands-free conversation');
+  $('#microphone').setAttribute('aria-label',enabled?'Stop hands-free conversation':'Start hands-free conversation');
+  if(!enabled)microphone.cancel();
+}
+function voiceAllowed(){
+  const stage=document.body.dataset.tourStage;
+  return begun&&!cinematic&&!busy&&!voice.active&&!handlingTranscript&&!document.hidden&&!document.querySelector('dialog[open]')&&document.body.dataset.settingsOpen!=='true'&&(!onboarding?.running||['brain','gesture','idea','ready'].includes(stage||''));
+}
+const conversationTimer=window.setInterval(()=>{
+  const allowed=voiceAllowed();
+  if(handsFree&&allowed&&!microphone.recording&&!microphone.pending&&performance.now()>handsFreeAfter){handsFreeAfter=performance.now()+1200;void microphone.start();}
+  else if(handsFree&&!allowed&&(microphone.recording||microphone.pending))microphone.cancel();
+  $('#hands-free').classList.toggle('recording',handsFree&&microphone.recording);
+  const working=busy||building;
+  document.body.dataset.working=String(working);
+  $('#work-status').hidden=!working;
+  if(working){if(!workStarted)workStarted=Date.now();$('#work-elapsed').textContent=`${Math.floor((Date.now()-workStarted)/1000)}s`;if(!building)$('#work-stage').textContent=document.body.dataset.tourStage==='planning'?'Shaping your plan':'Your court is thinking';}
+  else {workStarted=0;spatialWork='';}
+  if(working&&court?.renderer.xr.isPresenting&&!voice.active){
+    const text=`${$('#work-stage').textContent} · ${$('#work-elapsed').textContent}. ${$('#waiting-quote').textContent}`;
+    if(text!==spatialWork){spatialWork=text;court.dialogue.update(selected,text,'Court at work');}
+  }
+},250);
 let queuedNavigation: NonNullable<ReturnType<typeof navigationIntent>> | null=null;
 function finishOperation(turn:number){if(turn!==operation)return;busy=false;$('#send-instruction').removeAttribute('disabled');if(!document.querySelector('dialog[open]')&&document.body.dataset.settingsOpen!=='true'&&!openedHead&&!microphone.recording)onboarding?.resume();if(queuedNavigation){const next=queuedNavigation;queuedNavigation=null;queueMicrotask(()=>void navigate(next));}}
 let sourceFiles: Record<string,string> = {};
@@ -96,8 +124,9 @@ function renderBrains(){
   });
 }
 function openBrain(role:CourtRole,open=true){
+  $('#garden-overlay').hidden=true;
   if(busy||!introduced.has(role))return;if(onboarding?.running&&document.body.dataset.tourStage!=='brain'){if(open)onboarding.pause();else onboarding.resume();}selectCharacter(role,false);openedHead=open?role:null;court.openHead(openedHead);renderBrains();
-  begun=true;$('#begin-conversation').hidden=true;$('#repeat').hidden=false;
+  begun=true;$('#garden-overlay').hidden=true;$('#begin-conversation').hidden=true;$('#repeat').hidden=false;
   if(open)void speak(role,"Of course. Choose a brain, or tell me which one you'd like.");else void speak(role,"All closed up. What would you like to do next?");
 }
 async function swapBrain(role:CourtRole,provider:BrainProvider){
@@ -112,8 +141,8 @@ function showDialog(id:string){onboarding?.pause();const dialog=$<HTMLDialogElem
 function closeDialogs(){document.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach(dialog=>dialog.close());}
 function updateCaption(role:CourtRole,text:string,state='Your court is listening'){speakingRole=role;lastReply=text;$('#speaker-name').textContent=`${COURT[role].name.toUpperCase()} · ${COURT[role].title.toUpperCase()}`;$('#speaker-name').style.color=COURT[role].color;$('#caption').textContent=text;$('#speech-state').textContent=state;court?.dialogue.update(role,text,state);}
 const voice=new CourtVoice({state:speaking=>{for(const role of roles)court?.setCharacterState(role,busy&&role===selected?'thinking':role===speakingRole&&speaking?'speaking':'idle');$('#speech-state').textContent=speaking?`${COURT[speakingRole].name} is speaking`:busy?'Considering your instruction':'Your turn';document.body.classList.toggle('character-speaking',speaking);},amplitude:level=>court?.setSpeechAmplitude(speakingRole,level),error:toast});
-const microphone=new CourtMicrophone({state:active=>{if(active)onboarding?.pause();else setTimeout(()=>{if(!handlingTranscript&&!microphone.recording&&!document.querySelector('dialog[open]')&&document.body.dataset.settingsOpen!=='true')onboarding?.resume();},0);$('#microphone').classList.toggle('recording',active);$('#microphone').setAttribute('aria-pressed',String(active));$('#input-hint').textContent=active?'Listening · Select the microphone again when you finish':'Select a character · Speak or write an instruction';court.setCharacterState(selected,active?'listening':'idle');if(active)court.dialogue.update(selected,"I'm listening. Tell me what you would like to create.",'Microphone is on');},transcript:text=>{handlingTranscript=true;$<HTMLInputElement>('#instruction').value=text;void sendInstruction(text).finally(()=>{handlingTranscript=false;if(!document.querySelector('dialog[open]')&&document.body.dataset.settingsOpen!=='true')onboarding?.resume();});},error:message=>{toast(message);updateCaption(selected,message,'You can write instead');}});
-async function speak(role:CourtRole,text:string){updateCaption(role,text);await voice.speak(role,text);}
+const microphone=new CourtMicrophone({state:active=>{if(!active)handsFreeAfter=performance.now()+650;if(!active)setTimeout(()=>{if(!handlingTranscript&&!microphone.recording&&!document.querySelector('dialog[open]')&&document.body.dataset.settingsOpen!=='true')onboarding?.resume();},0);$('#microphone').classList.toggle('recording',active);$('#microphone').setAttribute('aria-pressed',String(active));$('#input-hint').textContent=active?'Listening · Hands-free on':'Select a character · Speak or write an instruction';court.setCharacterState(selected,active?'listening':'idle');if(active)court.dialogue.update(selected,"I'm listening. Tell me what you would like to create.",'Microphone is on');},transcript:text=>{handlingTranscript=true;$<HTMLInputElement>('#instruction').value=text;void sendInstruction(text).finally(()=>{handlingTranscript=false;if(!document.querySelector('dialog[open]')&&document.body.dataset.settingsOpen!=='true')onboarding?.resume();});},error:message=>{setHandsFree(false);toast(message);updateCaption(selected,message,'You can write instead');}});
+async function speak(role:CourtRole,text:string){microphone.cancel();updateCaption(role,text);await voice.speak(role,text);handsFreeAfter=performance.now()+750;}
 function selectCharacter(role:CourtRole,greet=true){
   if(!introduced.has(role))return;
   microphone.cancel();voice.stop();selected=role;court.selectCharacter(role);
@@ -127,7 +156,7 @@ async function begin(){if(onboarding?.running)return;if(onboarding||!begun){awai
 function renderProposal(){const pending=proposal?.status==='awaiting-approval'&&(!onboarding?.running||document.body.dataset.tourStage==='ready');$('#proposal-card').hidden=!pending;if(proposal){$('#proposal-title').textContent=proposal.title;$('#proposal-requirements').innerHTML=proposal.requirements.map(item=>`<li>${esc(item)}</li>`).join('');}$('#plan-milestones').innerHTML=charter?`<p class="eyebrow">SUGGESTED MILESTONES</p><ul>${charter.milestones.map(m=>`<li>${esc(m.title)}</li>`).join('')}</ul>`:'';court.dialogue.showProposal(pending?proposal!.requirements:[]);}
 async function api(path:string,data:unknown){const response=await fetch(`/api/court/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});if(!response.headers.get('content-type')?.includes('application/json'))throw new Error(`The server could not complete this request (HTTP ${response.status}). Please try again.`);const result=await response.json();if(!response.ok)throw new Error(result.error||'The court could not complete that action.');return result;}
 async function sendInstruction(message=$<HTMLInputElement>('#instruction').value){
-  message=message.trim();if(!message)return;if(busy&&!navigationIntent(message)){toast('Your court is working. You can still ask to navigate or open settings.');return;}
+  message=message.trim();if(!message)return;if(/^(stop listening|microphone off|stop hands.free)[.!]?$/i.test(message)){setHandsFree(false);return;}if(busy&&!navigationIntent(message)){toast('Your court is working. You can still ask to navigate or open settings.');return;}
   microphone.cancel();begun=true;$('#begin-conversation').hidden=true;$('#repeat').hidden=false;
   court.dialogue.showComposer(false);
   const intent=navigationIntent(message);
@@ -168,6 +197,9 @@ async function waitForBuild(requestId:string){
     const response=await fetch(`/api/court/build-status?project=${project}&requestId=${requestId}`);
     if(!response.ok)throw new Error('The build status is unavailable. Reload to reconnect to your project.');
     const job=await response.json();
+    if(job.startedAt)workStarted=job.startedAt;
+    const stage=({queued:'Waiting for your builder',generating:'Writing your application',saving:'Saving application files',checking:'Checking in the browser'} as Record<string,string>)[job.stage]||'Writing your application';
+    $('#work-stage').textContent=stage;
     if(job.status==='complete')return job.result;
     if(job.status==='error'){sessionStorage.removeItem(`goc-build:${project}`);throw new Error(job.error||'The build did not finish. You can try approving the plan again.');}
     await new Promise(resolve=>setTimeout(resolve,1000));
@@ -175,7 +207,7 @@ async function waitForBuild(requestId:string){
   throw new Error('The build is still taking longer than expected. Reload to reconnect and check its result.');
 }
 async function resumeBuild(requestId:string){
-  if(busy)return;const turn=++operation;busy=true;
+  if(busy)return;const turn=++operation;busy=true;building=true;$('#proposal-card').hidden=true;court.dialogue.showProposal([]);$('#work-stage').textContent='Reconnecting to your build';
   updateCaption('builder','Your build is still running. I am reconnecting to its progress.','Building your application');
   try{
     const result=await waitForBuild(requestId);sessionStorage.removeItem(`goc-build:${project}`);
@@ -183,11 +215,11 @@ async function resumeBuild(requestId:string){
     $('#review-work').hidden=false;$('#review-work').innerHTML=`Review ${esc(result.artifact.title)} ${icon('arrow',16)}`;$('#export-source').hidden=false;
     updateCaption('builder',result.speech,'Ready for review');showPreview(true);
   }catch(error){toast(error instanceof Error?error.message:'The build could not be resumed.');}
-  finally{finishOperation(turn);}
+  finally{building=false;finishOperation(turn);renderProposal();}
 }
 async function approvePlan(){
   if(!proposal||busy||proposal.status!=='awaiting-approval')return;
-  voice.stop();selectCharacter('builder',false);const turn=++operation;busy=true;court.setCharacterState('builder','working');$('#approve-plan').setAttribute('disabled','');
+  microphone.cancel();voice.stop();selectCharacter('builder',false);const turn=++operation;busy=true;building=true;workStarted=Date.now();$('#proposal-card').hidden=true;court.dialogue.showProposal([]);$('#work-stage').textContent='Starting your build';court.setCharacterState('builder','working');$('#approve-plan').setAttribute('disabled','');
   updateCaption('builder',"Your plan is approved. I'm building the application, then I'll bring it forward for you and Iris to inspect.",'Building your application');
   try{
     const requestId=crypto.randomUUID();sessionStorage.setItem(`goc-build:${project}`,requestId);
@@ -195,9 +227,9 @@ async function approvePlan(){
     const result=accepted.pending?await waitForBuild(requestId):accepted;sessionStorage.removeItem(`goc-build:${project}`);
     checks=result.checks;hasArtifact=true;$('#review-work').hidden=false;proposal.status='ready-for-review';renderProposal();$('#export-source').hidden=false;
     $('#review-work').innerHTML=`Review ${esc(result.artifact.title)} ${icon('arrow',16)}`;
-    busy=false;history.push({speaker:'builder',text:result.speech});await speak('builder',result.speech);showPreview(true);
+    busy=false;history.push({speaker:'builder',text:result.speech});showPreview(true);void speak('builder',result.speech);
   }catch(error){busy=false;court.setCharacterState('builder','idle');updateCaption('builder',error instanceof Error?error.message:'The build did not finish. The previous version is preserved.','Build did not finish');}
-  finally{finishOperation(turn);$('#approve-plan').removeAttribute('disabled');}
+  finally{building=false;finishOperation(turn);renderProposal();$('#approve-plan').removeAttribute('disabled');}
 }
 function ensurePreview(){if(connection)return;connection=new PreviewConnection(project,{frame:bitmap=>court.updateFrame(bitmap),status:(state,message)=>{$('#connection-status').textContent=message;$('#connection-dot').classList.toggle('ready',state==='ready');$('#reconnect').hidden=!['offline','error'].includes(state);court.setStatus(state);},focus:focused=>{textFocused=focused;},latency:ms=>{$('#latency').textContent=`${ms} ms`;},exported:data=>{const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const anchor=document.createElement('a');anchor.href=url;anchor.download='sovereign-task-board.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}});}
 function showPreview(visible:boolean){previewOpen=visible;if(visible){microphone.cancel();voice.stop();ensurePreview();}court.showPreview(visible);if(!visible)roles.forEach(role=>court.setCharacterVisible(role,introduced.has(role)));document.body.classList.toggle('is-preview',visible);$('#return-court').hidden=!visible;$('.preview-tools').hidden=!visible;$('.preview-connection').hidden=!visible;}
@@ -209,8 +241,8 @@ function action(name:string){
   if(name==='tour-continue'){onboarding?.handleAction(name);return;}
   if(name.startsWith('brain-open:')){court.dialogue.showSettings(false);document.body.dataset.settingsOpen='false';const role=name.split(':')[1] as CourtRole;openBrain(role,openedHead!==role);return;}
   if(name.startsWith('brain-set:')){const [,role,provider]=name.split(':');if(isBrain(provider))void swapBrain(role as CourtRole,provider);return;}
-  if(name.startsWith('key:')){$<HTMLInputElement>('#instruction').value=court.dialogue.handleKey(name.slice(4));return;}if(name==='talk'){onboarding?.pause();voice.stop();void microphone.start();}if(name==='write'){if(court.renderer.xr.isPresenting)court.dialogue.showComposer(true,$<HTMLInputElement>('#instruction').value);else $('#instruction').focus();}if(name==='send')void sendInstruction();if(name==='clear'){$<HTMLInputElement>('#instruction').value='';court.dialogue.setInput('');}if(name==='close-composer')court.dialogue.showComposer(false);if(name==='approve')void approvePlan();if(name==='repeat')void speak(speakingRole,lastReply);if(name==='mute'){voice.muted=!voice.muted;voice.stop();$<HTMLInputElement>('#sound-toggle').checked=!voice.muted;$('#quiet').classList.toggle('muted',voice.muted);}if(name==='preview')showPreview(true);if(name==='court')showPreview(false);if(name==='recenter')court.recenter();if(name==='reload')connection?.send({type:'reload'});if(name==='size')court.resizeBoard();if(name==='exit')void court.exitVR();if(name==='help'){closeDialogs();showDialog('guide-dialog');}}
-try{court=new CourtScene($('#world'),{click:(x,y)=>connection?.send({type:'click',x,y}),action,character:role=>selectCharacter(role),feedback:()=>{},session:active=>{document.body.classList.toggle('in-vr',active);if(!active){microphone.cancel();voice.stop();}}});roles.filter(r=>r!=='virus').forEach(r=>court.setCharacterVisible(r,false));court.showGarden(true);court.onFps=fps=>{$('#fps').textContent=`${fps} fps${court.renderer.xr.isPresenting?' · headset':' · desktop'}`;};if(query.get('view')==='preview')showPreview(true);}catch(error){toast(error instanceof Error?error.message:'The 3D court could not start.');}
+  if(name.startsWith('key:')){$<HTMLInputElement>('#instruction').value=court.dialogue.handleKey(name.slice(4));return;}if(name==='talk'){if(handsFree){setHandsFree(false);}else{voice.stop();begun=true;setHandsFree(true);if(voiceAllowed())void microphone.start();}}if(name==='write'){if(court.renderer.xr.isPresenting)court.dialogue.showComposer(true,$<HTMLInputElement>('#instruction').value);else $('#instruction').focus();}if(name==='send')void sendInstruction();if(name==='clear'){$<HTMLInputElement>('#instruction').value='';court.dialogue.setInput('');}if(name==='close-composer')court.dialogue.showComposer(false);if(name==='approve')void approvePlan();if(name==='repeat')void speak(speakingRole,lastReply);if(name==='mute'){voice.muted=!voice.muted;voice.stop();$<HTMLInputElement>('#sound-toggle').checked=!voice.muted;$('#quiet').classList.toggle('muted',voice.muted);}if(name==='preview')showPreview(true);if(name==='court')showPreview(false);if(name==='recenter')court.recenter();if(name==='reload')connection?.send({type:'reload'});if(name==='size')court.resizeBoard();if(name==='exit')void court.exitVR();if(name==='help'){closeDialogs();showDialog('guide-dialog');}}
+try{court=new CourtScene($('#world'),{click:(x,y)=>connection?.send({type:'click',x,y}),action,character:role=>selectCharacter(role),feedback:()=>{},session:active=>{document.body.classList.toggle('in-vr',active);if(!active){microphone.cancel();voice.stop();}}});roles.filter(r=>r!=='virus').forEach(r=>court.setCharacterVisible(r,false));court.showGarden(true);court.onFps=fps=>{$('#fps').textContent=`${fps} fps${court.renderer.xr.isPresenting?' · headset':' · desktop'}`;};if(query.get('view')==='preview')showPreview(true);}catch(error){window.dispatchEvent(new CustomEvent('goc-boot-error',{detail:'The 3D court could not start. Please check browser graphics support.'}));throw error;}
 async function planFromIdea(idea:string){
   const turn=++operation;busy=true;$('#send-instruction').setAttribute('disabled','');court.setCharacterState('virus','thinking');
   updateCaption('virus','I am turning your idea into milestones and a build plan.','Preparing your plan');
@@ -221,7 +253,17 @@ async function planFromIdea(idea:string){
   }catch(error){throw error;}
   finally{finishOperation(turn);court.setCharacterState('virus','idle');}
 }
+function pendingArrivalSkipped(){return matchMedia('(prefers-reduced-motion: reduce)').matches||court.renderer.xr.isPresenting;}
+async function playArrival(){
+  cinematic=true;document.body.dataset.cinematic='true';$('#skip-arrival').hidden=false;
+  try{await court.playArrival();}finally{cinematic=false;document.body.dataset.cinematic='false';$('#skip-arrival').hidden=true;}
+}
+$('#skip-arrival').onclick=()=>court.finishArrival();
+$('#hands-free').onclick=()=>{if(handsFree)setHandsFree(false);else{begun=true;setHandsFree(true);void voice.unlock();}};
+$('#settings-brain').onclick=()=>{closeDialogs();openBrain(selected,true);};
+$('#settings-history').onclick=()=>$('#history-button').click();
 async function startGuide(returning=false,direct=false){
+  court.finishArrival();
   onboarding?.stop();closeDialogs();showPreview(false);openedHead=null;court.openHead(null);
   begun=true;$('#begin-conversation').hidden=true;$('#garden-overlay').hidden=true;
   if(!returning&&!direct){introduced.clear();roles.forEach(role=>{court.setCharacterVisible(role,false);const b=document.querySelector<HTMLButtonElement>(`[data-role="${role}"]`);if(b)b.hidden=true;});court.showGarden(true);}
@@ -275,9 +317,10 @@ fetch(`/api/court/status?project=${project}`).then(response=>response.json()).th
   selectCharacter('virus',false);updateCaption('virus',onboarded?'Welcome back. Continue with Virus to resume your saved project.':'I am Virus, your guide. Select Enter the Game of Codes to begin.','Ready when you are');
   $('#garden-overlay').hidden=false;$('#begin-reign').textContent=onboarded?'Continue with Virus':'Enter the Game of Codes';
   $('#begin-reign').onclick=()=>void startGuide(onboarded);
-  document.body.dataset.appReady='true';
+  document.body.dataset.appReady='true';window.dispatchEvent(new Event('goc-ready'));
+  if(!onboarded&&!data.activeBuildRequestId&&!sessionStorage.getItem(`goc-build:${project}`)&&!pendingArrivalSkipped()){void playArrival();}
   const pendingBuild=data.activeBuildRequestId||sessionStorage.getItem(`goc-build:${project}`);if(pendingBuild){$('#garden-overlay').hidden=true;void resumeBuild(pendingBuild);}
-}).catch(()=>toast('The conversation service is starting. Reload in a moment.'));
+}).catch(()=>{window.dispatchEvent(new CustomEvent('goc-boot-error',{detail:'The conversation service could not connect. Please try again.'}));});
 $('#review-milestones').addEventListener('click',()=>void navigate('milestones'));
 $('#tour-continue').addEventListener('click',()=>onboarding?.handleAction('tour-continue'));
 $('#code-file').addEventListener('change',()=>{$('#code-content').textContent=sourceFiles[$<HTMLSelectElement>('#code-file').value]||'';});
@@ -299,4 +342,4 @@ $('#history-button').addEventListener('click',()=>{$('#history-list').innerHTML=
 $('#copy-link').addEventListener('click',async()=>{try{const health=await fetch('/api/health').then(response=>response.json());const link=new URL(health.headsetUrls[0]);link.searchParams.set('project',project);await navigator.clipboard.writeText(link.href);toast('Your Quest project link is copied.');}catch{toast('Use the Quest HTTPS Network URL printed in the terminal.');}});$('#export-data').addEventListener('click',()=>{ensurePreview();if(!connection?.send({type:'export'}))toast('Open Review starter, then export once it is connected.');});$('#reload').addEventListener('click',()=>action('reload'));$('#resize-board').addEventListener('click',()=>action('size'));$('#recenter').addEventListener('click',()=>action('recenter'));$('#reconnect').addEventListener('click',()=>connection?.connect());
 $('#enter-vr').addEventListener('click',async()=>{try{await voice.unlock();await court.enterVR();if(!begun)await begin();}catch(error){$('#device-message').textContent=error instanceof Error?error.message:'The headset session could not start.';showDialog('device-dialog');}});if(navigator.xr)navigator.xr.isSessionSupported('immersive-vr').then(supported=>{if(supported)$('#device-note').textContent='Headset ready · Point and pinch to address your team';}).catch(()=>{});
 document.addEventListener('keydown',event=>{if(!previewOpen||!textFocused||document.querySelector('dialog[open]')||(event.target instanceof HTMLElement&&['INPUT','TEXTAREA'].includes(event.target.tagName))||event.ctrlKey||event.metaKey||event.altKey)return;if(event.key.length===1){event.preventDefault();connection?.send({type:'text',text:event.key});}else if(['Backspace','Enter','Escape','Tab','ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();connection?.send({type:'key',key:event.key});}});
-window.addEventListener('pagehide',()=>{microphone.cancel();voice.stop();connection?.dispose();court?.dispose();});
+window.addEventListener('pagehide',()=>{clearInterval(conversationTimer);setHandsFree(false);microphone.cancel();voice.stop();connection?.dispose();court?.dispose();});

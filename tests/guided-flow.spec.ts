@@ -8,7 +8,7 @@ const id = 'eeeeeeee-1111-4111-8111-111111111111';
 const charter = { idea:'A reading tracker for students', milestones:[{id:'m1',title:'Add books and save progress',achieved:null},{id:'m2',title:'Review reading progress',achieved:null}] };
 const proposal = { id:'ffffffff-1111-4111-8111-111111111111', title:'Reading tracker',requirements:['Add books','Save progress'],status:'awaiting-approval' };
 function wav(){const bytes=Buffer.alloc(44+4800);bytes.write('RIFF');bytes.writeUInt32LE(bytes.length-8,4);bytes.write('WAVEfmt ',8);bytes.writeUInt32LE(16,16);bytes.writeUInt16LE(1,20);bytes.writeUInt16LE(1,22);bytes.writeUInt32LE(24000,24);bytes.writeUInt32LE(48000,28);bytes.writeUInt16LE(2,32);bytes.writeUInt16LE(16,34);bytes.write('data',36);bytes.writeUInt32LE(4800,40);return bytes;}
-async function fixture(page:Page, returning=false){
+async function fixture(page:Page, returning=false,motion: 'reduce'|'no-preference'='reduce'){
   const state:any={mode:'cloud',configured:true,selectedProvider:'gemini',provider:'Gemini',onboarded:returning,brains:{},history:[],checks:[],charter:returning?charter:null,proposal:returning?{...proposal}:null,providers:[
     {id:'muse',name:'Muse',installed:false,state:'disabled',message:'Meta API unavailable'},
     ...['gemini','claude','codex'].map(id=>({id,name:id,installed:true,state:'connected',message:'Ready'}))
@@ -20,11 +20,11 @@ async function fixture(page:Page, returning=false){
     Object.defineProperty(window,'devicePixelRatio',{value:.5});
     (window as any).SpeechRecognition=class {
       onresult:any;onend:any;onerror:any;
-      start(){queueMicrotask(()=>{this.onresult?.({results:[[{transcript:(window as any).__transcript||'cloud'}]]});this.onend?.();});}
+      start(){(window as any).__recognition=this;const text=(window as any).__transcript||(!(window as any).__heardOnce?'cloud':'');if(!text)return;(window as any).__heardOnce=true;(window as any).__transcript='';queueMicrotask(()=>{this.onresult?.({results:[[{transcript:text}]]});this.onend?.();});}
       stop(){} abort(){}
     };
   });
-  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.emulateMedia({reducedMotion:motion});
   await page.route('**/api/court/**',async route=>{
     const path=new URL(route.request().url()).pathname.split('/').at(-1)!;
     const body=route.request().method()==='POST'?route.request().postDataJSON():null;
@@ -64,7 +64,7 @@ test('brain commands use head context; navigation requests remain actions',()=>{
 test('first visit demonstrates actions, drafts milestones and introduces characters progressively',async({page})=>{
   test.setTimeout(120000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const {requests,state}=await fixture(page);
-  await expect(page.locator('[data-role="virus"]')).toBeVisible();
+  await expect(page.locator('[data-role="virus"]')).toHaveCount(1);
   for(const role of ['architect','builder','inspector','artiste'])await expect(page.locator(`[data-role="${role}"]`)).toBeHidden();
   await page.locator('#begin-reign').click();
   await expect(page.locator('body')).toHaveAttribute('data-tour-stage','brain',{timeout:25000});
@@ -104,7 +104,8 @@ test('first visit demonstrates actions, drafts milestones and introduces charact
 
 test('unavailable Muse cannot be picked or sent to inference; settings navigation acts directly',async({page})=>{
   const {requests}=await fixture(page,true);
-  await page.locator('#open-head').click();
+  await page.locator('#settings').click();
+  await page.locator('#settings-brain').click();
   await expect(page.locator('[data-brain="muse"]')).toBeDisabled();
   await send(page,'use muse');
   await expect(page.locator('#toast')).toContainText('Meta API unavailable');
@@ -172,6 +173,8 @@ test('VR garden lets hands continue the guide, select an orb, and reach the keyb
 
 test('reloading during a background build reconnects and opens the finished application',async({page})=>{
   const {state,requests}=await fixture(page,true);state.holdBuild=true;
+  await page.locator('#begin-reign').click();
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','ready');
   await send(page,'approve this plan');
   await expect.poll(()=>requests.filter(r=>r.path==='build-status').length).toBeGreaterThan(0);
   await page.reload();
@@ -179,4 +182,87 @@ test('reloading during a background build reconnects and opens the finished appl
   state.holdBuild=false;
   await expect(page.locator('body')).toHaveClass(/is-preview/);
   expect(requests.filter(r=>r.path==='build')).toHaveLength(1);
+});
+
+
+test('startup paints useful text and rotates quotes even when the 3D module fails',async({page})=>{
+  await page.route('**/src/court-main.ts*',route=>route.abort());
+  await page.goto('/');
+  await expect(page.locator('#boot-screen')).toBeVisible();
+  await expect(page.locator('#boot-retry')).toBeVisible();
+  const first=await page.locator('#boot-quote').textContent();
+  await expect(page.locator('#boot-quote')).not.toHaveText(first!);
+});
+
+test('desktop arrival can be skipped and leaves a compact garden entry',async({page})=>{
+  await fixture(page,false,'no-preference');
+  await expect(page.locator('body')).toHaveAttribute('data-cinematic','true');
+  await page.screenshot({path:'test-results/castle-arrival.png'});
+  await page.locator('#skip-arrival').click();
+  await expect(page.locator('body')).toHaveAttribute('data-cinematic','false');
+  await expect(page.locator('#begin-reign')).toBeVisible();
+  await expect(page.locator('.conversation')).toBeHidden();
+});
+
+test('hands-free rearms between turns, pauses for voice and stops explicitly',async({page})=>{
+  const {requests}=await fixture(page,true);
+  await page.locator('#begin-reign').click();
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','ready');
+  await page.evaluate(()=>{
+    (window as any).__starts=0;
+    (window as any).SpeechRecognition=class {
+      onresult:any;onend:any;onerror:any;
+      start(){(window as any).__starts++;(window as any).__recognition=this;}
+      stop(){this.onend?.();} abort(){}
+    };
+  });
+  await page.locator('#hands-free').click();
+  await expect(page.locator('#hands-free')).toHaveAttribute('aria-pressed','true');
+  await expect.poll(()=>page.evaluate(()=>(window as any).__starts)).toBe(1);
+  let release:()=>void=()=>{};
+  const gate=new Promise<void>(r=>release=r);
+  await page.route('**/api/court/voice',async route=>{await gate;await route.fulfill({contentType:'audio/wav',body:wav()});});
+  await page.evaluate(()=>{const r=(window as any).__recognition;r.onresult({results:[[{transcript:'Please suggest a useful improvement'}]]});r.onend();});
+  await expect.poll(()=>requests.filter(r=>r.path==='converse').length).toBe(1);
+  await page.waitForTimeout(1200);
+  expect(await page.evaluate(()=>(window as any).__starts)).toBe(1);
+  release();
+  await expect.poll(()=>page.evaluate(()=>(window as any).__starts)).toBe(2);
+  await page.locator('#hands-free').click();
+  await page.waitForTimeout(1200);
+  expect(await page.evaluate(()=>(window as any).__starts)).toBe(2);
+  await expect(page.locator('#hands-free')).toHaveAttribute('aria-pressed','false');
+});
+
+test('approval collapses the plan, shows elapsed work, and opens preview before narration',async({page})=>{
+  const {state}=await fixture(page,true);state.holdBuild=true;
+  await page.locator('#begin-reign').click();
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','ready');
+  await page.locator('#approve-plan').click();
+  await expect(page.locator('#proposal-card')).toBeHidden();
+  await expect(page.locator('#work-status')).toBeVisible();
+  await expect(page.locator('#work-stage')).toContainText('Writing your application');
+  await expect(page.locator('#work-elapsed')).toContainText('s');
+  await page.screenshot({path:'test-results/build-progress.png'});
+  await page.route('**/api/court/voice',route=>route.abort());
+  state.holdBuild=false;
+  await expect(page.locator('body')).toHaveClass(/is-preview/);
+});
+
+
+test('denied microphone permission turns hands-free off without retrying',async({page})=>{
+  await fixture(page,true);
+  await page.locator('#begin-reign').click();
+  await expect(page.locator('body')).toHaveAttribute('data-tour-stage','ready');
+  await page.evaluate(()=>{
+    (window as any).__starts=0;
+    (window as any).SpeechRecognition=class {
+      onerror:any;start(){(window as any).__starts++;queueMicrotask(()=>this.onerror?.({error:'not-allowed'}));}abort(){}
+    };
+  });
+  await page.locator('#hands-free').click();
+  await expect(page.locator('#toast')).toContainText('denied');
+  await expect(page.locator('#hands-free')).toHaveAttribute('aria-pressed','false');
+  await page.waitForTimeout(1500);
+  expect(await page.evaluate(()=>(window as any).__starts)).toBe(1);
 });

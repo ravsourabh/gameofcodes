@@ -250,11 +250,11 @@ export class CourtCharacter {
     this.label.needsUpdate = true;
   }
 
-  animate(time: number, cameraPosition: THREE.Vector3) {
+  animate(time: number, cameraPosition: THREE.Vector3, showLabel = true) {
     this.opening = THREE.MathUtils.lerp(this.opening, this.brainOpen ? 1 : 0, 0.13);
     this.scalp.position.set(0, this.opening * 0.42, -this.opening * 0.16); this.scalp.rotation.x = -this.opening * 0.5;
     this.brain.visible = this.opening > 0.02; this.brain.position.set(0, 0.14 + this.opening * 0.21, 0.03); this.brain.scale.setScalar(Math.max(0.01, this.opening));
-    this.nameplate.visible = this.opening < 0.1;
+    this.nameplate.visible = showLabel && this.opening < 0.1;
     (this.forehead.material as THREE.MeshBasicMaterial).opacity = 0.32 * (1 - this.opening);
     const phase = this.role === 'architect' ? 0 : this.role === 'builder' ? 2 : 4;
     const speaking = this.state === 'speaking';

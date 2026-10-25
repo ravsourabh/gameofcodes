@@ -31,6 +31,9 @@ export class PreviewConnection {
     window.addEventListener('online', this.handleOnline);
     this.connect();
     this.watchdog = window.setInterval(() => {
+      if (this.state === 'connecting' && performance.now() - this.lastFrame > 15000) {
+        this.setStatus('error', 'No preview frames arrived. Reconnecting to your application…');this.socket?.close();
+      }
       if (this.state === 'ready' && performance.now() - this.lastFrame > 30_000) {
         this.offline = true;
         this.setStatus('offline', 'Preview paused · reconnecting');
@@ -52,7 +55,7 @@ export class PreviewConnection {
     this.setStatus('connecting', this.attempts ? 'Reconnecting to your application…' : 'Opening your application…');
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${location.host}/preview?project=${this.project}`);
-    this.socket = ws;
+    this.socket = ws; this.lastFrame = performance.now();
     ws.binaryType = 'blob';
     ws.onmessage = async event => {
       if (ws !== this.socket || this.disposed || ws.readyState !== WebSocket.OPEN || !navigator.onLine) return;
@@ -73,7 +76,7 @@ export class PreviewConnection {
         finally { this.decoding = false; }
         return;
       }
-      const message = JSON.parse(event.data);
+      let message;try{message=JSON.parse(event.data);}catch{this.setStatus('error','The preview sent an invalid response. Try reconnecting.');return;}
       if (message.type === 'status') {
         this.lastFrame = performance.now();
         this.setStatus(message.status === 'ready' ? 'connecting' : message.status, message.message);

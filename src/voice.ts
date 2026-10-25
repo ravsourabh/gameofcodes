@@ -8,15 +8,17 @@ export class CourtVoice {
   private sequence = 0;
   private meter = 0;
   private finishPlayback?: () => void;
+  active = false;
   muted = false;
   constructor(private events: VoiceEvents) {}
   async unlock() { this.context ??= new AudioContext(); await this.context.resume(); }
   stop() {
-    this.sequence++; this.controller?.abort(); this.finishPlayback?.(); this.finishPlayback = undefined; this.source?.stop(); this.source = undefined;
+    this.active = false; this.sequence++; this.controller?.abort(); this.finishPlayback?.(); this.finishPlayback = undefined; this.source?.stop(); this.source = undefined;
     cancelAnimationFrame(this.meter); window.speechSynthesis?.cancel(); this.events.state(false); this.events.amplitude(0);
   }
   async speak(role: CourtRole, text: string) {
     this.stop(); if (this.muted) return;
+    this.active = true;
     const sequence = this.sequence; this.controller = new AbortController();
     try {
       await this.unlock();
@@ -54,7 +56,7 @@ export class CourtVoice {
           speechSynthesis.speak(utterance);
         });
       } else this.events.error("Voice output is unavailable in this browser. The character's reply is shown in captions.");
-    }
+    } finally { if (sequence === this.sequence) this.active = false; }
   }
 }
 
@@ -68,6 +70,7 @@ export class CourtMicrophone {
   private sequence = 0;
   private controller?: AbortController;
   recording = false;
+  pending = false;
   constructor(private events: { state: (active: boolean) => void; transcript: (text: string) => void; error: (message: string) => void }) {}
   async start(useBrowserRecognition = true) {
     if (this.recording) return this.stop();
@@ -85,11 +88,13 @@ export class CourtMicrophone {
           recognition.onend = recognition.onerror = null; recognition.abort(); this.recognition = undefined; this.recording = false;
           void this.start(false); return;
         }
+        if(event.error==='no-speech')return;
         if(event.error!=='aborted')this.events.error(event.error==='not-allowed'?'Microphone access was denied. Allow it in your browser, or write your instruction.':'I did not hear a clear instruction. Please try again, or write it.');
       };
       try { recognition.start(); this.recording = true; this.events.state(true); } catch { this.events.error('Microphone access is unavailable. You can write your instruction instead.'); }
       return;
     }
+    this.pending = true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }, video: false });
       if (sequence !== this.sequence) { stream.getTracks().forEach(track => track.stop()); return; }
@@ -97,9 +102,16 @@ export class CourtMicrophone {
       this.context = new AudioContext({ sampleRate: 24_000 }); await this.context.resume();
       if (sequence !== this.sequence) return;
       const input = this.context.createMediaStreamSource(this.stream); this.processor = this.context.createScriptProcessor(4096, 1, 1); this.chunks = [];
-      this.processor.onaudioprocess = event => { this.chunks.push(new Float32Array(event.inputBuffer.getChannelData(0))); };
+      let heardSpeech = false, silentSince = performance.now();
+      this.processor.onaudioprocess = event => {
+        const samples = new Float32Array(event.inputBuffer.getChannelData(0)); this.chunks.push(samples);
+        const rms = Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length);
+        if (rms > .018) { heardSpeech = true; silentSince = performance.now(); }
+        if (heardSpeech && performance.now() - silentSince > 1100) void this.stop();
+        else if (!heardSpeech && performance.now() - silentSince > 8000) this.cancel();
+      };
       const silent = this.context.createGain(); silent.gain.value = 0; input.connect(this.processor); this.processor.connect(silent); silent.connect(this.context.destination);
-      this.recording = true; this.events.state(true); this.timer = window.setTimeout(() => void this.stop(), 20_000);
+      this.pending = false; this.recording = true; this.events.state(true); this.timer = window.setTimeout(() => void this.stop(), 20_000);
     } catch { if (sequence !== this.sequence) return; this.cleanup(); this.events.error('Microphone access was denied or is unavailable. Write your instruction to continue.'); }
   }
   async stop() {
@@ -112,13 +124,15 @@ export class CourtMicrophone {
     const word = (at: number, value: string) => [...value].forEach((char, i) => view.setUint8(at + i, char.charCodeAt(0)));
     word(0, 'RIFF'); view.setUint32(4, 36 + outputLength * 2, true); word(8, 'WAVE'); word(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, 24_000, true); view.setUint32(28, 48_000, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true); word(36, 'data'); view.setUint32(40, outputLength * 2, true);
     for (let i = 0; i < outputLength; i++) { const sample = Math.max(-1, Math.min(1, samples[Math.min(length - 1, Math.floor(i * sampleRate / 24_000))])); view.setInt16(44 + i * 2, sample < 0 ? sample * 32768 : sample * 32767, true); }
+    this.pending = true;
     try {
       this.controller = new AbortController();
       const response = await fetch('/api/court/transcribe', { method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: bytes, signal: this.controller.signal }); const data = await response.json();
       if (sequence !== this.sequence) return;
       if (!response.ok) throw new Error(data.error); if (data.transcript?.trim()) this.events.transcript(data.transcript.trim()); else this.events.error('I did not hear a clear instruction. Please try again.');
     } catch (error) { if (sequence === this.sequence) this.events.error(error instanceof Error ? error.message : 'Transcription failed. Please try again.'); }
+    finally { if (sequence === this.sequence) this.pending = false; }
   }
   cancel() { this.sequence++; this.controller?.abort(); this.recognition?.abort(); this.recognition = undefined; this.cleanup(); }
-  private cleanup() { clearTimeout(this.timer); if (this.processor) this.processor.onaudioprocess = null; this.processor?.disconnect(); this.processor = undefined; this.stream?.getTracks().forEach(track => track.stop()); this.stream = undefined; void this.context?.close(); this.context = undefined; this.chunks = []; this.recording = false; this.events.state(false); }
+  private cleanup() { this.pending = false; clearTimeout(this.timer); if (this.processor) this.processor.onaudioprocess = null; this.processor?.disconnect(); this.processor = undefined; this.stream?.getTracks().forEach(track => track.stop()); this.stream = undefined; void this.context?.close(); this.context = undefined; this.chunks = []; this.recording = false; this.events.state(false); }
 }

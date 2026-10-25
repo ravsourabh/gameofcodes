@@ -15,3 +15,12 @@ export function parseInput(raw) {
   if (['reload', 'export', 'ping'].includes(value.type)) return { type: value.type };
   return null;
 }
+
+// The preview service is loopback-only; its public Host is supplied by the proxy.
+export function validPreviewOrigin(headers) {
+  try {
+    const origin = new URL(headers.origin);
+    const host = headers['x-forwarded-host'] || headers.host;
+    return ['http:', 'https:'].includes(origin.protocol) && origin.host === host;
+  } catch { return false; }
+}

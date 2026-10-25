@@ -86,3 +86,42 @@ dialog h2 { font-family:Georgia,serif; font-weight:400; font-size:30px; letter-s
 #code-dialog { width:min(1000px,94vw); max-height:90vh; }
 #code-content { overflow:auto; max-height:65vh; padding:20px; background:#09151b; color:#d8e4d1; font:13px/1.6 Consolas,monospace; white-space:pre; }
 .brain-option:disabled { opacity:.4; cursor:not-allowed; }
+
+/* Keep the world visible; reveal secondary controls only where they are useful. */
+.court-intro,.device-note,.conversation-footnote,.role-title { display:none; }
+.conversation { width:min(620px,calc(100vw - 32px)); gap:8px; bottom:24px; }
+.role-button { padding:7px 13px; }
+.role-name { font-size:14px; }
+#open-head { display:none; }
+body[data-tour-stage="brain"] #open-head { display:flex; }
+.dialogue-card { min-height:0; padding:12px 17px; background:#10292ddc; box-shadow:none; }
+.dialogue-card p { font:16px/1.5 Georgia,serif; max-height:96px; overflow:auto; scrollbar-width:thin; }
+.dialogue-meta { margin-bottom:5px; }
+#speaker-name { letter-spacing:.6px; font-size:9px; }
+#speech-state { font-size:9px; }
+.instruction-form { height:48px; background:#10252cbb; }
+.instruction-form input { font-size:12px; }
+#tour-controls { padding:0; background:transparent; border:0; justify-content:center; }
+#tour-hint { display:none; }
+#tour-continue { padding:8px 18px; }
+.proposal-card { padding:14px 17px; max-height:34dvh; overflow:auto; scrollbar-width:thin; }
+.proposal-card h2 { margin:4px 0; }
+.proposal-card ul { font-size:11px; margin:8px 0; line-height:1.5; }
+.proposal-actions { gap:8px; flex-wrap:wrap; }
+#plan-milestones { display:none; }
+body[data-working="true"] .role-picker,body[data-working="true"] .instruction-form,body[data-working="true"] .dialogue-card { display:none; }
+#work-status { border:1px solid #b9a37344; border-radius:10px; padding:18px 20px; background:#10292de8; font:13px system-ui; }
+#work-elapsed { float:right; color:#a7b7a6; font-variant-numeric:tabular-nums; }
+#waiting-quote { font:italic 16px/1.5 Georgia,serif; color:#d4c59f; margin:12px 0 0; }
+.work-track { margin-top:12px; height:2px; overflow:hidden; background:#cfb67d22; }
+.work-track i { display:block; width:25%; height:100%; background:#cfb67d; animation:work-travel 2.4s ease-in-out infinite alternate; }
+@keyframes work-travel { to { transform:translateX(300%); } }
+#hands-free[aria-pressed="true"] { color:#dbbe80; border-radius:50%; background:#9bb98b22; }
+#hands-free.recording { box-shadow:0 0 0 2px #9dbb8c66; }
+#skip-arrival { position:absolute; bottom:32px; right:32px; z-index:60; }
+body[data-cinematic="true"] .conversation,body[data-cinematic="true"] .garden-overlay,body[data-cinematic="true"] .enter-vr { visibility:hidden; }
+body:has(#garden-overlay:not([hidden])) .conversation { visibility:hidden; }
+.garden-overlay { bottom:60px; }
+.garden-eyebrow { display:none; }
+.enter-vr { padding:10px 13px; font-size:11px; }
+@media(max-width:700px) { .conversation { bottom:16px; }.role-picker { gap:4px; }.role-button { padding:6px 10px; }.role-name { font-size:12px; }.dialogue-card p { font-size:15px; }.header-actions { gap:7px; } }

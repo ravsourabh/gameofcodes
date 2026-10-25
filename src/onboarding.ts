@@ -59,11 +59,11 @@ export class OnboardingManager {
       if (!options.returning && !options.direct) {
         this.cb.scene.showGarden(true);
         this.setStage('welcome', 'Virus is welcoming you');
-        await this.say(token, 'virus', "Welcome to Game of Codes. I'm Virus, your guide. I'll show you how to choose an AI brain, hear your idea, and take you into the court with a plan ready for approval.");
+        await this.say(token, 'virus', "Welcome to Game of Codes. I'm Virus, your guide. Let's choose a brain, hear your idea, and meet your court.");
         this.cb.scene.openHead('virus');
         this.setStage('brain', 'Try choosing a brain, or Continue after watching the demonstration.', true);
         const brainDemo = this.wait();
-        await this.say(token, 'virus', "I've opened my head so you can see my brain. The symbols above it are the available providers. Choose one, or say its name—for example, Claude. Unavailable providers cannot be selected. Choose Continue when you're ready.");
+        await this.say(token, 'virus', "Here's my brain. Choose a provider or say its name, like Claude. Then select Continue.");
         await brainDemo; this.checkpoint(token); this.cb.scene.openHead(null);
         this.cb.scene.addGestureOrbs();
         this.setStage('gesture', 'Pinch or click an orb. You can also select Continue.', true);
@@ -81,7 +81,7 @@ export class OnboardingManager {
           this.setStage('idea', 'Tell Virus what you want to build. He will draft the milestones.');
           // Register the input before speaking so fast typists are never ignored.
           const idea = new Promise<string>(resolve => { this.ideaInput = resolve; });
-          await this.say(token, 'virus', 'What would you like to build, and who is it for? Tell me in your own words. I will use my assigned brain to turn your idea into milestones and a first build plan.');
+          await this.say(token, 'virus', 'What would you like to build, and who is it for? I will suggest a plan.');
           const text = await idea; this.checkpoint(token);
           if (!text.trim()) continue;
           this.setStage('planning', 'Virus is drafting milestones and requirements using his assigned brain.');
@@ -96,7 +96,7 @@ export class OnboardingManager {
         }
       }
       this.setStage('entering', 'Virus is opening the gate and leading you to the court.');
-      await this.say(token, 'virus', 'Your plan is ready. Follow me into the court; you can review and change the milestones there.');
+      await this.say(token, 'virus', 'Your plan is ready. Follow me into the court.');
       await this.cb.scene.guideToCourt(); await this.ready(token);
       this.setStage('introductions', 'Meet the team who will work on your idea.');
       for (const [role, line] of [
@@ -109,7 +109,7 @@ export class OnboardingManager {
         if (!options.returning) await this.say(token, 'virus', line);
       }
       this.cb.scene.selectCharacter('architect');
-      await this.say(token, 'virus', options.hasBuild ? 'Your saved build is ready. Ask me to review the app or show the code. Tell the team what you would like to change next.' : 'You are ready. Review the plan below, ask for a change, or approve it to build. You can always ask me to show the code, review the app, open settings, or return to the court.');
+      await this.say(token, 'virus', options.hasBuild ? 'Your saved build is ready. Ask me to review the app or show the code. Tell the team what you would like to change next.' : 'Your court is ready. Review your plan, request a change, or approve it to build.');
       this.checkpoint(token);
       await this.cb.onComplete(); this.checkpoint(token);
       this.active = false; this.setStage('ready', 'Review your plan, request changes, or approve to build.');
