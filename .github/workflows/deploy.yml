@@ -12,12 +12,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy to server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 167.71.227.218
-          username: deploy
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          # Write deploy key
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 167.71.227.218 >> ~/.ssh/known_hosts 2>/dev/null
+
+          ssh -i ~/.ssh/deploy_key deploy@167.71.227.218 << 'ENDSSH'
             set -e
             cd ~/sovereign
 
@@ -27,7 +31,7 @@ jobs:
             # Rebuild Docker image
             docker build -t sovereign:latest .
 
-            # Replace container with zero-downtime swap
+            # Replace container
             docker stop sovereign || true
             docker rm sovereign || true
             docker run -d \
@@ -39,3 +43,4 @@ jobs:
               sovereign:latest
 
             echo "Deployed $(git rev-parse --short HEAD) at $(date)"
+          ENDSSH
