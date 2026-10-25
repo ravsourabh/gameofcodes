@@ -14,6 +14,7 @@ async function fixture(page:Page, returning=false){
     ...['gemini','claude','codex'].map(id=>({id,name:id,installed:true,state:'connected',message:'Ready'}))
   ]};
   state.providers=state.providers.map((p:any)=>({description:'Test provider',loginCommand:'',installUrl:'https://example.test',...p}));
+  let buildPolls=0;
   const requests:{path:string;body:any}[]=[];
   await page.addInitScript(()=>{
     Object.defineProperty(window,'devicePixelRatio',{value:.5});
@@ -36,7 +37,8 @@ async function fixture(page:Page, returning=false){
       state.brains[body.role]=body.provider;result={...state};
     }
     if(path==='complete-onboarding'){state.onboarded=true;result={onboarded:true};}
-    if(path==='build'){state.artifact={title:'Reading tracker',version:id};state.proposal.status='ready-for-review';result={artifact:state.artifact,checks:[],speech:'Your reading tracker is built and ready to try.'};}
+    if(path==='build'){state.activeBuildRequestId=body.requestId;state.proposal.status='building';result={pending:true,requestId:body.requestId};}
+    if(path==='build-status'){buildPolls++;if(state.holdBuild||buildPolls<2)result={status:'pending'};else{state.artifact={title:'Reading tracker',version:id};state.proposal.status='ready-for-review';state.activeBuildRequestId=null;result={status:'complete',result:{artifact:state.artifact,checks:[],speech:'Your reading tracker is built and ready to try.'}};}}
     if(path==='files')result={files:{'index.html':'<h1>Reading tracker</h1>','app.css':'body { color: teal; }','app.js':'console.log("reading");'}};
     if(path==='converse')result={role:body.role,speech:'A useful next step.',proposal:null};
     await route.fulfill({json:result});
@@ -165,4 +167,16 @@ test('VR garden lets hands continue the guide, select an orb, and reach the keyb
   await expect(page.locator('body')).toHaveAttribute('data-settings-open','false');
   await panel(1190,489);
   await expect(page.locator('body')).not.toHaveClass(/in-vr/);
+});
+
+
+test('reloading during a background build reconnects and opens the finished application',async({page})=>{
+  const {state,requests}=await fixture(page,true);state.holdBuild=true;
+  await send(page,'approve this plan');
+  await expect.poll(()=>requests.filter(r=>r.path==='build-status').length).toBeGreaterThan(0);
+  await page.reload();
+  await expect(page.locator('#caption')).toContainText('reconnecting');
+  state.holdBuild=false;
+  await expect(page.locator('body')).toHaveClass(/is-preview/);
+  expect(requests.filter(r=>r.path==='build')).toHaveLength(1);
 });

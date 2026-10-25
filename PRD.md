@@ -473,3 +473,10 @@ Workspace            (table + screen)
 | Custom domain / CDN | IP + self-signed cert sufficient for Quest Browser |
 | Non-English language | Rules require English |
 | Voice cloning | Post-competition (default voices expire Dec 31) |
+
+
+### Build reliability (2026-10-25)
+
+Cloud builds run as background jobs. The browser polls progress through short requests, so a long model response does not exceed the public proxy request window. Reloading reconnects to a project's active build request. Failed jobs retain the previous application and show a retryable error.
+
+When Gemini is assigned to Bram, code generation uses `gemini-3.8-flash` (overridable with `GEMINI_BUILD_MODEL`), low thinking, and an explicit output schema; conversational planning still uses Flash Lite. This is internal Gemini routing and does not override another provider assigned to Bram. Truncated model output is rejected instead of being reported as a completed app.

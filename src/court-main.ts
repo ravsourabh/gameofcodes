@@ -125,7 +125,7 @@ function selectCharacter(role:CourtRole,greet=true){
 }
 async function begin(){if(onboarding?.running)return;if(onboarding||!begun){await startGuide(onboarded);return;}begun=true;$('#begin-conversation').hidden=true;$('#repeat').hidden=false;await voice.unlock();await speak(selected,COURT[selected].greeting);}
 function renderProposal(){const pending=proposal?.status==='awaiting-approval'&&(!onboarding?.running||document.body.dataset.tourStage==='ready');$('#proposal-card').hidden=!pending;if(proposal){$('#proposal-title').textContent=proposal.title;$('#proposal-requirements').innerHTML=proposal.requirements.map(item=>`<li>${esc(item)}</li>`).join('');}$('#plan-milestones').innerHTML=charter?`<p class="eyebrow">SUGGESTED MILESTONES</p><ul>${charter.milestones.map(m=>`<li>${esc(m.title)}</li>`).join('')}</ul>`:'';court.dialogue.showProposal(pending?proposal!.requirements:[]);}
-async function api(path:string,data:unknown){const response=await fetch(`/api/court/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const result=await response.json();if(!response.ok)throw new Error(result.error||'The court could not complete that action.');return result;}
+async function api(path:string,data:unknown){const response=await fetch(`/api/court/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});if(!response.headers.get('content-type')?.includes('application/json'))throw new Error(`The server could not complete this request (HTTP ${response.status}). Please try again.`);const result=await response.json();if(!response.ok)throw new Error(result.error||'The court could not complete that action.');return result;}
 async function sendInstruction(message=$<HTMLInputElement>('#instruction').value){
   message=message.trim();if(!message)return;if(busy&&!navigationIntent(message)){toast('Your court is working. You can still ask to navigate or open settings.');return;}
   microphone.cancel();begun=true;$('#begin-conversation').hidden=true;$('#repeat').hidden=false;
@@ -162,12 +162,37 @@ async function sendInstruction(message=$<HTMLInputElement>('#instruction').value
   catch(error){busy=false;court.setCharacterState(addressedRole,'idle');updateCaption(addressedRole,error instanceof Error?error.message:'I could not finish that request. Please try again.','Request did not finish');}
   finally{finishOperation(turn);}
 }
+async function waitForBuild(requestId:string){
+  const deadline=Date.now()+6*60*1000;
+  while(Date.now()<deadline){
+    const response=await fetch(`/api/court/build-status?project=${project}&requestId=${requestId}`);
+    if(!response.ok)throw new Error('The build status is unavailable. Reload to reconnect to your project.');
+    const job=await response.json();
+    if(job.status==='complete')return job.result;
+    if(job.status==='error'){sessionStorage.removeItem(`goc-build:${project}`);throw new Error(job.error||'The build did not finish. You can try approving the plan again.');}
+    await new Promise(resolve=>setTimeout(resolve,1000));
+  }
+  throw new Error('The build is still taking longer than expected. Reload to reconnect and check its result.');
+}
+async function resumeBuild(requestId:string){
+  if(busy)return;const turn=++operation;busy=true;
+  updateCaption('builder','Your build is still running. I am reconnecting to its progress.','Building your application');
+  try{
+    const result=await waitForBuild(requestId);sessionStorage.removeItem(`goc-build:${project}`);
+    hasArtifact=true;checks=result.checks;proposal={...proposal!,status:'ready-for-review'};renderProposal();
+    $('#review-work').hidden=false;$('#review-work').innerHTML=`Review ${esc(result.artifact.title)} ${icon('arrow',16)}`;$('#export-source').hidden=false;
+    updateCaption('builder',result.speech,'Ready for review');showPreview(true);
+  }catch(error){toast(error instanceof Error?error.message:'The build could not be resumed.');}
+  finally{finishOperation(turn);}
+}
 async function approvePlan(){
   if(!proposal||busy||proposal.status!=='awaiting-approval')return;
   voice.stop();selectCharacter('builder',false);const turn=++operation;busy=true;court.setCharacterState('builder','working');$('#approve-plan').setAttribute('disabled','');
   updateCaption('builder',"Your plan is approved. I'm building the application, then I'll bring it forward for you and Iris to inspect.",'Building your application');
   try{
-    const result=await api('build',{project,proposalId:proposal.id,requestId:crypto.randomUUID()});
+    const requestId=crypto.randomUUID();sessionStorage.setItem(`goc-build:${project}`,requestId);
+    const accepted=await api('build',{project,proposalId:proposal.id,requestId,async:true});
+    const result=accepted.pending?await waitForBuild(requestId):accepted;sessionStorage.removeItem(`goc-build:${project}`);
     checks=result.checks;hasArtifact=true;$('#review-work').hidden=false;proposal.status='ready-for-review';renderProposal();$('#export-source').hidden=false;
     $('#review-work').innerHTML=`Review ${esc(result.artifact.title)} ${icon('arrow',16)}`;
     busy=false;history.push({speaker:'builder',text:result.speech});await speak('builder',result.speech);showPreview(true);
@@ -251,6 +276,7 @@ fetch(`/api/court/status?project=${project}`).then(response=>response.json()).th
   $('#garden-overlay').hidden=false;$('#begin-reign').textContent=onboarded?'Continue with Virus':'Enter the Game of Codes';
   $('#begin-reign').onclick=()=>void startGuide(onboarded);
   document.body.dataset.appReady='true';
+  const pendingBuild=data.activeBuildRequestId||sessionStorage.getItem(`goc-build:${project}`);if(pendingBuild){$('#garden-overlay').hidden=true;void resumeBuild(pendingBuild);}
 }).catch(()=>toast('The conversation service is starting. Reload in a moment.'));
 $('#review-milestones').addEventListener('click',()=>void navigate('milestones'));
 $('#tour-continue').addEventListener('click',()=>onboarding?.handleAction('tour-continue'));

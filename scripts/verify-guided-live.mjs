@@ -4,7 +4,7 @@ const origin = process.env.GOC_VERIFY_URL || 'https://gameofcodes.si';
 const project = randomUUID();
 async function post(endpoint, input, expected = 200) {
   const response = await fetch(`${origin}/api/court/${endpoint}`, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(input), signal: AbortSignal.timeout(180000) });
-  const data = await response.json(); assert.equal(response.status, expected, `${endpoint}: ${data.error || response.status}`); return data;
+  const raw = await response.text();let data;try{data=JSON.parse(raw);}catch{throw new Error(`${endpoint}: server returned HTTP ${response.status} instead of JSON`);} assert.equal(response.status, expected, `${endpoint}: ${data.error || response.status}`); return data;
 }
 const status = await fetch(`${origin}/api/court/status?project=${project}`).then(r=>r.json());
 assert.equal(status.mode, 'cloud');assert.equal(status.onboarded, false);
@@ -26,7 +26,10 @@ assert.equal(wav.toString('ascii',0,4),'RIFF');assert.equal(wav.readUInt32LE(24)
 assert.ok(wav.readUInt32LE(40)>48000);console.log(`PASS actual ElevenLabs PCM speech (${(wav.readUInt32LE(40)/48000).toFixed(1)}s)`);
 if(process.argv.includes('--build')){
   await post('brain',{project,role:'builder',provider:'gemini'});
-  const build=await post('build',{project,proposalId:plan.proposal.id,requestId:randomUUID()});
+  const requestId=randomUUID();const accepted=await post('build',{project,proposalId:plan.proposal.id,requestId,async:true},202);
+  assert.equal(accepted.pending,true);let build;const deadline=Date.now()+360000;
+  while(Date.now()<deadline){const job=await fetch(`${origin}/api/court/build-status?project=${project}&requestId=${requestId}`).then(r=>r.json());if(job.status==='error')throw new Error(job.error);if(job.status==='complete'){build=job.result;break;}await new Promise(r=>setTimeout(r,1000));}
+  assert.ok(build,'Build did not finish before the verification deadline');
   assert.ok(build.artifact);assert.ok(build.checks.every(check=>check.passed!==false));
   const source=await fetch(`${origin}/api/court/files?project=${project}`).then(r=>r.json());
   assert.deepEqual(Object.keys(source.files).sort(),['app.css','app.js','index.html']);

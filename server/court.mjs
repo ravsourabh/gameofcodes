@@ -22,6 +22,18 @@ const buildSchema = { type: 'object', properties: { html: { type: 'string' }, cs
 export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge = createProviderBridge({ root }) }) {
   const store = path.join(root, '.sovereign', 'court');
   const projects = new Map(); const locks = new Map(); const requests = new Map();
+  // Keep pending jobs until settled; evict the oldest settled jobs at capacity.
+  const buildJobs = new Map();
+  function reserveBuildJob(key) {
+    if (buildJobs.size >= 100) {
+      const oldest = [...buildJobs].find(([, job]) => job.status !== 'pending');
+      if (!oldest) fail('The build queue is full. Please try again later.', 429);
+      buildJobs.delete(oldest[0]);
+    }
+    const job = { status: 'pending' };
+    buildJobs.set(key, job);
+    return job;
+  }
   let sessionCalls = 0;
   const configuration = async (id) => ({ ...await bridge.status(), mode: process.env.SOVEREIGN_MODE === 'cloud' ? 'cloud' : 'local', localSpeechAvailable, callsUsed: sessionCalls, callLimit: process.env.SOVEREIGN_MODE === 'cloud' ? 300 : 30, ...(id ? { charter: (await state(id)).charter, onboarded: (await state(id)).onboarded } : {}) });
   const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
@@ -33,6 +45,14 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
     data.brains ||= {};
     data.charter ||= null;
     data.onboarded = data.onboarded === true;
+    data.activeBuildRequestId ||= null;
+    data.lastBuild ||= null;
+    if (data.activeBuildRequestId && !buildJobs.has(`${id}:${data.activeBuildRequestId}`)) {
+      data.lastBuild = { requestId: data.activeBuildRequestId, status: 'error', error: 'The server restarted and this build job was lost. Submit a new build request.' };
+      data.activeBuildRequestId = null;
+      if (data.proposal?.status === 'building') data.proposal.status = 'awaiting-approval';
+      await persist(id, data);
+    }
     projects.set(id, data); return data;
   }
   async function persist(id, data) {
@@ -76,6 +96,19 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
         if (url.pathname === '/api/court/status' && req.method === 'GET') {
           const id = url.searchParams.get('project');
           json(res, 200, { ...await configuration(id), ...(id ? await state(id) : {}) }); return true;
+        }
+        if (url.pathname === '/api/court/build-status' && req.method === 'GET') {
+          const project = url.searchParams.get('project'), requestId = url.searchParams.get('requestId');
+          if (!isProjectId(project) || !isProjectId(requestId)) fail('Invalid build status request.');
+          const job = buildJobs.get(`${project}:${requestId}`);
+          const data = !job ? await state(project) : null;
+          const saved = data?.lastBuild?.requestId === requestId ? data.lastBuild : null;
+          const result = !job ? saved?.status === 'complete' ? { status: 'complete', result: saved.result }
+            : saved?.status === 'error' ? { status: 'error', error: saved.error }
+            : { status: 'error', error: saved?.status === 'pending' || data?.activeBuildRequestId === requestId ? 'The server restarted and this build job was lost. Submit a new build request.' : 'That build job was not found or has expired. Submit a new build request.' }
+            : job.status === 'complete' ? { status: 'complete', result: job.result }
+            : job.status === 'error' ? { status: 'error', error: job.error } : { status: 'pending' };
+          json(res, 200, result); return true;
         }
         if (['/api/court/source', '/api/court/files'].includes(url.pathname) && req.method === 'GET') {
           const id = url.searchParams.get('project'), data = await state(id);
@@ -148,8 +181,22 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
         }
         if (url.pathname === '/api/court/build') {
           const input = await body(req); if (!isProjectId(input.project) || !isProjectId(input.proposalId) || !isProjectId(input.requestId)) fail('Invalid build approval.');
-          const result = await exclusive(input.project, input.requestId, async () => {
+          const key = `${input.project}:${input.requestId}`;
+          let job = buildJobs.get(key);
+          if (!job) {
+            job = reserveBuildJob(key);
+            const trackedJob = job;
+            job.promise = exclusive(input.project, input.requestId, async () => {
             const data = await state(input.project);
+            if (data.lastBuild?.requestId === input.requestId) {
+              if (data.lastBuild.status === 'complete') return data.lastBuild.result;
+              fail('This build request failed or was lost after a server restart. Submit a new build request.', 409);
+            }
+            data.activeBuildRequestId = input.requestId;
+            data.lastBuild = { requestId: input.requestId, status: 'pending' };
+            try {
+              await persist(input.project, data);
+              const result = await (async () => {
             if (!data.proposal || data.proposal.id !== input.proposalId || data.proposal.status !== 'awaiting-approval') fail('That plan has changed or was already approved. Ask Elara for the current proposal.', 409);
             data.proposal.status = 'building'; await persist(input.project, data);
             try {
@@ -179,8 +226,27 @@ export function createCourtService({ root, getRoom, saveRoom, broadcast, bridge 
               data.history.push({ speaker: 'builder', text: speech }); data.history = data.history.slice(-60); await persist(input.project, data);
               return { role: 'builder', speech, artifact: data.artifact, checks };
             } catch (error) { data.proposal.status = 'awaiting-approval'; await persist(input.project, data); throw error; }
-          });
-          json(res, 200, result); return true;
+              })();
+              data.activeBuildRequestId = null;
+              data.lastBuild = { requestId: input.requestId, status: 'complete', result };
+              await persist(input.project, data);
+              return result;
+            } catch (error) {
+              data.activeBuildRequestId = null;
+              data.lastBuild = { requestId: input.requestId, status: 'error', error: 'The build could not finish. Check the assistant connection and try again with a new request ID.' };
+              await persist(input.project, data);
+              throw error;
+            }
+            });
+            // Attach both handlers immediately, including for fire-and-forget HTTP requests.
+            job.promise.then(result => { trackedJob.result = result; trackedJob.status = 'complete'; }, () => {
+              // Provider errors can contain upstream HTML, credentials or host paths.
+              trackedJob.error = 'The build could not finish. Check the assistant connection and try again with a new request ID.';
+              trackedJob.status = 'error';
+            });
+          }
+          if (input.async === true) { json(res, 202, { pending: true, requestId: input.requestId }); return true; }
+          json(res, 200, await job.promise); return true;
         }
         if (url.pathname === '/api/court/plan-idea') {
           const input = await body(req);

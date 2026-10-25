@@ -114,20 +114,22 @@ export async function generateImage(prompt) {
 
 // Gemini — primary cloud brain for all providers
 // Flash Lite for conversation (fast, cheap); Flash for builds (code quality matters)
-export async function geminiGenerate(input, schema, { isBuild = false } = {}) {
+export async function geminiGenerate(input, schema, { isBuild = false, transport = post } = {}) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw err('GEMINI_API_KEY not set', 503);
-  const model = isBuild ? 'gemini-flash-latest' : 'gemini-flash-lite-latest';
+  const model = isBuild ? (process.env.GEMINI_BUILD_MODEL || 'gemini-3.8-flash') : 'gemini-flash-lite-latest';
   const { system, user } = buildPrompt(input, schema);
   const body = JSON.stringify({
-    system_instruction: { parts: [{ text: system }] },
+    system_instruction: { parts: [{ text: isBuild ? `${system}\nKeep the implementation compact and complete. Prefer straightforward HTML, CSS and JavaScript. Avoid long decorative SVG paths or repeated boilerplate. Finish every JSON string and the entire JSON object.` : system }] },
     contents: [{ parts: [{ text: user }] }],
-    generationConfig: { maxOutputTokens: isBuild ? 8192 : 2048, responseMimeType: 'application/json' },
+    generationConfig: { maxOutputTokens: isBuild ? 16384 : 2048, responseMimeType: 'application/json', ...(isBuild ? { responseJsonSchema: schema, thinkingConfig: { thinkingLevel: 'LOW' } } : {}) },
   });
   const path = `/v1beta/models/${model}:generateContent?key=${key}`;
-  const res = await post('generativelanguage.googleapis.com', path, { 'Accept': 'application/json' }, body);
+  const res = await transport('generativelanguage.googleapis.com', path, { 'Accept': 'application/json' }, body, isBuild ? 180_000 : 90_000);
   if (res.status !== 200) throw err(`Gemini API error ${res.status}: ${JSON.stringify(res.body).slice(0, 200)}`, res.status >= 500 ? 502 : res.status);
-  const text = res.body?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '';
+  const candidate=res.body?.candidates?.[0];
+  if(candidate?.finishReason==='MAX_TOKENS')throw err('The build exceeded the model output limit. Ask for a smaller first version and try again.',502);
+  const text = (candidate?.content?.parts||[]).filter(part=>!part.thought&&typeof part.text==='string').map(part=>part.text).join('').trim();
   if (!text) throw err('Gemini returned an empty response', 502);
   return parseJson(text, 'Gemini');
 }

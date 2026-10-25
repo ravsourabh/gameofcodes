@@ -1,11 +1,107 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createCourtService } from '../server/court.mjs';
+
+for (const failure of [false, true]) test(`async build ${failure ? 'reports failure safely' : 'polls pending then complete'} without duplicate generation`, { timeout: 10_000 }, async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'sovereign-court-test-'));
+  const project = randomUUID(), proposalId = randomUUID(), requestId = randomUUID();
+  const folder = path.join(root, '.sovereign', 'court');
+  await mkdir(folder, { recursive: true });
+  await writeFile(path.join(folder, `${project}.json`), JSON.stringify({ history: [], proposal: { id: proposalId, title: 'Tracker', requirements: ['Track books'], status: 'awaiting-approval' }, artifact: null, checks: [], version: 0 }));
+  let release, started, calls = 0, loaded = '';
+  const blocked = new Promise(resolve => { release = resolve; });
+  const generating = new Promise(resolve => { started = resolve; });
+  const bridge = { async status() { return { providers: [] }; }, async generate() {
+    calls++; started(); await blocked;
+    if (failure) throw Object.assign(new Error('SECRET-token <html>upstream timeout</html> D:/private/path'), { status: 502 });
+    return { html: '<h1>Tracker</h1>', css: 'body{color:teal}', js: '', summary: 'Ready' };
+  } };
+  const room = { queue: Promise.resolve(), page: { on() {}, off() {}, url() { return loaded; }, async goto(url) { loaded = url; }, locator() { return { async innerText() { return 'Tracker'; } }; } } };
+  const createService = () => createCourtService({ root, bridge, getRoom: async () => room, saveRoom: async () => {}, broadcast() {} });
+  let court = createService();
+  const server = http.createServer((req, res) => court.handle(req, res, new URL(req.url, 'http://localhost')));
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = `http://127.0.0.1:${server.address().port}`;
+  const post = async data => {
+    const response = await fetch(`${address}/api/court/build`, { method: 'POST', headers: { Origin: address, 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal: AbortSignal.timeout(2000) });
+    return { status: response.status, data: await response.json() };
+  };
+  const poll = async (id = requestId, projectId = project) => {
+    const response = await fetch(`${address}/api/court/build-status?project=${projectId}&requestId=${id}`);
+    return { status: response.status, data: await response.json() };
+  };
+  const input = { project, proposalId, requestId, async: true };
+  try {
+    assert.deepEqual(await post(input), { status: 202, data: { pending: true, requestId } });
+    assert.deepEqual(await poll(), { status: 200, data: { status: 'pending' } });
+    await generating;
+    const pending = JSON.parse(await readFile(path.join(folder, `${project}.json`), 'utf8'));
+    assert.equal(pending.activeBuildRequestId, requestId);
+    const activeStatus = await fetch(`${address}/api/court/status?project=${project}`).then(response => response.json());
+    assert.equal(activeStatus.activeBuildRequestId, requestId);
+    assert.equal((await post(input)).status, 202);
+    const competingRequest = randomUUID();
+    assert.equal((await post({ ...input, requestId: competingRequest })).status, 202);
+    assert.equal((await poll(competingRequest)).data.status, 'error');
+    // A different request must fail the project lock without starting another build.
+    assert.equal((await poll('bad')).status, 400);
+    assert.equal((await post({ ...input, requestId: 'bad' })).status, 400);
+    assert.equal((await poll(requestId, '../outside')).status, 400);
+    assert.equal((await poll(randomUUID())).data.status, 'error');
+    assert.equal((await poll(requestId, randomUUID())).data.status, 'error');
+    release();
+    let result;
+    for (let i = 0; i < 100; i++) {
+      result = await poll();
+      if (result.data.status !== 'pending') break;
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(result.status, 200);
+    assert.equal(calls, 1);
+    const saved = JSON.parse(await readFile(path.join(folder, `${project}.json`), 'utf8'));
+    assert.equal(saved.activeBuildRequestId, null);
+    assert.equal(saved.lastBuild.requestId, requestId);
+    assert.equal(saved.lastBuild.status, result.data.status);
+    if (failure) {
+      assert.equal(result.data.status, 'error');
+      assert.doesNotMatch(result.data.error, /SECRET|html|private/);
+      assert.equal(Object.hasOwn(result.data, 'result'), false);
+      assert.equal(saved.proposal.status, 'awaiting-approval');
+      assert.equal(saved.artifact, null);
+    } else {
+      assert.equal(result.data.status, 'complete');
+      assert.equal(result.data.result.role, 'builder');
+      assert.equal(result.data.result.artifact.title, 'Tracker');
+      assert.equal(saved.proposal.status, 'ready-for-review');
+      assert.deepEqual((await post({ ...input, async: false })).data, result.data.result);
+    }
+    assert.equal((await post(input)).status, 202);
+    assert.deepEqual(await poll(), result);
+    assert.equal(calls, 1);
+    court = createService();
+    assert.deepEqual(await poll(), result, 'Final outcome survives a service restart');
+    if (!failure) assert.deepEqual((await post({ ...input, async: false })).data, result.data.result);
+    assert.equal(calls, 1);
+    const lostProject = randomUUID(), lostRequest = randomUUID();
+    await writeFile(path.join(folder, `${lostProject}.json`), JSON.stringify({ history: [], proposal: { id: randomUUID(), status: 'building' }, activeBuildRequestId: lostRequest, lastBuild: { requestId: lostRequest, status: 'pending' } }));
+    const lost = await poll(lostRequest, lostProject);
+    assert.equal(lost.status, 200); assert.equal(lost.data.status, 'error'); assert.match(lost.data.error, /restarted.*lost/);
+    const recovered = JSON.parse(await readFile(path.join(folder, `${lostProject}.json`), 'utf8'));
+    assert.equal(recovered.activeBuildRequestId, null);
+    assert.equal(recovered.proposal.status, 'awaiting-approval');
+  } finally {
+    release();
+    await post({ ...input, async: false });
+    await new Promise(resolve => server.close(resolve));
+    assert.ok(path.resolve(root).startsWith(path.resolve(tmpdir()) + path.sep + 'sovereign-court-test-'));
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test('Virus plans with its assigned brain, validates before saving, and onboarding belongs to each project', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'sovereign-court-test-'));
