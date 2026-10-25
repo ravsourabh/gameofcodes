@@ -72,7 +72,7 @@ Each wave is one focused Claude Code conversation with a clear deliverable. Wave
 
 **Deliverables:**
 - `SOVEREIGN_MODE=cloud` env var switches inference from CLI spawning to REST API calls
-- `cloudGenerate()` in `server/providers.mjs` — Anthropic API / OpenAI API / Meta Llama API
+- `cloudGenerate()` in `server/providers.mjs` — Anthropic API / OpenAI API / Google Gemini API / Meta Llama API (disabled pending key fix)
 - `Dockerfile` — builds Node.js server + compiled Vite client + Playwright Chromium
 - `docker-compose.yml` — local cloud-mode testing with `.env` file
 - Self-signed TLS cert generation at container startup (port 5443)
@@ -305,6 +305,21 @@ Quest Browser / Desktop
   Preview bridge :4175 → Playwright Chromium → board :4174
 ```
 
+### Brain → Provider Mapping
+
+Each character has an independently assignable brain. The brain determines which AI provider handles that character's conversations and builds. Muse ≠ Gemini — they are distinct providers.
+
+| Brain | Local mode | Cloud mode | Model | Status |
+| --- | --- | --- | --- | --- |
+| **Muse** | Meta Muse Code CLI | Meta Llama API (`api.llama.com/compat/v1/`) | `Llama-4-Scout-17B-16E-Instruct` | ⚠️ Disabled — API key `invalid_api_key`, needs regeneration |
+| **Claude** | Anthropic Claude Code CLI | Anthropic API | `claude-sonnet-4-6` | ✅ Working |
+| **ChatGPT** | OpenAI Codex CLI | OpenAI API | `gpt-4o-mini` | ✅ Working |
+| **Gemini** | Cloud only (no local CLI) | Google Gemini API | Conversation: `gemini-flash-lite-latest` · Build: `gemini-flash-latest` | ✅ Working · Default cloud brain |
+
+**Important distinction:** Gemini (`gemini-flash-lite-latest` / `gemini-flash-latest`) is not a replacement for Muse — it is a separate 4th brain with its own logo and provider identity. Using Gemini as the default cloud brain is a temporary measure while the Meta Llama API key is resolved. When Muse is re-enabled, Gemini and Muse will be independent selectable options per character.
+
+**The model split within Gemini** (Flash Lite vs Flash) is an internal Gemini routing decision only — it applies when a character's brain is set to Gemini. Characters assigned Claude or ChatGPT use a single model for both conversation and builds.
+
 ### Cloud Mode (167.71.227.218)
 ```
 Quest Browser / Any Browser
@@ -312,8 +327,8 @@ Quest Browser / Any Browser
     ├── CourtVoice → ElevenLabs API (server-side) | browser speechSynthesis fallback
     └── CourtMicrophone → browser Web Speech API (no server transcription)
   Docker container (SOVEREIGN_MODE=cloud)
-    ├── /api/court/converse → Anthropic API | OpenAI API | Meta Llama API
-    ├── /api/court/build    → same REST APIs
+    ├── /api/court/converse → Gemini Flash Lite (default) | Claude | GPT-4o-mini | Llama (disabled)
+    ├── /api/court/build    → Gemini Flash (default) | Claude | GPT-4o-mini | Llama (disabled)
     └── /api/court/voice    → ElevenLabs API
   VPS: Docker + env file (API keys, TTS_PROVIDER=elevenlabs)
 ```
@@ -344,10 +359,11 @@ Workspace            (table + screen)
 | 2 | ✅ Meta developer account **Developer Access** confirmed | Done 2026-10-25 |
 | 3 | ✅ **Registered on Devpost** | Done 2026-10-25 |
 | 4 | ✅ **ElevenLabs API key** (`sk_...`) obtained | Done 2026-10-25 |
-| 5 | Get **Anthropic API key** | Wave 1 |
-| 6 | Get **OpenAI API key** | Wave 1 |
-| 7 | Get **Meta Llama API key** (llama.developer.meta.com) | Wave 1 |
-| 8 | Set all API keys in env file on `167.71.227.218` | Wave 1 |
+| 5 | ✅ Anthropic API key | Done 2026-10-25 |
+| 6 | ✅ OpenAI API key | Done 2026-10-25 |
+| 7 | ✅ Gemini API key | Done 2026-10-25 |
+| 7b | ⚠️ **Meta Llama API key** — `invalid_api_key` on `api.llama.com/compat/v1/`. Endpoint is correct; key needs regeneration at [api.llama.com](https://api.llama.com). Muse disabled in cloud until resolved. | Blocked |
+| 8 | ✅ All working keys in `sovereign.env` on `167.71.227.218` | Done 2026-10-25 |
 | 9 | **Record 3-minute demo video** (IWER on desktop is fine) | Wave 7 |
 | 10 | **Upload video** to YouTube / Vimeo (public or unlisted) | Wave 7 |
 | 11 | **Complete Devpost submission form** | Wave 8 |
