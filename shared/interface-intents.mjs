@@ -25,7 +25,9 @@ export function parseInterfaceIntent(text, names = []) {
     ['show characters','show-characters'],['open characters','show-characters'],['open the avatar workshop','show-characters'],
     ['show notes','notes'],['show my notes','notes'],['what have you noted','notes'],['what did you note','notes'],
     ['help','guide-help'],['explain simply','guide-help'],['repeat the lesson','intro'],['restart the intro','intro'],['repeat the intro','intro'],
-    ['start discussion','discussion-start'],['resume','discussion-resume'],['resume discussion','discussion-resume'],['stop discussion','discussion-stop'],['finish discussion','discussion-finish'],
+    ['start','discussion-start'],['start discussion','discussion-start'],['शुरू करो','discussion-start'],['चर्चा शुरू करो','discussion-start'],
+    ['resume','discussion-resume'],['resume discussion','discussion-resume'],['continue','discussion-resume'],['go ahead','discussion-resume'],['जारी रखो','discussion-resume'],['चर्चा जारी रखो','discussion-resume'],['आगे बढ़ो','discussion-resume'],
+    ['stop discussion','discussion-stop'],['finish discussion','discussion-finish'],
     ['clarify','discussion-clarify'],['clarify that','discussion-clarify'],['simplify','discussion-simplify'],['simplify that','discussion-simplify'],['give an example','discussion-example'],['ask for evidence','discussion-evidence'],['show evidence','discussion-evidence'],['challenge that','discussion-challenge'],['switch sides','discussion-switch-sides'],['summarise so far','discussion-summary'],['summarize so far','discussion-summary'],['you have the floor','discussion-floor'],
   ]);
   const floor=known.find(name=>value===`give ${name} the floor`||value===`let ${name} speak`);if(floor)return {action:'discussion-floor',characterName:floor};

@@ -265,7 +265,7 @@ export function createSessionService({ root, ai = createSessionAI(), news=create
         });
       } catch (error) {
         if(!(error instanceof SessionError))onError(error);
-        json(res, error instanceof SessionError ? error.status : 500, { error: error instanceof SessionError ? error.message : 'The session could not be saved or loaded. Your existing data has been kept.', code: error instanceof SessionError ? error.code : 'STORAGE_ERROR' });
+        json(res, error instanceof SessionError ? error.status : 500, { error: error instanceof SessionError ? error.message : 'The session could not be saved or loaded. Your existing data has been kept.', code: error instanceof SessionError ? error.code : 'STORAGE_ERROR',...(error instanceof SessionError&&isId(error.characterId)?{characterId:error.characterId}:{}) });
       }
     },
   };

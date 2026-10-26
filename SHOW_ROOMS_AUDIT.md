@@ -28,6 +28,16 @@ Live testing caught an invalid Hindi setup contract, an initial-round fairness i
 
 The hosted release is checked separately for its exact Git revision, public capabilities, configured Sarvam catalogue, dated news, avatar assets, browser/VR entry/exit, bounded live Hindi/news output and unchanged pre-existing saved data. Deployment retains the prior image and a data-volume backup. Review reports remain in the ignored private directory.
 
+## October 27 recovery follow-up
+
+The OpenAI model catalogue still listed `o1` after its reported October 23 shutdown. The app had discarded `shutdown_date`; it now filters shutdown models before ranking choices and blocks saved retired assignments with an explicit model/character error. Future shutdown dates remain selectable. Runtime `model_not_found` responses invalidate the catalogue and temporarily exclude only that model, without exposing provider response text or substituting a model. Other provider failures no longer uniformly suggest a key/balance problem. The user's explicit GPT-5.4 Mini choice was applied to the affected saved Host through the revision-checked assignment API; character identity, voice and history were retained.
+
+Closing the studio previously rendered discussion visibility before clearing its open flag, hiding Resume until a later state change. Studio notifications now publish the actual open state before rendering, including cancellation and delayed-save close paths. Whole-utterance Start/Continue/Go ahead and Hindi equivalents route to approved start/resume actions before note capture. Quoted commands and topic sentences remain ordinary input. An unavailable model targets the affected character when Brain & voice opens.
+
+Focused browser regressions exercise studio close, explicit model replacement, English/Hindi resumption, unchanged direction/brief counts and reload. A private in-memory copy of the affected session produced three real Hindi contributions across GPT-5.4 Mini and Claude Haiku, with both follow-ups referencing the preceding actual utterance. Two Sarvam clips decoded as 17.49- and 32.92-second mono WAV audio. The replay did not write to the production conversation. Private reports and audio remain under `.sovereign/review/`.
+
+Recovery verification passes 87 unit/service checks, 46 production browser journeys, TypeScript and the production build. Completed conversations remain byte-identical; the deliberately repaired active session retains its history and subsequent user-driven contributions. Hosted checks separately verify the release revision, filtered catalogue, selected Host brain and visible Resume after studio close.
+
 ## Remaining limits
 
 Room presets share the court architecture; this release does not create a walkable multi-room building or schedule multiple unattended shows concurrently. Voice acting and spontaneous laughter depend on the selected synthesis voice and generated text. News reasoning is source-aware interpretation, not an independent fact-checking service. Physical Quest microphone/tracking, comfort, GPU frame time and thermal behaviour still require W10/W11 hardware validation; browser hand emulation is not evidence of those results.

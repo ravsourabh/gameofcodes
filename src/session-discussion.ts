@@ -9,6 +9,8 @@ export class SessionDiscussion {
   guideMode=false;looping=false;busy=false;message='';targetId:string|null=null;
   private token=0;private controller:AbortController|null=null;private panel=document.createElement('section');private more=false;private page=0;private pendingControl:{signature:string;body:any}|null=null;private reviewIndex=-1;
   private scope='';
+  private failure(data:any,fallback:string){return Object.assign(new Error(data.error||fallback),{characterId:data.characterId});}
+  private failureMessage(error:unknown,fallback:string){const id=(error as {characterId?:string})?.characterId;if(id&&(this.cb.session()?.characters.some(c=>c.id===id)||this.cb.guide().id===id))this.ai.speakerId=id;return error instanceof Error?error.message:fallback;}
   private pendingDirection:{signature:string;saved:boolean;briefRequestId:string}|null=null;
   constructor(private cb:Callbacks,private ai:SessionConversation){
     this.panel.id='discussion-panel';this.panel.setAttribute('aria-label','Live discussion');document.querySelector('.session-app')!.append(this.panel);
@@ -47,7 +49,7 @@ export class SessionDiscussion {
       if(profile!==this.cb.profile()||s.id!==this.cb.session()?.id)throw new DOMException('Session changed','AbortError');
       const response=await fetch(`/api/discussion/${s.id}/control?profileId=${profile}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request.body),signal:AbortSignal.timeout(15000)}),data=await response.json();
       if(response.status===409&&attempt===0){if(profile!==this.cb.profile()||s.id!==this.cb.session()?.id)throw new DOMException('Session changed','AbortError');await this.refresh();request.body.expectedRevision=this.cb.session()!.revision;continue;}
-      if(!response.ok)throw new Error(data.error||'That discussion action did not finish.');
+      if(!response.ok)throw this.failure(data,'That discussion action did not finish.');
       if(profile!==this.cb.profile()||s.id!==this.cb.session()?.id)throw new DOMException('Session changed','AbortError');
       if(data.session.revision>=this.cb.session()!.revision)this.cb.sessionChanged(validateSession(data.session));if(this.pendingControl===request)this.pendingControl=null;return;
     }
@@ -56,22 +58,22 @@ export class SessionDiscussion {
     const s=this.cb.session()!,profile=this.cb.profile();this.controller=new AbortController();
     const response=await fetch(`/api/discussion/${s.id}/${part}?profileId=${profile}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId,expectedRevision:s.revision}),signal:this.controller.signal}),data=await response.json();
     if(profile!==this.cb.profile()||s.id!==this.cb.session()?.id)throw new DOMException('Session changed','AbortError');
-    if(!response.ok)throw new Error(data.error||'The saved action could not finish.');this.cb.sessionChanged(validateSession(data.session));
+    if(!response.ok)throw this.failure(data,'The saved action could not finish.');this.cb.sessionChanged(validateSession(data.session));
   }
   async pause(){this.cancelLocal();if(this.cb.session()?.status==='running'&&this.active)try{await this.control('pause');this.message='Paused. Your committed turns are kept.';}catch(error){this.message=error instanceof Error?error.message:'Pause could not be saved. No more turns will be requested.';}this.changed();}
   async restore(){this.cancelLocal();this.guideMode=false;this.message='';this.more=false;this.targetId=null;this.pendingControl=null;this.pendingDirection=null;const s=this.cb.session();this.scope=s?.id||'';if(s?.discussion){if(s.status==='running')await this.pause();const last=currentScopeTurns(this.cb.session()!).at(-1);if(last)this.ai.showContribution(last);if(needsBrief(s))this.message='Your direction is saved. Apply it before continuing.';}this.changed();}
   async invite(once=false){
     if(this.busy)return;this.scope=this.cb.session()?.id||'';this.cb.beforeStart();this.guideMode=false;const pausing=this.pause(),token=this.token;this.busy=true;this.message='Inviting two complementary voices for your idea…';this.ai.say(this.message,'Thinking');this.changed();let start=false;
     try{await pausing;if(token!==this.token)return;await this.inference('cast');if(token!==this.token)return;await this.cb.castChanged?.();if(token!==this.token)return;this.message='Your other voices have joined. Opening the discussion…';start=true;}
-    catch(error){if(token===this.token){await this.refresh().catch(()=>{});this.message=error instanceof Error?error.message:'Invitation paused. Retry the saved invitation.';this.ai.say(this.message,'Error');}}
+    catch(error){if(token===this.token){await this.refresh().catch(()=>{});this.message=this.failureMessage(error,'Invitation paused. Retry the saved invitation.');this.ai.say(this.message,'Error');}}
     finally{this.busy=false;this.changed();}if(start&&token===this.token)await this.start(once);
   }
-  async applySavedTopic(){if(this.busy)return;this.cancelLocal();const token=this.token;this.busy=true;this.message='Applying your saved direction…';this.changed();try{await this.inference('brief');if(token===this.token){this.message=`Topic saved: ${currentBrief(this.cb.session()!)?.title}. Resume when ready.`;this.ai.say(this.message);}}catch(error){if(token===this.token){await this.refresh().catch(()=>{});this.message=error instanceof Error?error.message:'Your words are saved. Retry the topic update.';this.ai.say(this.message,'Error');}}finally{this.busy=false;this.changed();}}
+  async applySavedTopic(){if(this.busy)return;this.cancelLocal();const token=this.token;this.busy=true;this.message='Applying your saved direction…';this.changed();try{await this.inference('brief');if(token===this.token){this.message=`Topic saved: ${currentBrief(this.cb.session()!)?.title}. Resume when ready.`;this.ai.say(this.message);}}catch(error){if(token===this.token){await this.refresh().catch(()=>{});this.message=this.failureMessage(error,'Your words are saved. Retry the topic update.');this.ai.say(this.message,'Error');}}finally{this.busy=false;this.changed();}}
   async start(once=false,style?:'coaching'){
     const session=this.cb.session();if(session&&session.participants.filter(p=>p.active).length<2&&session.discussion?.style!=='coaching'&&style!=='coaching'){await this.invite(once);return;}
     if(this.busy)return;this.scope=this.cb.session()?.id||'';this.cb.beforeStart();this.guideMode=false;this.cancelLocal();const token=this.token;this.busy=true;this.message='Preparing the floor…';this.changed();
     try{if(this.exists&&needsBrief(this.cb.session()!))await this.inference('brief');if(token!==this.token)return;const group=this.cb.session()!.participants.filter(p=>p.active).length>1;await this.control(this.exists?'resume':'start',style?{style}:group&&this.cb.session()?.discussion?.style==='coaching'?{style:'group'}:{});if(token!==this.token){if(this.active)await this.control('pause');return;}this.looping=true;this.message='';this.more=false;this.changed();void this.run(token,once);}
-    catch(error){this.message=error instanceof Error?error.message:'Discussion could not start.';this.ai.say(this.message,'Error');this.changed();}finally{this.busy=false;this.changed();}
+    catch(error){this.message=this.failureMessage(error,'Discussion could not start.');this.ai.say(this.message,'Error');this.changed();}finally{this.busy=false;this.changed();}
   }
   private async run(token:number,once:boolean){
     let carrySpeech=false;
@@ -81,7 +83,7 @@ export class SessionDiscussion {
         if(!carrySpeech){this.ai.stop(false);this.ai.speakerId=character.id;this.ai.say(`${character.name} is considering the discussion…`,'Thinking');}
         const response=await fetch(`/api/discussion/${s.id}/turn?profileId=${profile}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:crypto.randomUUID(),expectedRevision:s.revision}),signal:this.controller.signal}),result=await response.json();
         if(token!==this.token||profile!==this.cb.profile()||s.id!==this.cb.session()?.id)return;
-        if(!response.ok)throw new Error(result.error||'This contribution could not finish.');
+        if(!response.ok)throw this.failure(result,'This contribution could not finish.');
         this.cb.sessionChanged(validateSession(result.session));const contribution=result.contribution as Contribution;
         const prepared=carrySpeech?await this.ai.prepareContribution(contribution,this.controller.signal):undefined;if(token!==this.token)return;
         const cut=carrySpeech?this.ai.playbackSnapshot():null;carrySpeech=false;
@@ -99,12 +101,12 @@ export class SessionDiscussion {
         if(once){await this.pause();return;}
         if(this.ai.quiet){const until=Date.now()+Math.min(20000,Math.max(6000,contribution.text.split(/\s+/).length*320));while(token===this.token&&Date.now()<until)await new Promise(r=>setTimeout(r,80));}
       }
-    }catch(error){if(token===this.token){this.cancelLocal();try{await this.refresh();if(this.cb.session()?.status==='running')await this.control('pause');}catch{}this.message=error instanceof Error?error.message:'Connection lost. Resume explicitly when ready.';this.ai.say(this.message,'Error');this.changed();}}
+    }catch(error){if(token===this.token){this.cancelLocal();try{await this.refresh();if(this.cb.session()?.status==='running')await this.control('pause');}catch{}this.message=this.failureMessage(error,'Connection lost. Resume explicitly when ready.');this.ai.say(this.message,'Error');this.changed();}}
   }
   async intervene(action:string,text='',characterId=this.targetId){
     this.scope=this.cb.session()?.id||'';this.cb.beforeStart();this.guideMode=false;this.cancelLocal();const token=this.token,signature=JSON.stringify({id:this.cb.session()?.id,profile:this.cb.profile(),action,text,characterId});if(this.pendingDirection?.signature!==signature)this.pendingDirection={signature,saved:false,briefRequestId:crypto.randomUUID()};const pending=this.pendingDirection;this.busy=true;this.message='Saving your direction…';this.changed();
     try{if(!this.exists)await this.control('prepare');if(token!==this.token)return false;if(!pending.saved){await this.control('intervene',{action,text,characterId});pending.saved=true;}if(token!==this.token)return false;if(action==='say'){this.message='Your words are saved. Updating the working topic…';this.ai.say(this.message,'Thinking');await this.inference('brief',pending.briefRequestId);}if(token!==this.token)return false;this.message=action==='say'?`Direction saved for this discussion: ${currentBrief(this.cb.session()!)?.title}. Resume when ready.`:'Direction saved. Resume to hear the next response.';this.ai.say(this.message);this.pendingDirection=null;return true;}
-    catch(error){if(token===this.token){await this.refresh().catch(()=>{});this.message=error instanceof Error?error.message:'Direction could not finish. Your saved words can be retried.';this.ai.say(this.message,'Error');}}finally{this.busy=false;this.changed();}
+    catch(error){if(token===this.token){await this.refresh().catch(()=>{});this.message=this.failureMessage(error,'Direction could not finish. Your saved words can be retried.');this.ai.say(this.message,'Error');}}finally{this.busy=false;this.changed();}
     return false;
   }
   async address(id:string){const s=this.cb.session();if(!s?.participants.some(p=>p.active&&p.characterId===id))return;this.targetId=id;await this.intervene('give-floor','',id);}

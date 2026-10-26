@@ -615,6 +615,8 @@ Numbering gives the recommended integration order. Independent environment or co
 
 **W06 show follow-up:** implemented and locally verified with 84 unit/service checks, 44 production browser journeys and a bounded live Hindi/news run using three actual OpenAI/Claude participants and three Sarvam voices. See [SHOW_ROOMS_AUDIT.md](SHOW_ROOMS_AUDIT.md).
 
+**W06 recovery requirement:** closing the character studio must immediately restore paused-discussion controls. Whole-utterance Start/Continue commands in English and Hindi must route to approved start/resume actions rather than becoming saved topic directions. Filter provider-reported shutdown dates before offering models, retain future shutdown choices, and identify the affected character when a saved model becomes unavailable. Preserve history and require the user's replacement choice; never silently substitute a brain.
+
 ### W07 — Scores, courtroom decisions, and presenters
 
 - **Additional W06 follow-up before scores:** seated roundtable rigs/hand gestures, desktop TV shots with manual override, heard-first speaker context, custom narrated/written show premises, independent room/tone choices, Hindi/Sarvam and reviewed Indian-news topics implement AC-22/AC-23. Verify actual voices, sourced discussion and real audio cut-ins before building scoring/presenters. Physical headset comfort and performance remain W10/W11 validation, and multi-room background scheduling is deferred.

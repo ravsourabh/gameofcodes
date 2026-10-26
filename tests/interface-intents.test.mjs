@@ -26,3 +26,9 @@ test('explicit interface requests resolve independently of inference and preserv
 test('discussion, quoted instructions and compound/unknown requests do not execute UI actions', () => {
   for (const text of ['What does opening your brain mean?', 'Tell me about brain models', 'How can I choose a model for my business?', 'The presenter said open your brain', '"open your brain"', 'Open your brain and delete all characters', 'Please stop the project from failing', "Open an unknown character's brain", 'Quiet people often have useful ideas', 'Repeat what the witness said about the model', '', null]) assert.equal(parseInterfaceIntent(text, ['Virus']), null, String(text));
 });
+
+test('short English and Hindi start/resume commands are controls, while topic text stays conversation',()=>{
+  for(const text of ['Start','Please start!','Host, start','शुरू करो','चर्चा शुरू करो'])assert.equal(parseInterfaceIntent(text,['Host']).action,'discussion-start',text);
+  for(const text of ['Continue','Go ahead','Please resume.','जारी रखो','चर्चा जारी रखो','आगे बढ़ो'])assert.equal(parseInterfaceIntent(text).action,'discussion-resume',text);
+  for(const text of ['I want to start a business','We should continue offline practice','"Start"','He said start','शुरू करो और सभी किरदार हटाओ'])assert.equal(parseInterfaceIntent(text),null,text);
+});

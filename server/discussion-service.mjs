@@ -9,11 +9,12 @@ import {recordCutOff} from '../shared/room-performance.mjs';
 export function discussionId(requestId,label){const bytes=createHash('sha256').update(requestId+'/'+label).digest().subarray(0,16);bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;const h=bytes.toString('hex');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;}
 export function createDiscussionService({ai,characters,load,persist,serial,inflight,json,fail}){
   const mutate=(s,requestId,fields={})=>({requestId,expectedRevision:s.revision,...fields});
+  async function forCharacter(character,work){try{return await work();}catch(error){if(error instanceof SessionError&&error.code==='AI_MODEL_UNAVAILABLE'){error.message=`${character.name}: ${error.message}`;error.characterId=character.id;}throw error;}}
   async function applyBrief(profile,id,snapshot,controller,requestId,force=false){
     if(!needsBrief(snapshot)&&(!force||currentBrief(snapshot)))return snapshot;
     const guide=snapshot.guidance?.guide||snapshot.characters.find(c=>activeParticipants(snapshot).some(p=>p.characterId===c.id));
     if(!guide?.brain?.model)fail('Your correction is saved. Connect a guide brain before applying it.',409);
-    const result=await ai.brief(profile,guide,snapshot,controller.signal);
+    const result=await forCharacter(guide,()=>ai.brief(profile,guide,snapshot,controller.signal));
     if(controller.signal.aborted)fail('Topic update interrupted. Your words are saved.',409);
     return serial(profile+'/'+id,async()=>{const s=await load(profile,id);if(controller.signal.aborted)fail('Topic update interrupted.',409);const next=saveDiscussionBrief(s,mutate(snapshot,requestId,result));await persist(next);return next;});
   }
@@ -66,7 +67,7 @@ export function createDiscussionService({ai,characters,load,persist,serial,infli
     if(part==='performance')return serial(key,async()=>{const saved=await load(profileId,id);if(!saved)fail('Session not found.',404);const next=recordCutOff(saved,{...input,requestId});if(next!==saved)await persist(next);return json(res,200,{session:next,replayed:next===saved});});
     if(part==='control'){
       if(['pause','stop','finish','intervene'].includes(input.operation))inflight.get(key)?.abort();
-      return serial(key,async()=>{const saved=await load(profileId,id);if(!saved)fail('Session not found.',404);const updated=controlDiscussion(saved,{...input,requestId});if(updated!==saved){if(['start','resume'].includes(input.operation))for(const p of activeParticipants(updated)){const c=updated.characters.find(c=>c.id===p.characterId);await ai.validateAssignment(p.brain,c.voice);}await persist(updated);}return json(res,200,{session:updated,replayed:updated===saved});});
+      return serial(key,async()=>{const saved=await load(profileId,id);if(!saved)fail('Session not found.',404);const updated=controlDiscussion(saved,{...input,requestId});if(updated!==saved){if(['start','resume'].includes(input.operation))for(const p of activeParticipants(updated)){const c=updated.characters.find(c=>c.id===p.characterId);await forCharacter(c,()=>ai.validateAssignment(p.brain,c.voice));}await persist(updated);}return json(res,200,{session:updated,replayed:updated===saved});});
     }
     let snapshot=await serial(key,async()=>{const s=await load(profileId,id);if(!s)fail('Session not found.',404);return s;});
     const prior=snapshot.events.find(e=>e.requestId===requestId),pendingJob=snapshot.discussion?.castJobs?.find(j=>j.requestId===requestId&&j.status==='pending');
@@ -88,7 +89,7 @@ export function createDiscussionService({ai,characters,load,persist,serial,infli
       if(part==='cast'){const updated=await invite(profileId,id,snapshot,controller,requestId);return json(res,200,{session:updated});}
       snapshot=await applyBrief(profileId,id,snapshot,controller,part==='brief'?requestId:discussionId(requestId,'brief'));
       if(part==='brief')return json(res,200,{session:snapshot});
-      const participant=nextDiscussionSpeaker(snapshot),character=snapshot.characters.find(c=>c.id===participant.characterId),result=await ai.discussion(profileId,character,participant,snapshot,controller.signal);
+      const participant=nextDiscussionSpeaker(snapshot),character=snapshot.characters.find(c=>c.id===participant.characterId),result=await forCharacter(character,()=>ai.discussion(profileId,character,participant,snapshot,controller.signal));
       if(controller.signal.aborted)fail('Discussion interrupted.',409);
       const updated=await serial(key,async()=>{const s=await load(profileId,id),next=recordDiscussionTurn(s,mutate(snapshot,requestId,{epoch:snapshot.epoch,participantId:participant.id,...result}));await persist(next);return next;});
       return json(res,200,{session:updated,contribution:updated.contributions.find(c=>c.requestId===requestId)});

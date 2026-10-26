@@ -31,6 +31,20 @@ test('a failure before the first turn keeps a visible start/retry path',async({p
  state.failStart=true;await page.locator('[data-guide="start-discussion"]').click();await expect(page.locator('#discussion-panel')).toBeVisible();await expect(page.locator('.discussion-message')).toContainText('brain connection failure');await expect(page.locator('[data-discuss="start"]')).toBeEnabled();expect((await session()).discussion).toBeUndefined();
  await page.locator('[data-discuss="start"]').click();await expect.poll(async()=>(await session()).contributions.length,{timeout:20000}).toBe(1);await page.locator('#interrupt').click();await expect(page.locator('body')).toHaveAttribute('data-discussion-state','paused');
 });
+
+test('closing the brain studio restores Resume and short start commands never become saved directions',async({page})=>{
+ await start(page);await page.getByLabel('Your instruction').fill("Open Elian's brain");await page.getByRole('button',{name:'Send instruction'}).click();await expect(page.locator('body')).toHaveAttribute('data-workshop-open','true');await expect(page.locator('#discussion-panel')).toBeHidden();
+ await page.locator('[data-workshop="close"]').click();await expect(page.locator('body')).toHaveAttribute('data-workshop-open','false');await expect(page.locator('[data-discuss="resume"]')).toBeVisible();await expect(page.locator('#court-surfaces')).toBeVisible();
+ const before=await session(),briefs=state.briefCalls.length;
+ for(const command of ['Start','जारी रखो']){const count=(await session()).contributions.length;await page.getByLabel('Your instruction').fill(command);await page.getByRole('button',{name:'Send instruction'}).click();await expect.poll(async()=>(await session()).contributions.length).toBeGreaterThan(count);await page.locator('#interrupt').click();await expect(page.locator('body')).toHaveAttribute('data-discussion-state','paused');}
+ expect((await session()).discussion.interventions).toEqual(before.discussion.interventions);expect(state.briefCalls.length).toBe(briefs);await page.reload();await expect(page.locator('[data-discuss="resume"]')).toBeVisible();await page.screenshot({path:'test-results/recovered-discussion.png'});
+});
+
+test('an unavailable participant model targets that character for a deliberate brain change',async({page})=>{
+ state.unavailableModel='gpt-fixture';await page.locator('[data-guide="start-discussion"]').click();await expect(page.locator('.discussion-message')).toContainText('Elian: This model is unavailable');await expect(page.locator('#speaker-label')).toHaveText('Elian');expect(state.calls).toHaveLength(0);
+ await page.locator('#brain-open').click();await expect(page.locator('.workshop-top h2')).toContainText('Elian');await page.locator('[data-workshop="choice:anthropic|claude-fixture"]').click();await page.locator('[data-workshop="join"]').click();await expect(page.locator('body')).toHaveAttribute('data-workshop-open','false');await expect(page.locator('[data-discuss="start"]')).toBeVisible();
+ await page.locator('[data-discuss="start"]').click();await expect.poll(async()=>(await session()).contributions.length).toBeGreaterThan(0);await page.locator('#interrupt').click();await expect(page.locator('body')).toHaveAttribute('data-discussion-state','paused');expect((await session()).participants[0].brain.model).toBe('claude-fixture');expect(state.calls[0].brain.model).toBe('claude-fixture');
+});
 test('spoken playback holds the floor and interrupt prevents a late audio end from restarting it',async({page})=>{
  await page.evaluate(()=>{const state={spoken:[] as SpeechSynthesisUtterance[],canceled:0};(window as any).__voiceTest=state;Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{getVoices:()=>[],speak:(utterance:SpeechSynthesisUtterance)=>state.spoken.push(utterance),cancel:()=>state.canceled++}});});
  await page.locator('#quiet').click();await page.locator('[data-guide="start-discussion"]').click();await expect(page.locator('#conversation-state')).toHaveText('Speaking');await expect.poll(()=>page.evaluate(()=>(window as any).__voiceTest.spoken.length)).toBe(1);

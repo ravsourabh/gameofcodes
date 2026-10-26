@@ -40,6 +40,23 @@ test('avatar proposals are validated as cosmetics and transcription preserves th
  const proposal=await ai.avatar(profile,'A calm person',brain,new AbortController().signal);assert.equal(proposal.fields.name,'Ari');assert.deepEqual(Object.keys(proposal.fields).sort(),['name','personality','code','avatar','voicePreference'].sort());
  assert.equal((await ai.transcribe(profile,Buffer.from('audio'),'audio/mpeg',new AbortController().signal)).text,'Hello');assert.equal(fileName,'voice.mp3');
 });
+
+test('shutdown metadata excludes retired models before ranking and rejects saved assignments without substitution',async()=>{
+ const today=new Date().toISOString().slice(0,10),future=new Date(Date.now()+86400000).toISOString().slice(0,10),calls=[];
+ const ai=createSessionAI({env:{OPENAI_API_KEY:'fixture'},transport:async(url)=>{calls.push(url);assert.ok(url.endsWith('/models'));return Response.json({data:[{id:'o1',shutdown_date:'2026-10-23'},{id:'gpt-ending-today',shutdown_date:today},{id:'gpt-future-mini',shutdown_date:future},{id:'gpt-unknown',shutdown_date:null},{id:'gpt-missing-date'},{id:'gpt-invalid-date',shutdown_date:'unknown'}]});}});
+ assert.deepEqual((await ai.catalog()).providers[0].models.map(m=>m.id).sort(),['gpt-future-mini','gpt-invalid-date','gpt-missing-date','gpt-unknown']);
+ await assert.rejects(ai.validateAssignment({provider:'openai',model:'o1'},null),e=>e.code==='AI_MODEL_UNAVAILABLE'&&/o1 was shut down on 2026-10-23/.test(e.message));
+ await ai.validateAssignment({provider:'openai',model:'gpt-future-mini'},null);assert.equal(calls.length,1);
+});
+
+test('model_not_found identifies the failing model, stops retries and never leaks provider text',async()=>{
+ let posts=0;const ai=createSessionAI({env:{OPENAI_API_KEY:'fixture'},transport:async(url)=>url.endsWith('/models')?Response.json({data:[{id:'gpt-test'}]}):(posts++,Response.json({error:{code:'model_not_found',message:'Untrusted provider text secret-value'}},{status:404}))});
+ const profile=randomUUID(),c={...generateCharacter(profile),brain},s={scenario:{situation:''},participants:[],exchanges:[]};
+ for(let i=0;i<2;i++)await assert.rejects(ai.talk(profile,c,s,'Hi',new AbortController().signal),e=>e.code==='AI_MODEL_UNAVAILABLE'&&/gpt-test.*unavailable/.test(e.message)&&!e.message.includes('secret-value'));
+ assert.equal(posts,1);assert.deepEqual((await ai.catalog()).providers[0].models,[]);
+ const speech=createSessionAI({env:{OPENAI_API_KEY:'fixture'},transport:async(url)=>url.endsWith('/models')?Response.json({data:[{id:'gpt-test'},{id:'tts-1'}]}):Response.json({error:{code:'model_not_found'}},{status:404})});
+ await assert.rejects(speech.speak(profile,{voice:{provider:'openai',id:'echo'}},'Hi',new AbortController().signal),e=>e.code==='AI_UNAVAILABLE'&&/404/.test(e.message));assert.equal((await speech.catalog()).providers[0].models[0].id,'gpt-test');
+});
 test('model budgets bound both one profile and the server across new profiles',async()=>{
  const ai=createSessionAI({env:{OPENAI_API_KEY:'test-only'},transport:async url=>url.endsWith('/models')?Response.json({data:[{id:'gpt-test'}]}):Response.json({model:'gpt-test',output:[{content:[{type:'output_text',text:'A bounded reply.'}]}]})});
  const profile=randomUUID(),character={...generateCharacter(profile),brain},session={scenario:{situation:''},participants:[],exchanges:[]};

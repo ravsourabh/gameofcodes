@@ -12,6 +12,9 @@ import {SETUP_SCHEMA} from './setup-schema.mjs';
 const fail = (message, status = 503) => { throw new SessionError(message, status, 'AI_UNAVAILABLE'); };
 export function createSessionAI({ env = process.env, transport = fetch } = {}) {
   let cache, pendingCatalog;
+  const unavailableModels=new Map();
+  const blockedModel=(provider,model)=>{const key=provider+'/'+model,entry=unavailableModels.get(key);if(entry?.until<=Date.now()){unavailableModels.delete(key);return null;}return entry?.reason;};
+  const unavailable=(provider,model,reason)=>{throw new SessionError(`${provider}: ${model} ${reason}. Open Brain & voice and choose an available model. Your conversation is saved.`,503,'AI_MODEL_UNAVAILABLE');};
   const rates = new Map();
   // Profiles are unauthenticated, so the server also bounds its own daily spend.
   const dailyLimit = Math.max(1, Number.parseInt(env.SOVEREIGN_DAILY_AI_REQUESTS, 10) || 1500), day = { start: 0, count: 0 };
@@ -19,8 +22,13 @@ export function createSessionAI({ env = process.env, transport = fetch } = {}) {
     const response = await transport(url, { method: body ? 'POST' : 'GET', headers, ...(body ? { body: body instanceof FormData ? body : JSON.stringify(body) } : {}), signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(45000)]) : AbortSignal.timeout(12000) });
     if (!response.ok) {
       if(url.includes('elevenlabs.io/v2/voices')&&response.status===401)fail('ElevenLabs voice catalogue unavailable: enable voices_read on the key, or choose OpenAI/device voices.',403);
-      if(response.status===400){let error;try{error=await response.clone().json();}catch{}if(/schema|structured|output_config|response_format/i.test(String(error?.error?.message||'')))fail('This model rejected the discussion output contract. The discussion is paused; choose another compatible brain or retry after the integration is corrected.',503);}
-      fail(`The selected provider returned ${response.status}. Check its key, access and usage balance, then retry.`, response.status === 429 ? 429 : 503);
+      let error;try{error=await response.clone().json();}catch{}
+      if(response.status===404&&url==='https://api.openai.com/v1/responses'&&error?.error?.code==='model_not_found'&&typeof body?.model==='string'){
+        unavailableModels.set('openai/'+body.model,{reason:'is unavailable to this connection',until:Date.now()+60000});cache=null;
+        unavailable('openai',body.model,'is unavailable to this connection');
+      }
+      if(response.status===400&&/schema|structured|output_config|response_format/i.test(String(error?.error?.message||'')))fail('This model rejected the discussion output contract. The discussion is paused; choose another compatible brain or retry after the integration is corrected.',503);
+      fail(response.status===401?'The selected provider rejected its API key. Check that provider’s configured key.':response.status===403?'The selected provider denied access to this request. Check that provider’s permissions.':response.status===429?'The selected provider reached a rate or usage limit. Check its usage and retry later.':`The selected provider returned ${response.status}. This request could not finish; retry or choose another brain or voice.`, response.status === 429 ? 429 : 503);
     }
     const chunks = []; let bytes = 0;
     for await (const chunk of response.body) { bytes += chunk.length; if (bytes > 6_000_000) fail('The provider response exceeded the size limit.', 502); chunks.push(chunk); }
@@ -41,7 +49,10 @@ export function createSessionAI({ env = process.env, transport = fetch } = {}) {
         if (!key) return { id, name, status: 'No key configured', models: [], audioModels: [] };
         try {
           const data = await request(url, headers(id));
-          const entries = (data.data || data.models || []).map(model => ({ id: String(model.id || model.name?.replace('models/', '') || ''), name: String(model.display_name || model.displayName || model.id || ''), methods: model.supportedGenerationMethods }));
+          const listed = (data.data || data.models || []).map(model => ({ id: String(model.id || model.name?.replace('models/', '') || ''), name: String(model.display_name || model.displayName || model.id || ''), methods: model.supportedGenerationMethods,shutdownDate:model.shutdown_date }));
+          const today=new Date().toISOString().slice(0,10);
+          for(const model of listed)if(typeof model.shutdownDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(model.shutdownDate)&&model.shutdownDate<=today)unavailableModels.set(id+'/'+model.id,{reason:`was shut down on ${model.shutdownDate}`,until:Infinity});
+          const entries=listed.filter(model=>!blockedModel(id,model.id));
           const suitable = entries.filter(model => id === 'openai' ? /^(gpt-|o[134])/.test(model.id) && !/audio|realtime|image|transcribe|tts|search|instruct|codex|chat-latest/.test(model.id) : id === 'gemini' ? model.methods?.includes('generateContent') && /^gemini-/.test(model.id) && !/image|vision|tts|robot|computer/.test(model.id) : /^claude-/.test(model.id));
           suitable.sort((a,b) => { const rank = m => /nano|flash-lite|haiku/.test(m.id) ? 0 : /mini|flash|luna/.test(m.id) ? 1 : 2; return rank(a) - rank(b) || b.id.localeCompare(a.id); });
           return { id, name, status: 'Catalogue connected', models: suitable.slice(0, 30).map(({id,name}) => ({id,name})), audioModels: entries.filter(m => /^(gpt-transcribe|gpt-4o-mini-transcribe|whisper-1)$/.test(m.id)).map(m => m.id), speechModels: entries.filter(m => /^(tts-1|gpt-4o-mini-tts)$/.test(m.id)).map(m => m.id) };
@@ -73,6 +84,7 @@ export function createSessionAI({ env = process.env, transport = fetch } = {}) {
     if(brain&&(typeof brain!=='object'||Object.keys(brain).some(k=>!['provider','model'].includes(k))))fail('Invalid brain assignment.',400);
     if(voice&&(typeof voice!=='object'||Object.keys(voice).some(k=>!['provider','id'].includes(k))))fail('Invalid voice assignment.',400);
     const pool = await catalog();
+    if(brain&&blockedModel(brain.provider,brain.model))unavailable(brain.provider,brain.model,blockedModel(brain.provider,brain.model));
     if (brain && !pool.providers.some(p => p.id === brain.provider && p.models.some(m => m.id === brain.model))) fail('Choose a model from the connected catalogue.');
     if (voice && !(voice.provider === 'browser' && typeof voice.id === 'string' && voice.id.length <= 160) && !pool.voices.some(v => v.provider === voice.provider && v.id === voice.id)) fail('Choose a voice from the connected catalogue.');
   }

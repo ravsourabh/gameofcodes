@@ -75,7 +75,8 @@ export class CharacterWorkshop {
   get status() { return this.message; }
   private inCast(id: string) { return !!this.cb.session()?.participants.some(item => item.characterId === id && item.active); }
   private endpoint() { return `/api/characters?profileId=${encodeURIComponent(this.cb.profile())}`; }
-  private notify() { this.cb.changed(); }
+  // Discussion visibility reads this flag during changed(), including every close path.
+  private notify() { document.body.dataset.workshopOpen=String(this.isOpen);this.cb.changed(); }
   private setBusy(value: boolean) { this.busy = value; if(this.isOpen)this.render();else this.notify();this.dialog.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('button,input,textarea,select').forEach(element => element.disabled = value || element.dataset.restricted === 'true'); }
   private async request<T>(url: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(url, { ...options, signal: AbortSignal.timeout(8000), headers: { 'Content-Type': 'application/json' } });
@@ -233,14 +234,14 @@ export class CharacterWorkshop {
     }
     if(character.brain)try{await this.ai.assign(character.id,character.brain,character.voice||this.ai.voiceFor(character));}catch(error){this.message=error instanceof Error?error.message:'Brain could not be applied. Retry.';this.render();return;}
     if(this.roleDraft&&this.inCast(character.id)){await this.applyRole();}
-    this.isOpen=false;this.dialog.close();document.body.dataset.workshopOpen='false';this.ai.say(`${character.name} is ready.`);this.notify();
+    this.isOpen=false;this.dialog.close();this.ai.say(`${character.name} is ready.`);this.notify();
   }
   async handle(action: SceneAction) {
     if(this.busy)return;
     if(action==='characters'){this.open();return;}
     if(!action.startsWith('workshop:'))return;
     const value=action.slice(9);
-    if(value==='close'){this.ai.stop();this.close();document.body.dataset.workshopOpen='false';}
+    if(value==='close'){this.ai.stop();this.close();}
     else if(value==='new')this.newCharacter();else if(value==='join')await this.join();else if(value==='reroll')this.reroll();
     else if(value==='keep'){this.locks.has(this.feature)?this.locks.delete(this.feature):this.locks.add(this.feature);this.render();}
     else if(value.startsWith('feature:'))this.selectFeature(value.slice(8));
