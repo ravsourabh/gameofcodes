@@ -4,7 +4,7 @@ import {CharacterWorkshop} from './character-workshop';
 import {SessionConversation} from './session-conversation';
 
 type Choice={label:string;action:string};
-type Callbacks={profile:()=>string;session:()=>Session|null;ensureSession:()=>Promise<Session|null>;sessionChanged:(s:Session)=>void;changed:()=>void;details:()=>void;startDiscussion?:()=>Promise<void>};
+type Callbacks={profile:()=>string;session:()=>Session|null;ensureSession:()=>Promise<Session|null>;sessionChanged:(s:Session)=>void;changed:()=>void;details:()=>void;startDiscussion?:()=>Promise<void>;startCoaching?:()=>Promise<void>};
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const fieldsFor=(c:Character)=>characterFields({name:c.name,avatar:c.avatar,personality:c.personality,code:c.code,voicePreference:c.voicePreference});
 export class GuideSetup {
@@ -47,7 +47,7 @@ export class GuideSetup {
       return [{label:'Invite for this role',action:'invite'},{label:'Use someone saved',action:'saved'},{label:'Next role',action:'next-role'},{label:'Review room & cast',action:'recap'}];
     }
     if(this.view==='recap')return [{label:'Approve setup',action:'approve'},{label:'Try interrupting',action:'demo'},{label:'Change cast',action:'cast'},{label:'Read next',action:'next'}];
-    if(this.view==='ready')return [{label:this.cb.session()?.scenario.mode==='discussion'?'Start discussion':'Ask a character',action:this.cb.session()?.scenario.mode==='discussion'?'start-discussion':'free'},{label:'Review notes',action:'notes'},{label:'Edit setup',action:'details'}];
+    if(this.view==='ready'){const s=this.cb.session(),group=s?.scenario.mode==='discussion',solo=group&&s.participants.filter(p=>p.active).length<2;return [{label:group?solo?'Discuss with others':'Start discussion':'Ask a character',action:group?'start-discussion':'free'},...(solo?[{label:'One-to-one coaching',action:'start-coaching'}]:[]),{label:'Review notes',action:'notes'},{label:'Edit setup',action:'details'}];}
     return [{label:this.setup?.proposal?'Prepare readback':'Use an example',action:this.setup?.proposal?'propose':'example'},{label:'Add context',action:'context-menu'},{label:'Details',action:'details'}];
   }
   private get availableSaved(){const s=this.cb.session();return(this.workshop.library?.characters||[]).filter(c=>c.id!==this.workshop.guide.id&&!s?.participants.some(p=>p.active&&p.characterId===c.id));}
@@ -158,6 +158,7 @@ export class GuideSetup {
   }
   async handle(action:string){
     if(action==='start-discussion'){await this.cb.startDiscussion?.();return;}
+    if(action==='start-coaching'){await this.cb.startCoaching?.();return;}
     if(action==='pause'){await this.interrupted();return;}
     if(this.busy&&['notes','help','details'].includes(action))this.pause();
     if(this.busy)return;

@@ -9,6 +9,8 @@ export function parseInterfaceIntent(text, names = []) {
   const addressed = known.find(name => value.startsWith(name + ',') || value.startsWith(name + ':') || value.startsWith(name + ' '));
   if (addressed) { characterName = addressed; value = value.slice(addressed.length).replace(/^[,:]\s*/, '').trim(); }
   value = value.replace(/^(?:(?:please|can you|could you|would you|will you|i want to|i would like to|i'd like to)\s+)+/, '').replace(/(?:,? please| for me)$/, '').trim();
+  if(/^(?:discuss (?:it|this|the idea|my idea) with (?:others|the others|other (?:characters|people)|the group)|(?:bring in|invite|add) (?:other|more|two|2) (?:characters|voices|people|perspectives))$/.test(value))return {action:'discussion-invite',...(characterName?{characterName}:{})};
+  if(/^(?:one.to.one coaching|coach me one.on.one|talk one.to.one)$/.test(value))return {action:'discussion-coach',...(characterName?{characterName}:{})};
   const controls = new Map([
     ['stop','interrupt'],['pause','interrupt'],['interrupt','interrupt'],['stop talking','interrupt'],['stop speaking','interrupt'],
     ['quiet','quiet'],['quiet mode','quiet'],['be quiet','quiet'],['mute','quiet'],['mute yourself','quiet'],['turn off voice','quiet'],

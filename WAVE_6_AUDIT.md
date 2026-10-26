@@ -37,3 +37,5 @@ Rendering exposes rolling CPU submission timings, frame cadence, draw calls and 
 The existing GitHub main-branch deployment invokes `scripts/deploy.sh`. It serialises activation, keeps the prior image, archives the existing data volume, builds with the Git revision, preserves the Compose volume/environment, verifies discussion/setup capabilities and the served revision, and restores the previous image if activation/health fails. Build failure leaves the prior running container in place. The public host and all saved state/configuration are verified separately after activation. No credentials are committed.
 
 The next wave is W07: user scoring and decision presenters. Physical Quest acceptance remains a release-validation requirement in W10/W11.
+
+The subsequent public conversation exposed correction-memory, clarification-loop and single-Host failures that the original regression suite did not cover. [The pre-W07 repair audit](CONVERSATION_REPAIR_AUDIT.md) records the fixes and the required exact-case live replay. W07 remains unstarted until that repair is verified and deployed.

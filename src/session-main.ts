@@ -5,6 +5,7 @@ import { SessionConversation } from './session-conversation';
 import { GuideSetup } from './guide-setup';
 import {SessionDiscussion} from './session-discussion';
 import {CourtOverlay,courtState} from './court-surfaces';
+import {isScopeCorrection} from '../shared/discussion-memory.mjs';
 import { parseInterfaceIntent, type InterfaceIntent } from '../shared/interface-intents.mjs';
 import { isId, validateSession, type Session, type SessionMode, type Draft } from '../shared/session-domain.mjs';
 
@@ -245,8 +246,8 @@ const sessionCallbacks={profile:()=>selectedId,session:()=>saved,ensureSession,s
 conversation = new SessionConversation(sessionCallbacks);
 workshop = new CharacterWorkshop(sessionCallbacks,conversation);
 court=new CourtOverlay((action,id)=>{if(action==='floor'&&id)void discussion?.address(id);else if(action==='brain'&&id)void openCharacterControls('brain',id);});
-discussion=new SessionDiscussion({...sessionCallbacks,guide:()=>workshop!.guide,beforeStart:()=>{guideSetup?.pause();if(guideSetup)guideSetup.active=false;document.body.classList.remove('details-open');}},conversation);
-guideSetup=new GuideSetup({...sessionCallbacks,details:()=>{document.body.classList.add('details-open');if(!editing)start(draftMode);showDetails(true);},startDiscussion:async()=>{await discussion?.start();}},conversation,workshop);
+discussion=new SessionDiscussion({...sessionCallbacks,guide:()=>workshop!.guide,castChanged:async()=>{await workshop!.reload();},beforeStart:()=>{if(guideSetup?.active||guideSetup?.busy)guideSetup.pause();if(guideSetup)guideSetup.active=false;document.body.classList.remove('details-open');}},conversation);
+guideSetup=new GuideSetup({...sessionCallbacks,details:()=>{document.body.classList.add('details-open');if(!editing)start(draftMode);showDetails(true);},startDiscussion:async()=>{await discussion?.start();},startCoaching:async()=>{await discussion?.start(false,'coaching');}},conversation,workshop);
 async function openCharacterControls(view:'brain'|'voice'|'appearance', id=workshop?.current?.id&&workshop.isOpen?workshop.current.id:conversation?.speakerId||workshop?.guide.id){
   if(!workshop||!conversation||!id||busy||workshop.busy)return false;
   if(discussion?.active||discussion?.busy)await discussion.pause();
@@ -263,7 +264,7 @@ async function executeInterfaceIntent(intent:InterfaceIntent){
     if(!saved||saved.status==='draft'&&!discussion.exists){conversation.say('Confirm the situation and cast first, or open a saved discussion.');return;}
     if(intent.characterName){const matches=saved?.characters.filter(c=>c.name.normalize('NFKC').toLowerCase()===intent.characterName&&saved?.participants.some(p=>p.active&&p.characterId===c.id))||[];if(matches.length!==1){conversation.say('Select the active participant you mean.');return;}target=matches[0].id;}
     if(action==='floor'){if(target)await discussion.address(target);else conversation.say('Select a participant to give them the floor.');}
-    else if(['start','resume','stop','finish'].includes(action))await discussion.handle(action);
+    else if(['start','resume','stop','finish','invite','coach'].includes(action))await discussion.handle(action);
     else await discussion.intervene(action,'',target||saved?.participants.find(p=>p.active&&p.characterId===conversation?.speakerId)?.characterId||null);
     return;
   }
@@ -272,6 +273,7 @@ async function executeInterfaceIntent(intent:InterfaceIntent){
   if(intent.action==='repeat'){if(discussion?.active||discussion?.busy)await discussion.pause();await conversation.repeat();return;}
   if(intent.action==='notes'||intent.action==='guide-help'||intent.action==='intro'){if(discussion?.active||discussion?.busy)await discussion.pause();if(discussion)discussion.guideMode=true;if(guideSetup){guideSetup.active=true;conversation.speakerId=workshop.guide.id;document.body.classList.remove('details-open');await guideSetup.handle(intent.action==='notes'?'notes':intent.action==='intro'?'practice':'help');}return;}
   if(intent.action==='new-character'){if(discussion?.active||discussion?.busy)await discussion.pause();conversation.stop();workshop.newCharacter();return;}
+  if(intent.action==='show-characters'){if(discussion?.active||discussion?.busy)await discussion.pause();guideSetup?.pause();workshop.open();return;}
   let id=workshop.isOpen?workshop.current?.id:conversation.speakerId||workshop.guide.id;
   if(intent.characterName){
     const normalise=(name:string)=>name.normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
@@ -284,7 +286,11 @@ async function sendInstruction(text:string){
   if(!text.trim()||!conversation||!workshop)return;
   const intent=parseInterfaceIntent(text,[workshop.guide.name,...(workshop.library?.characters.map(c=>c.name)||[]),...(workshop.current?[workshop.current.name]:[])]);
   if(intent){if((busy||workshop.busy)&&!['interrupt','quiet','unquiet'].includes(intent.action)){conversation.say('Finishing your current change. Try that command again in a moment.');return;}await executeInterfaceIntent(intent);$<HTMLInputElement>('#instruction').value='';return;}
-  if(workshop.isOpen)await workshop.describe(text.trim());else if(discussion?.ownsInput)await discussion.intervene('say',text.trim(),discussion.targetId||saved?.participants.find(p=>p.active&&p.characterId===conversation?.speakerId)?.characterId||null);else if(!guideSetup?.active||conversation.speakerId&&conversation.speakerId!==workshop.guide.id||!await guideSetup.receive(text.trim()))await conversation.talk(conversation.speakerId||workshop.guide.id,text.trim());if(conversation.phase!=='Error'&&!guideSetup?.busy&&!document.querySelector('#guide-setup [role="alert"]'))$<HTMLInputElement>('#instruction').value='';
+  let accepted=true;
+  if(workshop.isOpen)await workshop.describe(text.trim());
+  else if(discussion&&(discussion.ownsInput||(discussion.active||saved?.status==='ready')&&isScopeCorrection(text)))accepted=await discussion.intervene('say',text.trim(),discussion.targetId||saved?.participants.find(p=>p.active&&p.characterId===conversation?.speakerId)?.characterId||null);
+  else if(!guideSetup?.active||conversation.speakerId&&conversation.speakerId!==workshop.guide.id||!await guideSetup.receive(text.trim()))await conversation.talk(conversation.speakerId||workshop.guide.id,text.trim());
+  if(accepted&&conversation.phase!=='Error'&&!guideSetup?.busy&&!document.querySelector('#guide-setup [role="alert"]'))$<HTMLInputElement>('#instruction').value='';
 }
 $('#instruction-form').addEventListener('submit',event=>{event.preventDefault();void sendInstruction($<HTMLInputElement>('#instruction').value);});
 $('#microphone').addEventListener('click',async()=>{if(discussion?.active&&conversation?.phase!=='Listening')await discussion.pause();void conversation?.microphone(text=>void sendInstruction(text));});

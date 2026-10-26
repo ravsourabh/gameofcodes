@@ -48,7 +48,7 @@ export function validateRecord(value, expectedKind = value?.kind) {
       check(isId(value.characterId) && text(value.role, 160, true) && text(value.code, 1000) && text(value.position, 4000) && brain(value.brain) && typeof value.active === 'boolean', 'Invalid participant.'); break;
     case 'contribution':
       check(isId(value.participantId) && isId(value.requestId) && integer(value.epoch) && text(value.text, 12000, true) && brain(value.brain) && value.brain !== null && idList(value.relatedIds), 'Invalid contribution.');
-      if(value.discussion!==undefined)check(value.discussion===true&&['opening','objection','answer','reflection','summary'].includes(value.turnKind)&&text(value.position,500,true)&&(value.questionForParticipantId===null||isId(value.questionForParticipantId)),'Invalid discussion contribution.');break;
+      if(value.discussion!==undefined)check(value.discussion===true&&['opening','objection','answer','reflection','summary'].includes(value.turnKind)&&text(value.position,500,true)&&(value.questionForParticipantId===null||isId(value.questionForParticipantId))&&(value.scopeVersion===undefined||integer(value.scopeVersion))&&(value.needsUserInput===undefined||typeof value.needsUserInput==='boolean'),'Invalid discussion contribution.');break;
     case 'rating':
       check(isId(value.contributionId) && text(value.criterion, 100, true) && Number.isFinite(value.value) && value.value >= -5 && value.value <= 5 && ['user', 'system'].includes(value.source) && text(value.reason, 2000) && integer(value.revision, 1), 'Invalid rating.'); break;
     case 'decision-point':
@@ -101,7 +101,7 @@ export function validateSession(value) {
   check(value.outcomes.every(item => item.references.every(id => recordIds.has(id) && id !== item.id)), 'Outcome has invalid references.');
   list(value.events, 'session events', (item, index) => {
     check(object(item) && item.schemaVersion === SCHEMA_VERSION && isId(item.id) && isId(item.requestId) && item.sequence === index + 1 && timestamp(item.at) && integer(item.epoch) && item.epoch <= value.epoch && text(item.command, 40000, true), 'Invalid session event.');
-    check(['session.created', 'session.updated', 'session.cancelled', 'session.transitioned', 'session.roster-updated', 'session.assigned', 'session.exchange', 'session.character-updated','session.guidance','session.discussion-control','session.discussion-turn'].includes(item.type), 'Unknown session event.');
+    check(['session.created', 'session.updated', 'session.cancelled', 'session.transitioned', 'session.roster-updated', 'session.assigned', 'session.exchange', 'session.character-updated','session.guidance','session.discussion-control','session.discussion-turn','session.discussion-brief','session.discussion-cast'].includes(item.type), 'Unknown session event.');
   });
   check(value.events.length === value.revision && value.events[0]?.type === 'session.created' && value.events[0]?.epoch === 0 && value.events.at(-1)?.epoch === value.epoch && new Set(value.events.map(item => item.requestId)).size === value.events.length && new Set(value.events.map(item => item.id)).size === value.events.length && value.events.every((item, index) => index === 0 || item.epoch >= value.events[index - 1].epoch), 'Inconsistent event ledger.');
   validateDiscussion(value);return value;

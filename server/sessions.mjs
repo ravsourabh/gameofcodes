@@ -7,7 +7,7 @@ import { createCharacterLibrary } from './character-library.mjs';
 import { createSessionAI } from './session-ai.mjs';
 import { changeSetup } from '../shared/setup-domain.mjs';
 import { extractContext } from './context-extract.mjs';
-import {controlDiscussion,nextDiscussionSpeaker,recordDiscussionTurn,elapsedDiscussion} from '../shared/discussion-domain.mjs';
+import {createDiscussionService} from './discussion-service.mjs';
 
 const fail = (message, status = 400, code) => { throw new SessionError(message, status, code); };
 const identifier = value => { if (!isId(value)) fail('Invalid profile, session, or request identifier.'); return value.toLowerCase(); };
@@ -92,6 +92,7 @@ export function createSessionService({ root, ai = createSessionAI(), onError = (
     sessions.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     return { sessions, unavailableCount };
   }
+  const discussions=createDiscussionService({ai,characters,load,persist,serial,inflight,json,fail});
   return {
     async handle(req, res, url) {
       try {
@@ -99,37 +100,12 @@ export function createSessionService({ root, ai = createSessionAI(), onError = (
         if (url.pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'sessions', schemaVersion: SCHEMA_VERSION, previewEnabled: false, inferenceEnabled: true });
         if (url.pathname === '/api/session-capabilities' && req.method === 'GET') return json(res, 200, { schemaVersion: SCHEMA_VERSION, modes: ['discussion', 'rehearsal'], draftSessions: true, characters: true, guide: true, guidedSetup:true, contextReview:true, tutorialProgress:true, liveSessions: true, discussion:true,liveRehearsal:false, modelRouting: true, voice: true, legacyData: 'preserved' });
         if (url.pathname === '/api/ai/catalog' && req.method === 'GET') return json(res, 200, await ai.catalog());
-        const discussionRoute=/^\/api\/discussion\/([0-9a-f-]+)\/(control|turn)$/.exec(url.pathname);
+        const discussionRoute=/^\/api\/discussion\/([0-9a-f-]+)\/(control|turn|brief|cast)$/.exec(url.pathname);
         if(discussionRoute){
           if(req.method!=='POST'||!sameOrigin(req))return json(res,403,{error:'Use discussion controls from this application.'});
-          const profileId=identifier(url.searchParams.get('profileId')),id=identifier(discussionRoute[1]),input=await body(req),key=profileId+'/'+id;
-          keys(input,discussionRoute[2]==='turn'?['requestId','expectedRevision']:['requestId','expectedRevision','operation','action','text','characterId']);const requestId=identifier(input.requestId);
-          if(discussionRoute[2]==='control'){
-            if(['pause','stop','finish','intervene'].includes(input.operation))inflight.get(key)?.abort();
-            return await serial(key,async()=>{const saved=await load(profileId,id);if(!saved)fail('Session not found.',404);
-              const updated=controlDiscussion(saved,{...input,requestId});
-              if(updated!==saved){if(['start','resume'].includes(input.operation))for(const p of updated.participants.filter(p=>p.active)){const c=updated.characters.find(c=>c.id===p.characterId);await ai.validateAssignment(p.brain,c.voice);}await persist(updated);}
-              return json(res,200,{session:updated,replayed:updated===saved});});
-          }
-          const snapshot=await serial(key,async()=>{const s=await load(profileId,id);if(!s)fail('Session not found.',404);return s;});
-          const prior=snapshot.events.find(e=>e.requestId===requestId);
-          if(prior){if(prior.type!=='session.discussion-turn')fail('Request identifier already used.',409);return json(res,200,{session:snapshot,contribution:snapshot.contributions.find(c=>c.requestId===requestId),replayed:true});}
-          if(snapshot.revision!==input.expectedRevision)fail('The session changed. Reload before requesting another contribution.',409);
-          if(snapshot.status!=='running'||!snapshot.discussion)fail('Resume the discussion before requesting a turn.',409);
-          if(snapshot.discussion.turnsUsed>=snapshot.discussion.turnLimit||elapsedDiscussion(snapshot)>=snapshot.scenario.durationMinutes*60000){
-            const updated=await serial(key,async()=>{const s=await load(profileId,id);const next=controlDiscussion(s,{requestId:randomUUID(),expectedRevision:s.revision,operation:'pause'});next.discussion.reason='The turn or duration budget is complete. Finish to keep a partial summary.';await persist(next);return next;});return json(res,429,{error:updated.discussion.reason,session:updated});
-          }
-          if(inflight.has(key))fail('A character already has the floor. Pause or wait.',409);
-          const controller=new AbortController(),disconnect=()=>{if(!res.writableEnded)controller.abort();};res.once('close',disconnect);inflight.set(key,controller);
-          try{
-            const participant=nextDiscussionSpeaker(snapshot),character=snapshot.characters.find(c=>c.id===participant.characterId);
-            const result=await ai.discussion(profileId,character,participant,snapshot,controller.signal);if(controller.signal.aborted)fail('Discussion interrupted.',409);
-            const updated=await serial(key,async()=>{const saved=await load(profileId,id);const next=recordDiscussionTurn(saved,{requestId,expectedRevision:input.expectedRevision,epoch:snapshot.epoch,participantId:participant.id,...result});await persist(next);return next;});
-            return json(res,200,{session:updated,contribution:updated.contributions.find(c=>c.requestId===requestId)});
-          }catch(error){
-            await serial(key,async()=>{const s=await load(profileId,id);if(s?.status==='running'&&s.epoch===snapshot.epoch){const paused=controlDiscussion(s,{requestId:randomUUID(),expectedRevision:s.revision,operation:'pause'});paused.discussion.reason=(error instanceof SessionError?error.message:'The provider connection was lost.').slice(0,300);await persist(paused);}});
-            throw error;
-          }finally{res.removeListener('close',disconnect);if(inflight.get(key)===controller)inflight.delete(key);}
+          const profileId=identifier(url.searchParams.get('profileId')),id=identifier(discussionRoute[1]),input=await body(req),part=discussionRoute[2];
+          keys(input,part==='control'?['requestId','expectedRevision','operation','action','text','characterId','style']:['requestId','expectedRevision']);
+          return await discussions.handle(req,res,{profileId,id,part,input,requestId:identifier(input.requestId)});
         }
         if(url.pathname==='/api/context/extract'){
           if(req.method!=='POST'||!sameOrigin(req))return json(res,403,{error:'Use context review from this application.'});

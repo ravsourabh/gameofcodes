@@ -186,6 +186,10 @@ The session controller manages turn-taking, shared context, time, and state. Eac
 
 A single model writing a complete fictional multi-character transcript does not satisfy the per-character brain requirement.
 
+Corrections are durable session memory. Retain exact user statements and version the working topic/goal separately from the original readback and old model replies. Latest direct corrections govern every later speaker and brain assignment; one response consuming an intervention must not erase its meaning. Retired topics must stay retired. Topic changes clear stale current positions and exclude obsolete turns from current argument context while retaining the full historical transcript. A failed or interrupted topic update keeps the user's words and offers an idempotent retry before further inference.
+
+A group has at least two actual cast participants. “Discuss it with others” must invite complementary persistent characters and open per-character turns; a lone Host cannot impersonate a group. Invite without another creation form, use the selected brain/voice as an explicit initial assignment, and allow individual changes afterward. Partial invitation retries preserve the planned identities. A single participant requires explicitly chosen one-to-one coaching.
+
 Each substantive turn must add a proposal, explanation, question, response to a named claim, or explicit revision. Redirect repeated summaries and off-topic exchanges. The moderator may surface unresolved questions or end a repetitive exchange; it must not manufacture disagreement, force consensus, or treat the most persuasive speaker as factually correct.
 
 For rehearsal, the panel follows the candidate's actual answers and probes relevant details. Panelists can build on one another's questions without turning the session into an unrelated debate among themselves.
@@ -214,6 +218,7 @@ All setup, text entry, character/model selection, intervention, rating, decision
 - Use bounded turns and a user-configurable session duration; suggest about ten minutes for an initial session. Show the remaining time and let the user end with a partial outcome.
 - Enforce limits on turns, per-turn output, concurrent requests, and total session usage. Warn when a known limit is near; continuing beyond a configured session budget requires a user action. Show a cost estimate only when supported by current provider data.
 - Automatic turns stop on pause, settings, loss of connection, session end, or the configured usage/time limit.
+- A genuinely essential question for the human pauses the turn loop and clock. Offer a reply path and explicit continuation with assumptions. Do not keep automatically asking variants of the same intent question; ordinary exploratory ideas should advance through concrete benefits, risks and tests. Retired-topic drift or repeated clarification permits at most one bounded model repair, then pauses without committing fabricated progress.
 - Show actual waiting state without claiming progress that has not occurred.
 - Save committed turns and events incrementally. Reconnecting restores the last consistent session without duplicating turns or ratings.
 - Failed model/TTS requests offer retry, skip, or a user-chosen available replacement. Partial sessions can still produce a clearly labelled partial report.
@@ -417,6 +422,7 @@ Specific model IDs, voice availability, connection health, and deployed service 
 | AC-18 | All first-release requirements in this PRD are delivered by the November 18 target; neither core mode nor assistant-led entry is deferred to a post-demo release. |
 | AC-19 | Virus-led setup is the default in desktop and VR: capture/read back/correct notes, suggest room/name/cast, autosave acknowledged drafts, and confirm before starting. Detailed forms are optional; microphone-free alternatives work. |
 | AC-20 | The first-use journey teaches point/pinch, input, and pause/intervention through successful actions, with a useful exchange targeted by five minutes and optional deeper practice through ten. Repeat/skip/resume work, progress is scoped/versioned, and failures do not falsely complete lessons. |
+| AC-21 | User corrections govern subsequent speakers after consumption, reload, interruption and a brain swap. Group mode includes multiple real persistent participants, referenced objections/answers and concrete progress. Essential human questions pause scheduling; repeated clarification cannot become an automatic loop. Lost acknowledgements and partial invitations retry without duplicate notes or characters. |
 
 ## 13. Quality, validation, and release evidence
 
@@ -440,6 +446,8 @@ Both walkthroughs begin with Virus-led orientation and situation capture, not th
 Run both walkthroughs on desktop and physical Quest with hands alone, including the text-input alternative. Repeat the affected steps with a model failure or interrupted connection, confirm recovery from the saved record, and record any unsupported operations as failures rather than implying coverage. Demonstration scripts are evidence of the responsive product, not substitutes for completing these release journeys.
 
 ### Required verification
+
+Before W07, replay the failed offline/mindfulness LeetCode conversation using its five exact corrections and a copied legacy single-Host setup in an isolated store. Verify later turns without re-entering corrections, an explicit brain swap, three real participants with at least two actual providers, a reference to another speaker's argument, and useful design/tradeoff/test content. Inspect the resulting text as well as host assertions. Browser checks must cover failed/lost correction receipts, reload, group invitation, waiting for human input and native hand controls. Keep the original completed conversation byte-identical. A model-written fictional group transcript or interface-only pass does not satisfy this gate.
 
 - Domain tests: stable character identity, code/role/model separation, routing, turn scheduling, cancellation, rating revisions, decision dependencies, persistence, migration compatibility, scoped tutorial progress, and acknowledged note-taking/corrections.
 - Browser end-to-end journeys: assistant-led input/readback without mandatory forms, real gesture/selection lessons, skip/repeat/resume, saved-character reuse, both modes, interventions, reports, exports, linked mode switching, and model/speech/tracking failure recovery.
@@ -579,6 +587,10 @@ Numbering gives the recommended integration order. Independent environment or co
 
 ### W07 — Scores, courtroom decisions, and presenters
 
+- **Prerequisite from the October 27 conversation failure:** complete the W05/W06 correction-memory, clarification-loop and real-cast repair (AC-21), review a live replay of the user's offline/mindfulness idea, and deploy that fix before starting scores/presenters. Future presenter and decision generation must use the current corrected brief rather than the original misheard setup. This repair does not count as starting W07.
+
+**Repair evidence — October 27:** durable working briefs, real group invitations, bounded drift/clarification recovery and pause-for-human behaviour are implemented. All 76 unit/service checks and 39 production browser journeys pass, including exact corrections, lost receipts, reload and native hand invitation/exit. A local live replay retained all five corrections across a Nano-to-Mini change and produced a three-person OpenAI/Claude discussion with referenced objections and concrete tests. [CONVERSATION_REPAIR_AUDIT.md](CONVERSATION_REPAIR_AUDIT.md) records the case and separate hosted verification procedure. W07 implementation remains unstarted.
+
 - Attach user ratings to actual contributions and criteria; record author, reason, rubric version, revisions, and undo. Keep user points distinct from automated assessments.
 - Update character totals and recent explanations on the right from the saved rating events. Permit rating without disrupting the active speaker.
 - Generate individual decision points with options, tradeoffs, dependencies, assumptions, and a named presenter; generate distinct persistent presenter identities through the character system.
@@ -629,7 +641,7 @@ Numbering gives the recommended integration order. Independent environment or co
 - Measure Quest 3/3S performance at the supported cast/queue budget during listening, inference waits, speech, model changes, panel use, and environment transitions. Optimise geometry/materials, shadows, textures, animation, and inactive-room culling toward sustained 72 Hz.
 - Run the domain checks, browser journeys, physical-headset walkthroughs, hosted-path checks, and migration/retirement checks required in section 13. Use controlled failures for repeatable recovery checks and real supported connections for live routing/speech validation.
 - Review discussion relevance and rehearsal feedback with representative users; obtain appropriate subject review for specialised templates. Record limitations instead of reporting unmeasured improvement.
-- Fix acceptance failures and replay affected journeys. Produce a release-candidate checklist with evidence for AC-01 through AC-17 and AC-19/AC-20, device measurements, known limitations, and deployment readiness; AC-18 is confirmed at release.
+- Fix acceptance failures and replay affected journeys. Produce a release-candidate checklist with evidence for AC-01 through AC-17 and AC-19 through AC-21, device measurements, known limitations, and deployment readiness; AC-18 is confirmed at release.
 
 **Completion check:** Both complete release walkthroughs pass on desktop and physical Quest, every functional criterion has evidence, and no unresolved defect blocks a required journey. Record measured performance against the 72 Hz goal and competition's published 60 fps minimum; a miss is a release risk requiring resolution, not a passed check.
 
@@ -641,7 +653,7 @@ Numbering gives the recommended integration order. Independent environment or co
 - Record the full first-release acceptance result and remaining non-blocking limitations. Confirm users can reach the app and complete its actual journeys without a development checkout.
 - Complete the competition access/eligibility checks, correct division/track, public video under three minutes, screenshots, description, and submission form. Submit through the authorised account workflow, verify judge access, and retain the unchanged submitted version during judging.
 
-**Completion check:** The agreed app is released at a verified usable URL with current documentation, assistant-led entry, both full journeys, and evidence for AC-01 through AC-20. The competition package is complete and, when entered, its submission/access are confirmed before the official cutoff. A finished video or submitted form alone does not complete the app.
+**Completion check:** The agreed app is released at a verified usable URL with current documentation, assistant-led entry, both full journeys, and evidence for AC-01 through AC-21. The competition package is complete and, when entered, its submission/access are confirmed before the official cutoff. A finished video or submitted form alone does not complete the app.
 
 ### Acceptance coverage and wave completion rules
 
@@ -667,6 +679,7 @@ Numbering gives the recommended integration order. Independent environment or co
 | AC-18 — Full first release by the agreed target | W12 |
 | AC-19 — Assistant-led capture/readback/correction and form-optional setup | W02, W03, W04, W06, W10 |
 | AC-20 — Action-based five/ten-minute gesture/app introduction | W04, W05, W07, W08, W10, W11 |
+| AC-21 — Durable corrections, real group discussion and clarification recovery | W05/W06 repair before W07; regression in W08–W12 |
 
 At each wave, record delivered behaviour, relevant verification, remaining dependencies, and material risks. Reuse suitable existing checks and add checks for new state/routing behaviour; a successful compile or mocked conversation alone is insufficient evidence of live AI interaction or physical headset comfort. All applicable release criteria are rechecked in W11 and against the hosted release in W12. Physical combat, human multiplayer, and other section-15 exclusions are not required to complete these waves.
 
