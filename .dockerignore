@@ -1,0 +1,11 @@
+.git
+node_modules
+dist
+.sovereign
+.env
+.env.*
+sovereign.env
+*.pem
+*.key
+test-results
+playwright-report

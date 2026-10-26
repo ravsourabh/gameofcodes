@@ -31,3 +31,25 @@ Headset frame rate still requires testing on physical Quest hardware.
 
 - `src/construction-stage.ts`: locally authored miniature table stage, abstract assembly blocks, wireframe and orbiting sparks; follows authoritative build phases and respects reduced motion. No downloaded assets.
 - `src/scene.ts`: closer castle arrival over extended continuous terrain, reusing the existing soil and stone materials.
+
+## Default human avatars (Rocketbox)
+
+`public/avatars/rocketbox/` holds six people from the
+[Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox) library
+(MIT, see `LICENSE.md` there): `Business_Male_04` (the guide), `Business_Female_01`
+and `Male_Adult_05`, plus `Business_Male_02`, `Business_Female_02` and `Female_Adult_07`. Each GLB was converted from the library's `*_facial.fbx` with
+Blender 4.5: textures downscaled from 2048 to 1024 px and stored as WebP, specular maps
+dropped, and 23 of the 176 face shapes kept (15 visemes, blinks, jaw open, smiles,
+brows). The original three GLBs are 0.9–1.5 MB; the three additional GLBs are 1.6–2.5 MB.
+
+`src/realistic-avatar.ts` poses the T-pose arms at load (relaxed arms, palms inward,
+slight finger curl) and animates breathing, a slow weight shift, gaze towards the
+viewer, blinks, and mouth shapes from the speech audio. All default-session views use these people, including the studio and native VR. The selected model is saved on the character; old records derive one deterministically from the saved seed. Seat and guide/cast roles never choose the body. The former style query/preference no longer enables cartoon rendering.
+
+The studio offers actual-model portraits, complete-person selection, clothing tint and supported glasses/brooch accessories. Tint affects torso clothing weights and preserves face, hands and exposed limbs. Geometry/textures are shared; instance materials are independent so changing one person cannot recolour another. Loading failures show a retry surface without substituting a different style. Physical Quest frame time remains unmeasured.
+
+The additional source revision is `0943055db6ec570bcef9f2c8b41c9e5467c808f9`. Optional rebuild: `node scripts/fetch-avatars.mjs`, Blender 4.5 with `--background --python scripts/convert-avatars.py`, then `python scripts/avatar-thumbnails.py` with Pillow. Raw FBX/TGA inputs stay in ignored `.sovereign/asset-build/rocketbox`; the runtime needs only local GLBs/WebP portraits and the retained MIT licence. Independent face/hair/clothing modules are not supplied by these complete-body assets.
+
+## Throne court (W06)
+
+`src/throne-court.ts` authors the current discussion hall using local geometry and deterministic stone/wood/cloth textures from `EnvironmentAssets`. It includes the sovereign throne/dais, ribbed arches, columns, rose/aisle windows, heraldic banners, lanterns, radial floor inlay, presenter seal, lectern and waiting bench. Static meshes are merged by material; inactive rooms are hidden. Two bounded warm lights supplement the shared daylight; there are no dynamic shadows or downloaded environment assets. `scripts/review-court.mjs` renders all six bundled people with an explicit AI fixture, captures a screenshot and reports integration timings/draw counts without provider calls. Physical Quest performance remains to be measured.

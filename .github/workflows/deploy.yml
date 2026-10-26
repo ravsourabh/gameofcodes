@@ -32,10 +32,9 @@ jobs:
             # Pull latest code from GitHub
             git pull --ff-only origin main
 
-            # Compose owns the service name and its existing project data volume.
-            docker compose build sovereign
-            docker compose up -d --no-deps sovereign
-            docker compose ps
+            # Retain saved state, verify the served revision, and restore the old
+            # image automatically if the new runtime does not become healthy.
+            bash scripts/deploy.sh
 
             echo "Deployed $(git rev-parse --short HEAD) at $(date)"
           ENDSSH

@@ -1,0 +1,11 @@
+import type {Session,Mutation,Participant,Brain} from './session-domain.mjs';
+export const INTERVENTIONS:string[];
+export function discussionTurns(session:Session):Session['contributions'];
+export function activeParticipants(session:Session):Participant[];
+export function elapsedDiscussion(session:Session,at?:number):number;
+export function validateDiscussion(session:Session):void;
+export function controlDiscussion(session:Session,mutation:Mutation & {operation:string;action?:string;text?:string;characterId?:string|null}):Session;
+export function nextDiscussionSpeaker(session:Session):Participant;
+export function validateTurnReply(session:Session,participant:Participant,reply:unknown):TurnReply;
+export type TurnReply={text:string;position:string;relatedIds:string[];questionForParticipantId:string|null;kind:'opening'|'objection'|'answer'|'reflection'|'summary';onTopic:boolean};
+export function recordDiscussionTurn(session:Session,mutation:Mutation & {epoch:number;participantId:string;reply:TurnReply;brain:Brain}):Session;

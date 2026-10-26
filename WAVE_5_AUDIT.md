@@ -1,0 +1,37 @@
+# Wave 5 — Live discussion and user intervention
+
+Implemented locally, October 27, 2026. This wave also pulls forward the realistic-avatar consistency correction requested before group discussion.
+
+## Human avatars first
+
+The default renderer now uses six local Rocketbox human models in the room, studio, previews, saved sessions and native VR. No style flag is needed, and the former classic preference cannot re-enable cartoon figures in the current app. New characters save their model identity explicitly. Older records derive it deterministically from their saved seed; seats and guide/cast roles never determine the face.
+
+The studio offers actual-model portraits, complete-person selection, clothing tint and supported accessories. The AI chooses among those supported capabilities. Kept model choices survive AI descriptions and rerolls. Opening an existing session character preserves its current appearance rather than changing to newer library defaults. Load errors show an explicit retry on desktop and the native surface; failed cache entries can recover, and no cartoon is substituted.
+
+All six people were inspected in browser screenshots with no shader/browser errors. Save/reload, kept choices, one-action join, lost acknowledgements, the former classic preference and native hand editing were exercised. Independent modular hair/beard/clothing cuts still need compatible art; this implementation does not claim those modules exist. Licensing, source revision, conversion scripts and asset budgets are in [ASSETS.md](ASSETS.md). Physical Quest frame time remains unmeasured.
+
+## Discussion controller
+
+- A reviewed, explicitly approved discussion setup is required before **Start discussion**. Group scheduling is separate from direct questions and council rehearsal.
+- The host chooses the next speaker from the active roster, balances participation, offers directed challenges a response opportunity and accepts explicit user floor assignments. Initial views stay independent where practical; a directed question or intervention supplies the relevant committed context.
+- Each model receives its own role/code/personality, reviewed scenario/context, relevant committed turns and pending user directions. Roundtable, hearing and adversarial verbal formats use the same controller, with intensity independent of format.
+- Provider output schemas constrain speaker/argument references. OpenAI uses Responses `text.format`, Claude uses `output_config.format`, and Gemini uses its JSON-schema response configuration. Host validation still checks all fields, membership, existing references, text bounds, repeated output and cancellation epochs. Claude's unsupported array-length constraint is enforced by the host. Unknown references never select an arbitrary speaker.
+- Contributions retain actual provider/model provenance, argument references, model-reported positions and optional directed questions. Previous history is not rewritten after a brain swap or position change. Exact repeated turns are rejected; off-topic pauses use the model's own flag, not an independent relevance/fact verifier.
+- Immediate local pause cancels generation/playback. Server control invalidates late results. Resume, one contribution, stop, finish, give-floor, clarify, simplify, example, evidence, challenge, switch-sides, summary and guide help use the shared control semantics. Directions save while paused and apply on explicit resume.
+- The browser requests one contribution at a time and waits for speech to settle. Quiet mode leaves bounded caption reading time. Repeat, microphone input, guide help, settings, inspection and leaving VR yield the floor; errors or reload never silently restart scheduling.
+- The saved authoritative clock and 20-turn cap bound discussion, alongside the existing model/audio minute and daily budgets. Failures pause automatic work. Stop/Finish saves an honest partial summary with committed references and current views; it does not infer a user decision. Full reports/export remain W09.
+- Paused roster/model changes preserve identities, positions and committed history. A missing brain or empty cast blocks resume visibly.
+
+## Evidence and limits
+
+All 66 unit/service checks pass on Node 24. These include multi-model persistence/replay, referenced objection/answer, floor direction, held-inference interruption, late-result rejection, the 20-turn cap without a 21st provider call, disconnect clock pause, failed initial-start retry, terminal states, brain swaps and provider schema contracts. TypeScript and the production build pass; the large-client-chunk warning remains.
+
+All 31 distinct browser checks passed across the production regression and targeted recovery runs. The combined 29-test run passed 28; one provider-recovery test closed its fixture while the single-step pause acknowledgement was pending. It now waits for the persisted paused state. All five discussion journeys then passed together, including the added initial-start recovery path, and a sixth playback check passed separately. These use explicit deterministic model/playback fixtures and real isolated service/storage: referenced exchange/direction/finish, inference cancellation/reload, provider recovery, failed initial start/retry, native start/pause/finish and held spoken playback interruption. The playback check confirms one held speaker blocks the next model call, cancellation stops that voice, and a late audio-end callback cannot restart scheduling. Other regression coverage includes the existing 23 journeys and two new realistic default/identity/load-retry journeys. Native controls are emulated, not physical Quest verification.
+
+A bounded live service run succeeded with four committed turns across requested OpenAI `gpt-5.4-nano` (actual `gpt-5.4-nano-2026-03-17`) and Claude `claude-haiku-4-5-20251001`. An objection referenced the prior contribution, subsequent answers retained the chain, two user directions were consumed, and Finish persisted a partial summary. The run used one setup inference plus four group inferences, no audio calls, and removed its isolated temporary store. Before schema constraints were added, an invalid model target was rejected without committing a turn; the live check then identified and corrected Claude's unsupported `maxItems` request constraint. No provider was silently replaced.
+
+Re-run the bounded live check explicitly with `node scripts/verify-session-discussion.mjs`. Runtime budgets are process counters, not a billing/authentication system. Physical headset microphone/tracking/comfort/frame rate, unfamiliar-user timing, every catalogue model and live Gemini group output remain unverified. Existing OpenAI/device voices remain available; the previously recorded ElevenLabs catalogue permission restriction is unchanged.
+
+Protocol shapes were checked against [OpenAI](https://developers.openai.com/api/docs/guides/structured-outputs), [Claude](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) and [Gemini](https://ai.google.dev/gemini-api/docs/generate-content/structured-output) documentation; the live evidence above covers the two named assignments.
+
+The next wave is **W06: final throne-court staging and spatial discussion surfaces**. Human-avatar consistency has been pulled forward; final art, full left/right information surfaces, presenter/score staging and measured physical performance remain later work. No deployment or cloud configuration was changed.

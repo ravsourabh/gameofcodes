@@ -1,5 +1,5 @@
 (() => {
-  const quotes = ['Every great kingdom begins with a single line.', 'A crown is earned. A build must pass.', 'Let your ideas take the throne.', 'The strongest castles are built one commit at a time.', 'Raise your standards before you raise your banners.', 'No bug shall inherit the throne.', 'A wise court reviews before it ships.', 'From a whisper of an idea, a kingdom of code.'];
+  const quotes = ['Different codes. One dilemma. Your call.', 'Make room for a different perspective.', 'A thoughtful question opens the discussion.'];
   let index = 0, finished = false;
   const rotate = setInterval(() => {
     index = (index + 1) % quotes.length;
