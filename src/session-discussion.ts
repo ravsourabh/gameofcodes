@@ -74,14 +74,25 @@ export class SessionDiscussion {
     catch(error){this.message=error instanceof Error?error.message:'Discussion could not start.';this.ai.say(this.message,'Error');this.changed();}finally{this.busy=false;this.changed();}
   }
   private async run(token:number,once:boolean){
+    let carrySpeech=false;
     try{
       while(token===this.token&&this.cb.session()?.status==='running'){
         const s=this.cb.session()!,profile=this.cb.profile(),participant=nextDiscussionSpeaker(s),character=s.characters.find(c=>c.id===participant.characterId)!;this.controller=new AbortController();
-        this.ai.stop(false);this.ai.speakerId=character.id;this.ai.say(`${character.name} is considering the discussion…`,'Thinking');
+        if(!carrySpeech){this.ai.stop(false);this.ai.speakerId=character.id;this.ai.say(`${character.name} is considering the discussion…`,'Thinking');}
         const response=await fetch(`/api/discussion/${s.id}/turn?profileId=${profile}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:crypto.randomUUID(),expectedRevision:s.revision}),signal:this.controller.signal}),result=await response.json();
         if(token!==this.token||profile!==this.cb.profile()||s.id!==this.cb.session()?.id)return;
         if(!response.ok)throw new Error(result.error||'This contribution could not finish.');
-        this.cb.sessionChanged(validateSession(result.session));const contribution=result.contribution as Contribution;await this.ai.presentContribution(contribution,this.controller.signal);
+        this.cb.sessionChanged(validateSession(result.session));const contribution=result.contribution as Contribution;
+        const prepared=carrySpeech?await this.ai.prepareContribution(contribution,this.controller.signal):undefined;if(token!==this.token)return;
+        const cut=carrySpeech?this.ai.playbackSnapshot():null;carrySpeech=false;
+        const presenting=this.ai.presentContribution(contribution,this.controller.signal,prepared);
+        if(cut&&cut.previousId!==contribution.id){const requestId=crypto.randomUUID();for(let attempt=0;attempt<2;attempt++){try{const current=this.cb.session()!,r=await this.ai.request<{session:Session}>(`/api/discussion/${current.id}/performance?profileId=${profile}`,{requestId,expectedRevision:current.revision,...cut,interruptedBy:contribution.id});if(token!==this.token)return;this.cb.sessionChanged(validateSession(r.session));break;}catch(error){if(attempt)throw error;await this.refresh();}}}
+        if(this.cb.session()?.showRoom==='heated'&&!once&&!this.ai.quiet&&this.cb.session()?.status==='running'&&this.cb.session()!.discussion!.turnsUsed%3!==0&&this.cb.session()!.discussion!.turnsUsed<this.cb.session()!.discussion!.turnLimit){
+          const deadline=Date.now()+8000;while(token===this.token&&!this.ai.playbackSnapshot()&&this.ai.phase==='Speaking'&&Date.now()<deadline)await new Promise(r=>setTimeout(r,80));
+          const until=Date.now()+1200;while(token===this.token&&this.ai.playbackSnapshot()&&Date.now()<until)await new Promise(r=>setTimeout(r,80));
+          if(token!==this.token)return;if(this.ai.playbackSnapshot()){carrySpeech=true;void presenting;continue;}
+        }
+        await presenting;
         if(token!==this.token)return;
         if(/unavailable|Repeat for audio/i.test(this.ai.phase))throw new Error('Voice playback is unavailable. The contribution is saved. Enable Quiet mode and resume for captions, or retry its voice with Repeat.');
         if(this.cb.session()?.status!=='running'){this.looping=false;this.message=this.cb.session()?.discussion?.reason||'';this.changed();return;}

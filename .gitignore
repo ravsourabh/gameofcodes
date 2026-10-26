@@ -7,5 +7,6 @@ playwright-report/
 *.local
 .env
 .env.*
+!.env.example
 sovereign.env
 elevenlabs_models.json

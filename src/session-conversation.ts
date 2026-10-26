@@ -1,7 +1,7 @@
 import { validateSession, type Brain, type Character, type Session,type Contribution } from '../shared/session-domain.mjs';
 import type { Mouth } from './realistic-avatar';
 export type Voice = { provider: string; id: string; name: string };
-export type Catalog = { providers: { id: string; name: string; status: string; models: { id: string; name: string }[]; audioModels: string[] }[]; voices: Voice[]; voiceStatus: string; localStatus: string };
+export type Catalog = { providers: { id: string; name: string; status: string; models: { id: string; name: string }[]; audioModels: string[] }[]; voices: Voice[]; voiceStatus: string; localStatus: string;hindiVoiceConfigured?:boolean };
 type Callbacks = { profile: () => string; session: () => Session | null; ensureSession: () => Promise<Session | null>; sessionChanged: (session: Session) => void; changed: () => void };
 export class SessionConversation {
   catalog: Catalog | null = null;
@@ -18,11 +18,13 @@ export class SessionConversation {
   // Lip-sync: provider audio is analysed as it plays; device speech only reports word boundaries.
   private audioContext: AudioContext | null = null; private analyser: AnalyserNode | null = null; private source: MediaElementAudioSourceNode | null = null;
   private spectrum = new Uint8Array(256); private deviceSpeaking = false; private wordAt = 0;
+  private deviceStartedAt=0;
   constructor(private cb: Callbacks) {}
   get busy() { return ['Thinking','Listening','Transcribing','Speaking','Connecting'].includes(this.phase); }
+  get hindi(){return this.cb.session()?.language==='hi';}
   get brains(): Brain[] { return this.catalog?.providers.flatMap(p => p.models.map(m => ({provider:p.id,model:m.id}))) || []; }
   get defaultBrain(): Brain | null { return this.brains.find(b => b.model === 'gpt-5.4-nano') || this.brains[0] || null; }
-  voiceFor(character: Character): Character['voice'] { return character.voice || this.catalog?.voices.length && {provider:this.catalog.voices[character.avatar.seed % this.catalog.voices.length].provider,id:this.catalog.voices[character.avatar.seed % this.catalog.voices.length].id} || {provider:'browser',id:'default'}; }
+  voiceFor(character: Character): Character['voice'] { const pool=this.catalog?.voices.filter(v=>this.hindi?v.provider==='sarvam':v.provider!=='sarvam')||[];return character.voice || pool.length && {provider:pool[character.avatar.seed%pool.length].provider,id:pool[character.avatar.seed%pool.length].id} || {provider:'browser',id:'default'}; }
   get captionPages() { return this.caption.match(/.{1,140}(?:\s|$)|\S{1,140}/g)?.map(t => t.trim()) || ['']; }
   get visibleCaption() { return this.captionPages[Math.min(this.page,this.captionPages.length - 1)] || ''; }
   say(text: string, phase = 'Ready') { this.lastGuidance=null;this.caption = text; this.page = 0; this.phase = phase; this.cb.changed(); }
@@ -36,8 +38,8 @@ export class SessionConversation {
     this.stop(false);const token=++this.token;this.controller=new AbortController();this.speakerId=guide.id;this.last=null;this.say(text,'Guidance');
     this.lastGuidance={text,guide};
     if(this.quiet)return;
-    if(guide.voice?.provider==='browser')return this.deviceSpeech(text,guide.voice.id,token);
-    if(!guide.voice)return;
+    if(guide.voice?.provider==='browser'&&!this.hindi)return this.deviceSpeech(text,guide.voice.id,token);
+    if(!guide.voice&&!this.hindi)return;
     try{const result=await this.request<{audio:string;mime:string}>(this.endpoint('narrate'),{text,sessionId:this.cb.session()?.id},this.controller.signal);if(token!==this.token)return;this.phase='Speaking';this.cb.changed();await this.play(result,token);}catch{if(token===this.token){this.phase='Guidance · captions';this.cb.changed();}}
   }
   async assign(characterId: string, brain: Brain, voice: Character['voice']) {
@@ -78,11 +80,16 @@ export class SessionConversation {
     finally { if (token === this.token) { this.controller = null; if (this.phase === 'Thinking') this.phase = 'Ready'; this.cb.changed(); } }
   }
   async repeat() { if(this.lastGuidance){await this.narrate(this.lastGuidance.text,this.lastGuidance.guide);return;}if (this.last) { this.stop(false); const token = ++this.token; this.controller = new AbortController(); try { await this.speak(this.last,token); } catch { if(token===this.token){this.phase='Voice unavailable';this.cb.changed();} } } }
-  showContribution(contribution:Contribution){const p=this.cb.session()?.participants.find(p=>p.id===contribution.participantId);if(!p)return;this.stop(false);this.speakerId=p.characterId;this.last={characterId:p.characterId,contributionId:contribution.id};this.say(contribution.text);}
-  async presentContribution(contribution:Contribution,signal:AbortSignal){
+  showContribution(contribution:Contribution){const p=this.cb.session()?.participants.find(p=>p.id===contribution.participantId);if(!p)return;this.stop(false);this.speakerId=p.characterId;this.last={characterId:p.characterId,contributionId:contribution.id};this.say((contribution.delivery==='satire'?(this.hindi?'व्यंग्य (कल्पित): ':'Satire (fictional): '):'')+contribution.text);}
+  async prepareContribution(contribution:Contribution,signal:AbortSignal){
+    const session=this.cb.session(),p=session?.participants.find(p=>p.id===contribution.participantId),character=session?.characters.find(c=>c.id===p?.characterId);if(!session||!character||this.quiet||!this.hindi&&character.voice?.provider==='browser')return undefined;
+    return this.request<{audio:string;mime:string}>(this.endpoint('speech'),{sessionId:session.id,requestId:crypto.randomUUID(),characterId:character.id,contributionId:contribution.id},signal);
+  }
+  playbackSnapshot(){if(!this.last?.contributionId)return null;if(this.audio&&!this.audio.paused&&!this.audio.ended&&this.audio.currentTime>0&&Number.isFinite(this.audio.duration))return {previousId:this.last.contributionId,atSeconds:this.audio.currentTime,durationSeconds:this.audio.duration,source:'audio'};if(this.deviceSpeaking&&this.deviceStartedAt>0)return {previousId:this.last.contributionId,atSeconds:(performance.now()-this.deviceStartedAt)/1000,durationSeconds:null,source:'device'};return null;}
+  async presentContribution(contribution:Contribution,signal:AbortSignal,prepared?:{audio:string;mime:string}){
     this.showContribution(contribution);if(this.quiet)return;
     const token=++this.token;this.controller=new AbortController();
-    try{await this.speak(this.last!,token);while(token===this.token&&!signal.aborted&&this.phase==='Speaking')await new Promise(r=>setTimeout(r,80));}
+    try{if(prepared){this.phase='Speaking';this.cb.changed();await this.play(prepared,token);}else await this.speak(this.last!,token);while(token===this.token&&!signal.aborted&&this.phase==='Speaking')await new Promise(r=>setTimeout(r,80));}
     catch{if(token===this.token){this.phase='Voice unavailable';this.cb.changed();}}
   }
   async preview(character: Character) {
@@ -96,8 +103,8 @@ export class SessionConversation {
     const session = this.cb.session(); if (!session) return;
     const character = session.guidance?.guide?.id===last.characterId ? session.guidance.guide : session.characters.find(c=>c.id===last.characterId);
     const savedText=last.contributionId?session.contributions.find(c=>c.id===last.contributionId)?.text:last.exchangeId?session.exchanges?.find(e=>e.id===last.exchangeId)?.text:undefined;
-    if(savedText){this.caption=savedText;this.page=0;this.cb.changed();}
-    if (character?.voice?.provider === 'browser') return this.deviceSpeech(this.caption,character.voice.id,token);
+    if(savedText){const contribution=last.contributionId?session.contributions.find(c=>c.id===last.contributionId):null;this.caption=(contribution?.delivery==='satire'?(this.hindi?'व्यंग्य (कल्पित): ':'Satire (fictional): '):'')+savedText;this.page=0;this.cb.changed();}
+    if (character?.voice?.provider === 'browser'&&!this.hindi) return this.deviceSpeech(this.caption,character.voice.id,token);
     this.phase='Speaking'; this.cb.changed();
     const result = await this.request<{audio:string;mime:string}>(this.endpoint('speech'),{sessionId:session.id,requestId:crypto.randomUUID(),characterId:last.characterId,exchangeId:last.exchangeId,contributionId:last.contributionId},this.controller?.signal);
     if(token!==this.token)return; await this.play(result,token);
@@ -115,6 +122,7 @@ export class SessionConversation {
   private deviceSpeech(text:string,id:string,token:number) {
     if (!('speechSynthesis' in window)) { this.phase='Voice unavailable';this.cb.changed();return; }
     const utterance = new SpeechSynthesisUtterance(text); utterance.voice = speechSynthesis.getVoices().find(v=>v.voiceURI===id)||null;
+    this.deviceStartedAt=0;utterance.onstart=()=>{if(token===this.token)this.deviceStartedAt=performance.now();};
     utterance.onboundary=()=>{this.wordAt=performance.now();};
     utterance.onend=()=>{this.deviceSpeaking=false;if(token===this.token){this.phase='Ready';this.cb.changed();}};utterance.onerror=()=>{this.deviceSpeaking=false;if(token===this.token){this.phase='Voice unavailable';this.cb.changed();}}; this.phase='Speaking';this.deviceSpeaking=true;this.cb.changed();speechSynthesis.speak(utterance);
   }

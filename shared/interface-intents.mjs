@@ -9,6 +9,11 @@ export function parseInterfaceIntent(text, names = []) {
   const addressed = known.find(name => value.startsWith(name + ',') || value.startsWith(name + ':') || value.startsWith(name + ' '));
   if (addressed) { characterName = addressed; value = value.slice(addressed.length).replace(/^[,:]\s*/, '').trim(); }
   value = value.replace(/^(?:(?:please|can you|could you|would you|will you|i want to|i would like to|i'd like to)\s+)+/, '').replace(/(?:,? please| for me)$/, '').trim();
+  if(/^(?:hindi(?: mode)?|speak (?:in )?hindi|हिंदी(?: मोड)?|हिन्दी(?: मोड)?|हिंदी में बात करो)$/.test(value))return {action:'language-hi'};
+  if(/^(?:english(?: mode)?|speak (?:in )?english|अंग्रेज़ी(?: मोड)?)$/.test(value))return {action:'language-en'};
+  if(/^(?:(?:show |discuss )?(?:recent |latest |today'?s )?indian news|आज की खबरें|भारतीय खबरें)$/.test(value))return {action:'indian-news'};
+  if(/^(?:start a show|create a show|show rooms|change (?:the )?room)$/.test(value))return {action:'show-start'};
+  const room=new Map([['heated panel','heated'],['comedy room','comedy'],['serious newsroom','newsroom'],['roundtable room','conference']]).get(value);if(room)return {action:`room-${room}`};
   if(/^(?:discuss (?:it|this|the idea|my idea) with (?:others|the others|other (?:characters|people)|the group)|(?:bring in|invite|add) (?:other|more|two|2) (?:characters|voices|people|perspectives))$/.test(value))return {action:'discussion-invite',...(characterName?{characterName}:{})};
   if(/^(?:one.to.one coaching|coach me one.on.one|talk one.to.one)$/.test(value))return {action:'discussion-coach',...(characterName?{characterName}:{})};
   const controls = new Map([

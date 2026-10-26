@@ -14,6 +14,8 @@ type Summary = { id: string; title: string; mode: SessionMode; status: string; r
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 const PROFILE_KEY = 'goc-session-profiles-v1';
+let preferredLanguage:'en'|'hi'='en';try{preferredLanguage=localStorage.getItem('goc-language')==='hi'?'hi':'en';}catch{}
+let switchingLanguage=false;let pendingLanguage:{sessionId:string;language:string;body:Record<string,unknown>}|null=null;
 let profiles: Profile[] = [], selectedId = '', storageWarning = '';
 try {
   const stored = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
@@ -33,7 +35,7 @@ persistProfiles();
 
 $('#app').innerHTML = `
 <main class="session-app">
- <div class="scene-wrap"><canvas id="session-world" tabindex="0" aria-label="Court and council room. Drag or use arrow keys to look. Home returns to the throne view."></canvas><div class="scene-shade"></div><span class="court-look-hint">Drag to look around · Your seat stays still</span></div>
+ <div class="scene-wrap"><canvas id="session-world" tabindex="0" aria-label="Court and council room. Drag or use arrow keys to look. Home returns to the throne view."></canvas><div class="scene-shade"></div><span class="court-look-hint"><button id="camera-mode" type="button">TV camera</button> · Drag to take control</span></div>
  <header class="app-header"><button id="brand-home" class="wordmark" aria-label="Game of Codes start screen"><img src="/crown.svg" alt=""><span>GAME OF CODES</span></button><div class="header-actions"><label class="profile-label"><span>Profile</span><select id="profile-select" aria-label="Current profile"></select></label><button id="new-profile" class="text-button">New profile</button><button id="characters-open" class="outline-button">Characters</button><button id="enter-vr" class="outline-button">Enter VR <span aria-hidden="true">↗</span></button></div></header>
  <section class="intro"><span class="eyebrow">DIFFERENT CODES. ONE DILEMMA. YOUR CALL.</span><div class="guide-presence"><span class="eyebrow">YOUR GUIDE</span><h1 id="guide-name">Virus</h1><p id="guide-caption">Your guide is here. Select Virus to meet him, or choose your room.</p><div class="guide-actions"><button id="meet-guide" class="primary-button">Meet Virus</button><button id="customise-guide" class="text-button">Customise guide</button></div></div><div class="room-caption"><i></i><span id="room-label">The throne court</span><small>Room preview</small></div></section>
  <section class="workspace" aria-label="Session setup">
@@ -64,7 +66,7 @@ let navigation = 0;
 let displayedGuideId = '';
 let historyPage=0;
 let historySessions:Summary[]=[];
-$('#app').insertAdjacentHTML('beforeend', `<section id="conversation" aria-label="Character conversation"><div class="caption-card"><div class="caption-heading"><span id="speaker-label">Virus</span><span id="conversation-state" role="status">Ready</span><button id="caption-previous" aria-label="Previous caption">‹</button><button id="caption-next" aria-label="Next caption">›</button></div><p id="conversation-caption" role="log">I’m Virus. Tell me what brings you here.</p></div><form id="instruction-form"><button type="button" id="microphone" aria-label="Speak an instruction">◉</button><input id="instruction" aria-label="Your instruction" maxlength="2000" placeholder="Ask Virus, or describe your character…" autocomplete="off"><button id="send-instruction" aria-label="Send instruction">↑</button></form><div class="conversation-actions"><button id="interrupt">Interrupt</button><button id="repeat">Repeat</button><button id="quiet">Quiet mode</button><button id="brain-open">Brain & voice</button><small id="brain-label"></small></div></section>`);
+$('#app').insertAdjacentHTML('beforeend', `<section id="conversation" aria-label="Character conversation"><div class="caption-card"><div class="caption-heading"><span id="speaker-label">Virus</span><span id="conversation-state" role="status">Ready</span><button id="caption-previous" aria-label="Previous caption">‹</button><button id="caption-next" aria-label="Next caption">›</button></div><p id="conversation-caption" role="log">I’m Virus. Tell me what brings you here.</p></div><form id="instruction-form"><button type="button" id="microphone" aria-label="Speak an instruction">◉</button><input id="instruction" aria-label="Your instruction" maxlength="2000" placeholder="Ask Virus, or describe your character…" autocomplete="off"><button id="send-instruction" aria-label="Send instruction">↑</button></form><div class="conversation-actions"><button id="interrupt">Interrupt</button><button id="repeat">Repeat</button><button id="quiet">Quiet mode</button><button id="brain-open">Brain & voice</button><button id="language-mode" title="Switch discussion language">हिन्दी</button><small id="brain-label"></small></div></section>`);
 function syncCourtClearance(){const height=$('#conversation').getBoundingClientRect().height;if(height)document.body.style.setProperty('--court-dock-clearance',`${Math.ceil(height)+28}px`);}
 new ResizeObserver(syncCourtClearance).observe($('#conversation'));
 document.querySelector('.header-actions')!.insertAdjacentHTML('beforeend','<button id="guided-open" class="text-button">Guided setup</button><button id="history-open" class="text-button">Saved</button><button id="settings-open" class="text-button">Settings</button>');
@@ -100,6 +102,7 @@ function updateScene(status = dirty ? 'Your changes have not been saved.' : save
   }
   const selectedCharacter = saved?.characters.find(c=>c.id===conversation?.speakerId) || workshop?.guide;
   if(conversation){
+    document.body.dataset.showRoom=saved?.showRoom||'conference';document.body.dataset.showStyle=saved?.showStyle||'serious';document.body.dataset.sessionLanguage=saved?.language||preferredLanguage;$('#language-mode').textContent=(saved?.language||preferredLanguage)==='hi'?'English':'हिन्दी';$('#language-mode').setAttribute('aria-pressed',String(saved?.language==='hi'));$<HTMLButtonElement>('#language-mode').disabled=switchingLanguage||busy||!!guideSetup?.busy||!!workshop?.busy;
     $('#quiet').textContent=conversation.quiet?'Enable voice':'Quiet mode';
     const teaching=guideSetup?.active&&['welcome','capture','selection'].includes(guideSetup.view)&&conversation.phase==='Ready'&&!workshop?.isOpen;
     $('#conversation-caption').textContent=teaching?guideSetup!.caption:conversation.visibleCaption;
@@ -190,7 +193,7 @@ async function save() {
   if (!titleInput.checkValidity()) { showDetails(true); titleInput.reportValidity(); return; }
   const fields = getDraft();
   const signature = JSON.stringify({ profile: selectedId, id: saved?.id, revision: saved?.revision, draft: fields });
-  if (!pending || pending.signature !== signature) pending = { signature, method: saved ? 'PATCH' : 'POST', id: saved?.id || crypto.randomUUID(), body: saved ? { requestId: crypto.randomUUID(), expectedRevision: saved.revision, action: 'update', draft: fields } : { requestId: crypto.randomUUID(), draft: fields } };
+  if (!pending || pending.signature !== signature) pending = { signature, method: saved ? 'PATCH' : 'POST', id: saved?.id || crypto.randomUUID(), body: saved ? { requestId: crypto.randomUUID(), expectedRevision: saved.revision, action: 'update', draft: fields } : { requestId: crypto.randomUUID(), draft: fields, ...(preferredLanguage==='hi'?{language:'hi'}:{}) } };
   const operation = pending;
   setBusy(true); clearError(); $('#save-status').textContent = 'Saving…';
   try {
@@ -247,7 +250,7 @@ conversation = new SessionConversation(sessionCallbacks);
 workshop = new CharacterWorkshop(sessionCallbacks,conversation);
 court=new CourtOverlay((action,id)=>{if(action==='floor'&&id)void discussion?.address(id);else if(action==='brain'&&id)void openCharacterControls('brain',id);});
 discussion=new SessionDiscussion({...sessionCallbacks,guide:()=>workshop!.guide,castChanged:async()=>{await workshop!.reload();},beforeStart:()=>{if(guideSetup?.active||guideSetup?.busy)guideSetup.pause();if(guideSetup)guideSetup.active=false;document.body.classList.remove('details-open');}},conversation);
-guideSetup=new GuideSetup({...sessionCallbacks,details:()=>{document.body.classList.add('details-open');if(!editing)start(draftMode);showDetails(true);},startDiscussion:async()=>{await discussion?.start();},startCoaching:async()=>{await discussion?.start(false,'coaching');}},conversation,workshop);
+guideSetup=new GuideSetup({...sessionCallbacks,newSituation:async()=>{const previous=saved;if(!previous?.guidance?.notes.length&&previous?.status==='draft')return;start('discussion',false);if(previous?.showStyle){const fresh=await ensureSession();if(fresh){const result=await conversation!.request<{session:Session}>(endpoint(fresh.id),{action:'show-style',style:previous.showStyle,...(previous.showRoom?{room:previous.showRoom}:{}),requestId:crypto.randomUUID(),expectedRevision:fresh.revision},undefined,'PATCH');applySession(result.session);}}},details:()=>{document.body.classList.add('details-open');if(!editing)start(draftMode);showDetails(true);},startDiscussion:async()=>{await discussion?.start();},startCoaching:async()=>{await discussion?.start(false,'coaching');}},conversation,workshop);
 async function openCharacterControls(view:'brain'|'voice'|'appearance', id=workshop?.current?.id&&workshop.isOpen?workshop.current.id:conversation?.speakerId||workshop?.guide.id){
   if(!workshop||!conversation||!id||busy||workshop.busy)return false;
   if(discussion?.active||discussion?.busy)await discussion.pause();
@@ -258,6 +261,9 @@ async function openCharacterControls(view:'brain'|'voice'|'appearance', id=works
   return opened;
 }
 async function executeInterfaceIntent(intent:InterfaceIntent){
+  if(intent.action==='show-start'||intent.action.startsWith('room-')){if(discussion?.active)await discussion.pause();if(discussion)discussion.guideMode=true;await guideSetup?.handle(intent.action==='show-start'?'show':'room:'+intent.action.slice(5));return;}
+  if(intent.action==='language-hi'||intent.action==='language-en'){await setLanguage(intent.action==='language-hi'?'hi':'en');return;}
+  if(intent.action==='indian-news'){if(discussion?.active)await discussion.pause();if(discussion)discussion.guideMode=true;await guideSetup?.handle('news');return;}
   if(!conversation||!workshop)return;
   if(intent.action.startsWith('discussion-')&&discussion){
     const action=intent.action.slice(11);let target=discussion.targetId;
@@ -297,10 +303,17 @@ $('#microphone').addEventListener('click',async()=>{if(discussion?.active&&conve
 $('#interrupt').addEventListener('click',()=>{if(discussion?.active||discussion?.busy){void discussion.pause().then(()=>guideSetup?.observedInterruption());}else{void guideSetup?.interrupted();conversation?.stop();}});
 $('#repeat').addEventListener('click',async()=>{if(discussion?.active||discussion?.busy)await discussion.pause();void conversation?.repeat();});
 $('#quiet').addEventListener('click',async()=>{if(!conversation)return;if(discussion?.active||discussion?.busy)await discussion.pause();guideSetup?.pause();conversation.quiet=!conversation.quiet;conversation.stop();$('#quiet').textContent=conversation.quiet?'Enable voice':'Quiet mode';});
+$('#camera-mode').addEventListener('click',()=>{scene?.toggleCamera();$('#camera-mode').textContent=document.body.dataset.cameraMode==='broadcast'?'TV camera':'Manual view';});
+$('#language-mode').addEventListener('click',()=>void setLanguage((saved?.language||preferredLanguage)==='hi'?'en':'hi'));
+async function setLanguage(language:'en'|'hi'){
+  if(switchingLanguage||!conversation)return;switchingLanguage=true;
+  try{if(discussion?.active||discussion?.busy)await discussion.pause();guideSetup?.pause();conversation.stop();const s=await ensureSession();if(!s)throw new Error('Save your session before changing language.');if(pendingLanguage?.sessionId!==s.id||pendingLanguage.language!==language)pendingLanguage={sessionId:s.id,language,body:{action:'language',language,requestId:crypto.randomUUID(),expectedRevision:s.revision}};const profile=selectedId;let confirmed=false;for(let attempt=0;attempt<2;attempt++){if(profile!==selectedId||s.id!==saved?.id)return;const response=await fetch(`/api/sessions/${s.id}?profileId=${profile}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(pendingLanguage.body),signal:AbortSignal.timeout(15000)}),data=await response.json();if(response.status===409&&attempt===0){const latest=await conversation.request<{session:Session}>(`/api/sessions/${s.id}?profileId=${profile}`);if(profile!==selectedId||s.id!==saved?.id)return;applySession(latest.session);pendingLanguage.body.expectedRevision=latest.session.revision;continue;}if(!response.ok)throw new Error(data.error||'Language change failed. Retry.');if(profile!==selectedId||s.id!==saved?.id)return;applySession(data.session);confirmed=true;break;}if(!confirmed)throw new Error('Language could not be saved. Retry.');pendingLanguage=null;preferredLanguage=language;try{localStorage.setItem('goc-language',language);}catch{}conversation.say(language==='hi'?(conversation.catalog?.hindiVoiceConfigured?'हिन्दी और Sarvam आवाज़ तैयार हैं। अपनी भूमिका लिखें या बोलें; रुकी हुई चर्चा के लिए Resume चुनें।':'हिन्दी कैप्शन तैयार हैं। आवाज़ चालू करने के लिए सर्वर पर SARVAM_API_KEY जोड़ें।'):'English mode saved. Describe your premise, or resume the paused discussion.');}
+  catch(error){conversation.say(error instanceof Error?error.message:'Language change failed. Retry.','Error');}finally{switchingLanguage=false;updateScene();}
+}
 $('#brain-open').addEventListener('click',()=>void openCharacterControls('brain'));
 $('#caption-previous').addEventListener('click',()=>{if(conversation){conversation.page=Math.max(0,conversation.page-1);updateScene();}});
 $('#caption-next').addEventListener('click',()=>{if(conversation){conversation.page=Math.min(conversation.captionPages.length-1,conversation.page+1);updateScene();}});
-function aiAction(action:string){if(!conversation)return;if(action==='ai:quiet'){conversation.quiet=!conversation.quiet;conversation.stop();}else if(action==='ai:previous'){conversation.page=Math.max(0,conversation.page-1);updateScene();}else if(action==='ai:next'){conversation.page=Math.min(conversation.captionPages.length-1,conversation.page+1);updateScene();}else if(action==='ai:stop')conversation.stop();else if(action==='ai:mic')void conversation.microphone(text=>void sendInstruction(text));else if(action==='ai:repeat')void conversation.repeat();else if(action==='ai:type'){nativeInput='';updateScene();}else if(action.startsWith('key:')){const key=action.slice(4);if(key==='cancel')nativeInput=undefined;else if(key==='send'){const text=nativeInput||'';nativeInput=undefined;void sendInstruction(text);}else if(key==='back')nativeInput=(nativeInput||'').slice(0,-1);else nativeInput=((nativeInput||'')+(key==='space'?' ':key)).slice(0,2000);updateScene();}}
+function aiAction(action:string){if(!conversation)return;if(action==='ai:language'){void setLanguage(saved?.language==='hi'?'en':'hi');return;}if(action==='ai:quiet'){conversation.quiet=!conversation.quiet;conversation.stop();}else if(action==='ai:previous'){conversation.page=Math.max(0,conversation.page-1);updateScene();}else if(action==='ai:next'){conversation.page=Math.min(conversation.captionPages.length-1,conversation.page+1);updateScene();}else if(action==='ai:stop')conversation.stop();else if(action==='ai:mic')void conversation.microphone(text=>void sendInstruction(text));else if(action==='ai:repeat')void conversation.repeat();else if(action==='ai:type'){nativeInput='';updateScene();}else if(action.startsWith('key:')){const key=action.slice(4);if(key==='cancel')nativeInput=undefined;else if(key==='send'){const text=nativeInput||'';nativeInput=undefined;void sendInstruction(text);}else if(key==='back')nativeInput=(nativeInput||'').slice(0,-1);else nativeInput=((nativeInput||'')+(key==='space'?' ':key)).slice(0,2000);updateScene();}}
 
 async function boot() {
   renderProfiles(); $('#legacy-notice').hidden = !new URL(location.href).searchParams.has('project');

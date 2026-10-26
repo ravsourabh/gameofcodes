@@ -2,18 +2,18 @@ import {SessionError,isId,prepareMutation,appendEvent} from './session-domain.mj
 
 const check=(ok,message)=>{if(!ok)throw new SessionError(message,409,'DISCUSSION_MEMORY');};
 const text=(v,n)=>typeof v==='string'&&v.trim().length>0&&v.length<=n;
-export const normaliseTopic=t=>t.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+export const normaliseTopic=t=>t.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}\p{M}]+/gu,' ').trim();
 export const currentBrief=s=>s.discussion?.briefs?.at(-1)||null;
 export const userDirections=s=>(s.discussion?.interventions||[]).filter(i=>i.action==='say');
 export const scopeVersion=s=>currentBrief(s)?.scopeVersion||0;
 export const currentScopeTurns=s=>(s.contributions||[]).filter(c=>c.discussion&&(c.scopeVersion||0)===scopeVersion(s));
 export const needsBrief=s=>userDirections(s).some(i=>!currentBrief(s)?.sourceIds.includes(i.id));
 const cleanPhrase=t=>t.trim().replace(/\s*(?:[,;]\s*)?(?:and )?nothing else[.!]?\s*$/i,'').replace(/^[\s“”"'‘’]+|[\s“”"'‘’.!?]+$/g,'').trim();
-export const isScopeCorrection=t=>typeof t==='string'&&/\b(?:(?:i|we)\s+(?:(?:only|just)\s+)?(?:mean|meant|intended)|ignore|forget|correction|focus on)\b/i.test(t);
+export const isScopeCorrection=t=>typeof t==='string'&&(/मेरा मतलब|मेरा आशय|सिर्फ|केवल|नज़रअंदाज़|भूल जाए|सुधार|विषय बदल/u.test(t)||/\b(?:(?:i|we)\s+(?:(?:only|just)\s+)?(?:mean|meant|intended)|ignore|forget|correction|focus on)\b/i.test(t));
 export function explicitScope(s){
  let topic='';for(const i of userDirections(s)){
   const match=/(?:\b(?:i|we)\s+(?:(?:only|just)\s+)?(?:mean|meant|intend(?:ed)?)\s+|\b(?:i|we)\s+(?:only|just)\s+want(?:ed)?\s+|\b(?:focus|concentrate)(?: only)? on\s+|\bdiscuss (?:my|the) idea (?:of|about)\s+)([\s\S]+)/i.exec(i.text);
-  if(match)topic=cleanPhrase(match[1]);else if(/\b(?:instead|new topic|change the (?:topic|idea)|switch (?:the|to)|let'?s (?:discuss|talk)|i now want)\b/i.test(i.text))topic='';
+  if(match)topic=cleanPhrase(match[1]);else if(/मेरा मतलब|मेरा आशय|विषय बदल/u.test(i.text)||/\b(?:instead|new topic|change the (?:topic|idea)|switch (?:the|to)|let'?s (?:discuss|talk)|i now want)\b/i.test(i.text))topic='';
  }
  if(!topic)return null;
  const candidates=[...(currentBrief(s)?.excludedTopics||[])];

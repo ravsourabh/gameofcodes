@@ -62,19 +62,19 @@ export function nextDiscussionSpeaker(s){
  const turns=currentScopeTurns(s),pending=d.interventions.filter(i=>i.consumedBy===null),target=pending.filter(i=>i.targetId).at(-1)?.targetId;
  if(target&&cast.some(p=>p.id===target))return cast.find(p=>p.id===target);
  const counts=cast.map(p=>turns.filter(t=>t.participantId===p.id).length),minimum=Math.min(...counts),question=turns.at(-1)?.questionForParticipantId;
- if(question){const index=cast.findIndex(p=>p.id===question);if(index>=0&&counts[index]<=minimum+1)return cast[index];}
+ if(question){const index=cast.findIndex(p=>p.id===question);if(index>=0&&counts[index]<=(minimum===0?0:minimum+1))return cast[index];}
  for(let i=0;i<cast.length;i++){const index=(d.nextIndex+i)%cast.length;if(counts[index]===minimum)return cast[index];}
  return cast[d.nextIndex%cast.length];
 }
 export function validateTurnReply(s,participant,reply){
- const turns=currentScopeTurns(s),first=!turns.some(t=>t.participantId===participant.id);
- check(reply&&Object.keys(reply).every(k=>['text','position','relatedIds','questionForParticipantId','kind','onTopic','needsUserInput'].includes(k))&&text(reply.text,1800)&&reply.text.trim()&&text(reply.position,500)&&reply.position.trim()&&(reply.needsUserInput===undefined||typeof reply.needsUserInput==='boolean'),'The model returned an incomplete contribution.');
+ const turns=currentScopeTurns(s);
+ check(reply&&Object.keys(reply).every(k=>['text','position','relatedIds','questionForParticipantId','kind','onTopic','needsUserInput','delivery'].includes(k))&&text(reply.text,1800)&&reply.text.trim()&&text(reply.position,500)&&reply.position.trim()&&(reply.needsUserInput===undefined||typeof reply.needsUserInput==='boolean')&&(reply.delivery===undefined||['serious','humour','satire'].includes(reply.delivery)),'The model returned an incomplete contribution.');
  check(['opening','objection','answer','reflection','summary'].includes(reply.kind)&&typeof reply.onTopic==='boolean','The model omitted its contribution type.');
  check(reply.onTopic,'The model flagged this turn as off topic. Redirect or choose another brain before resuming.');
  check(Array.isArray(reply.relatedIds)&&reply.relatedIds.length<=3&&new Set(reply.relatedIds).size===reply.relatedIds.length&&reply.relatedIds.every(id=>turns.some(t=>t.id===id)),'The model referenced an unavailable contribution.');
  check(reply.questionForParticipantId===null||activeParticipants(s).some(p=>p.id===reply.questionForParticipantId&&p.id!==participant.id),'The model addressed someone outside this cast.');
- if(!first&&turns.length&&reply.kind!=='summary')check(reply.relatedIds.length>0,'The response needs a reference to the argument it addresses.');
- const normalise=t=>t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+ if(turns.length&&reply.kind!=='summary')check(reply.relatedIds.length>0,'The response needs a reference to the argument it addresses.');
+ const normalise=t=>t.toLowerCase().replace(/[^\p{L}\p{N}\p{M}]+/gu,' ').trim();
  check(!turns.some(t=>normalise(t.text)===normalise(reply.text)),'This contribution repeats a committed turn. Redirect before resuming.');
  return validateProgress(s,reply);
 }
@@ -85,7 +85,7 @@ export function recordDiscussionTurn(session,mutation){
  check(d.turnsUsed<d.turnLimit&&elapsedDiscussion(next,Date.parse(mutation.now||new Date().toISOString()))<next.scenario.durationMinutes*60000,'The discussion budget has been reached.');
  const participant=nextDiscussionSpeaker(next);check(participant.id===mutation.participantId,'The floor changed before this reply completed.');
  const reply=validateTurnReply(next,participant,mutation.reply),now=mutation.now||new Date().toISOString();
- const contribution=createRecord('contribution',next.profileId,{participantId:participant.id,requestId:mutation.requestId,epoch:next.epoch,text:reply.text,brain:mutation.brain,relatedIds:reply.relatedIds,discussion:true,turnKind:reply.kind,position:reply.position,questionForParticipantId:reply.questionForParticipantId,scopeVersion:scopeVersion(next),needsUserInput:reply.needsUserInput===true},{now});
+ const contribution=createRecord('contribution',next.profileId,{participantId:participant.id,requestId:mutation.requestId,epoch:next.epoch,text:reply.text,brain:mutation.brain,relatedIds:reply.relatedIds,discussion:true,turnKind:reply.kind,position:reply.position,questionForParticipantId:reply.questionForParticipantId,scopeVersion:scopeVersion(next),delivery:reply.delivery||(next.showStyle==='satire'?'satire':next.showStyle==='funny'?'humour':'serious'),needsUserInput:reply.needsUserInput===true},{now});
  next.contributions.push(contribution);participant.position=reply.position;participant.updatedAt=now;
  for(const i of d.interventions)if(i.consumedBy===null)i.consumedBy=contribution.id;
  d.turnsUsed++;d.nextIndex=(activeParticipants(next).findIndex(p=>p.id===participant.id)+1)%activeParticipants(next).length;

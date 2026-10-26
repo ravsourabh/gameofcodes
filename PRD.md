@@ -101,6 +101,23 @@ The user's position and relationship to the characters must be evident in each e
 
 Format and intensity are separate settings. Calm, formal, probing, and heated verbal styles can be applied where appropriate. Intensity changes delivery and challenge; it does not require fabricated disagreement or automatic hostility.
 
+### Custom shows, rooms and tone
+
+Users can write or narrate the premise of a conference/show: what is happening, who the characters are, and what they should discuss. The premise may be a personal idea, a fictional situation, comedy, satire or a current news topic. Virus proposes a readback and cast; confirmation still precedes a live exchange. Room and tone can be selected through short choices or inferred in the proposed readback, without a new mandatory form.
+
+| Show room | Behaviour |
+| --- | --- |
+| Roundtable | Seated, thoughtful discussion, with everyone heard before directed follow-ups dominate. |
+| Heated panel | Forceful, short challenges and actual bounded audio cut-ins. At least every third contribution can finish; interruption and quiet controls remain immediate. |
+| Comedy room | Playful callbacks, occasional natural laughter/interjections, expressive faces and hands, and responses to the previous character's actual words. |
+| Serious newsroom | Sober source-aware reporting and analysis; distinguish reported claims, allegations, interpretations and unknown developments. |
+
+Serious, funny, satire and mixed are independent tone choices. Clearly label satirical contributions as fictional in captions and speech; never pass invented quotations or allegations off as news. Each saved show retains its own premise, room, tone, language, cast and corrections. Switching shows pauses the current session; this release does not schedule several background programmes simultaneously.
+
+Hindi discussion uses natural Devanagari replies and Sarvam Hindi speech, independently of the characters' reasoning models. Preserve existing English voice assignments; the Hindi route selects a stable Sarvam voice or a deliberately selected Sarvam assignment. Missing/failed Sarvam speech is reported without silently selecting another provider. Typed Hindi/Hinglish and recorded speech share the premise/readback path.
+
+Recent Indian news is offered as dated publisher RSS headlines and short excerpts, with source links, publication/retrieval timestamps and explicit review before model use. Do not treat model memory as a current-news feed, imply independent verification, or silently reuse stale material. A selected story can start a new show while preserving the previous record.
+
 ### Custom interview and rehearsal scenarios
 
 Templates offer optional examples and defaults. A custom situation is a first-class path.
@@ -178,7 +195,7 @@ The code is a user-visible roleplay configuration, not a claim to reveal a model
 The session controller manages turn-taking, shared context, time, and state. Each speaking character generates its own contribution through its assigned brain.
 
 1. Brief participants on the user's problem, their role and guiding code, the permitted material, and the session rules.
-2. For discussion, collect initial views before revealing other participants' views where practical.
+2. Every speaker, including a new participant's first turn, receives the latest actual contribution. Give an independent viewpoint while responding to that claim; a private position note is not a spoken utterance.
 3. Run bounded exchanges in which speakers can refer to a specific earlier claim, ask another character a question, answer an objection, or revise their position.
 4. Give participants opportunities to respond to direct challenges and prevent one character monopolising the session.
 5. Summarise strongest arguments and unresolved disagreements. Agreement is optional.
@@ -214,6 +231,7 @@ All setup, text entry, character/model selection, intervention, rating, decision
 ### Timing, interruption, and recovery
 
 - One foreground speaker at a time by default. Listening, thinking, speaking, interrupted, and failed states are visible.
+- The explicitly selected heated room can prepare a response/voice while another character speaks and cut the previous audio short when the next reply is ready. Store actual interruption timing and the interrupting contribution; do not claim an interruption when playback already ended. Cloud audio has measured elapsed/total times; device speech records elapsed time without inventing a total duration. Quiet mode and single-step remain sequential, every third contribution is protected, and normal rooms keep the default floor policy.
 - Pause/stop and accepted intervention events act locally without waiting for a model or network acknowledgement. Stop current audio, yield the floor, and reject late responses that belong to the interrupted exchange.
 - Use bounded turns and a user-configurable session duration; suggest about ten minutes for an initial session. Show the remaining time and let the user end with a partial outcome.
 - Enforce limits on turns, per-turn output, concurrent requests, and total session usage. Warn when a known limit is near; continuing beyond a configured session budget requires a user action. Show a cost estimate only when supported by current provider data.
@@ -291,7 +309,9 @@ The visual reference is the scale and atmosphere of grand medieval political fan
 
 The user occupies the throne. Characters can face the sovereign and one another. The layout includes a discussion group, an active-presenter position, a visible queue, and restrained information surfaces. Grandeur should come from scale, composition, lighting, and art direction within the rendering budget.
 
-The two required environments are the throne court and council chamber. No additional room is required to complete either journey.
+The throne court and council chamber remain the base environments. The court also supports distinct conference/show room presets, with seated characters, a shared conference table, chairs, programme backdrop and room-specific presentation. These presets share the base architecture; they are separate saved show configurations rather than a new mandatory navigation journey.
+
+Desktop TV framing follows committed speaker turns using speaker, two-person and wide shots. Dragging/arrow keys/Home take manual control, and the user can re-enable TV camera. Respect reduced-motion preferences. Automatic TV framing never moves the headset camera. Seated knees, feet and hands use the actual avatar rig; speaking gestures, gaze and listening reactions follow real floor/playback state.
 
 ### The council chamber
 
@@ -423,6 +443,8 @@ Specific model IDs, voice availability, connection health, and deployed service 
 | AC-19 | Virus-led setup is the default in desktop and VR: capture/read back/correct notes, suggest room/name/cast, autosave acknowledged drafts, and confirm before starting. Detailed forms are optional; microphone-free alternatives work. |
 | AC-20 | The first-use journey teaches point/pinch, input, and pause/intervention through successful actions, with a useful exchange targeted by five minutes and optional deeper practice through ten. Repeat/skip/resume work, progress is scoped/versioned, and failures do not falsely complete lessons. |
 | AC-21 | User corrections govern subsequent speakers after consumption, reload, interruption and a brain swap. Group mode includes multiple real persistent participants, referenced objections/answers and concrete progress. Essential human questions pause scheduling; repeated clarification cannot become an automatic loop. Lost acknowledgements and partial invitations retry without duplicate notes or characters. |
+| AC-22 | Characters sit around a shared table with moving rigged hands and responsive gaze. Desktop TV shots follow actual turns and can be disabled; VR stays head-controlled. A typed/narrated premise and persisted room/tone choices support serious, funny, satire and mixed shows. Every character hears the latest actual utterance and receives a first turn. |
+| AC-23 | Hindi replies play through configured Sarvam voices; failures remain explicit. Current-news excerpts retain source/date/review boundaries. Heated-room cut-ins record actual playback timing while preserving pause, budget and fairness guarantees; normal rooms, quiet mode and single-step remain sequential. |
 
 ## 13. Quality, validation, and release evidence
 
@@ -527,6 +549,8 @@ Numbering gives the recommended integration order. Independent environment or co
 
 ### W03 — Voices, per-character brains, and model routing
 
+- **W06 show follow-up:** add and live-test Sarvam Hindi speech, stable supported voice choices, previews and explicit failures without changing reasoning brains or saved English voice choices.
+
 - Incorporate the avatar-workshop correction: no mandatory dropdown grid, long scroll or repeated manual saves. Direct feature selection, visual options, temporary previews, AI descriptions and one-action join must work through shared desktop/hand controls. Keep detailed identity edits optional and use paged in-world choices/captions/text input.
 
 - Wire the guide's distinct voice, captions, visible listening/thinking states, microphone-free input, quiet/repeat, and immediate interruption before requiring any additional participant. Preserve one-speaker coordination when the guide hands off to a cast member.
@@ -542,6 +566,8 @@ Numbering gives the recommended integration order. Independent environment or co
 
 ### W04 — Virus-led setup, note-taking, and core gesture introduction
 
+- **W06 show follow-up:** typed/narrated premises, short room/tone choices, proposed genre confirmation and reviewed dated-news excerpts share the same capture/readback flow. Hindi capture and readback must preserve the user’s words.
+
 - Keep one current choice group beside the guide, page long readbacks/context, and surface saved/waiting/error receipts. Direct UI commands and interruption must stay available during setup. Label the current realistic-room/stylised-editor prototype honestly; an appearance preview is not proof of realistic cosmetic support.
 - Replace the default room/title/situation form with a conversation led by Virus. Accept one sentence or an optional template, ask one necessary question at a time, infer sensible defaults, suggest a name/room, and show only the current contextual choice. Retain detail forms as an explicit edit/fallback view.
 - Implement capture/readback/correction of situation, goal, and constraints, draft autosave with receipt/error handling, and explicit user confirmation before starting. Notes must retain the distinction between user statements and proposed interpretations.
@@ -556,6 +582,8 @@ Numbering gives the recommended integration order. Independent environment or co
 **Status — completed locally for cloud mode, October 26:** Guide-led capture/readback/correction, acknowledged raw/interpretation notes, bounded reviewed text/PDF context, model-attributed setup proposals, mixed saved/new cast selection, explicit readiness approval and action-based core practice are implemented. All 54 unit/service checks and 23 distinct browser checks pass, including emulated native hand/keyboard setup, late cancellation, short viewport and lost note/lesson receipt recovery. One live setup inference saved an unconfirmed research-defence readback and three suggested roles. Group scheduling, complete optional lessons, measured five/ten-minute pacing, physical Quest verification and public deployment remain later-wave work. See [WAVE_4_AUDIT.md](WAVE_4_AUDIT.md).
 
 ### W05 — Real discussion and user intervention
+
+- **W06 show follow-up:** include the actual latest utterance for every new voice; protect the first-round opportunity for all participants. Add opt-in heated cut-ins with real playback timing, protected turns and the existing immediate pause/cancellation semantics.
 
 - Implement the session scheduler, shared committed context, independent initial views where practical, bounded turns, and claim/question references between speakers.
 - Consume only the user's confirmed setup and reviewed excerpts from W04. Preserve their source/excerpt limits, never treat document text as application commands, and stop pending guide work before handing the floor to the scheduler.
@@ -585,7 +613,11 @@ Numbering gives the recommended integration order. Independent environment or co
 
 **Status — implemented and locally verified, October 27:** The architectural throne court, centred cast, speaker/listener states, guide staging, paged left-side views/reasoning, honest right-side judgement surface and compact native controls are implemented. Selecting a person inspects without interrupting; explicit floor assignment/brain inspection use the W05 pause semantics. Guide choices share the caption dock, detailed panels open on request, and panel spacing follows caption height. All 68 unit/service checks and 35 production browser journeys pass, including emulated hands, keyboard/studio transitions, selection through non-interactive caption areas and asset retry. A six-model desktop capture reports 83 draw calls/62,384 triangles and p95 frame cadence 33.4 ms at the 30 Hz desktop cap. Physical Quest readability, comfort, GPU/thermal performance and unfamiliar-user timing remain acceptance work in W10/W11. Compatible modular hair/clothing art remains in W11; no unsupported controls are offered. See [WAVE_6_AUDIT.md](WAVE_6_AUDIT.md).
 
+**W06 show follow-up:** implemented and locally verified with 84 unit/service checks, 44 production browser journeys and a bounded live Hindi/news run using three actual OpenAI/Claude participants and three Sarvam voices. See [SHOW_ROOMS_AUDIT.md](SHOW_ROOMS_AUDIT.md).
+
 ### W07 — Scores, courtroom decisions, and presenters
+
+- **Additional W06 follow-up before scores:** seated roundtable rigs/hand gestures, desktop TV shots with manual override, heard-first speaker context, custom narrated/written show premises, independent room/tone choices, Hindi/Sarvam and reviewed Indian-news topics implement AC-22/AC-23. Verify actual voices, sourced discussion and real audio cut-ins before building scoring/presenters. Physical headset comfort and performance remain W10/W11 validation, and multi-room background scheduling is deferred.
 
 - **Prerequisite from the October 27 conversation failure:** complete the W05/W06 correction-memory, clarification-loop and real-cast repair (AC-21), review a live replay of the user's offline/mindfulness idea, and deploy that fix before starting scores/presenters. Future presenter and decision generation must use the current corrected brief rather than the original misheard setup. This repair does not count as starting W07.
 
@@ -614,6 +646,8 @@ Numbering gives the recommended integration order. Independent environment or co
 
 ### W09 — Reports, session history, recovery, and linked modes
 
+- Include saved show room/tone/language and reviewed news source/date metadata in history and exports. Mark audio cut-offs and their interrupting contributions; distinguish the complete intended argument from the portion actually performed. Do not infer that every saved word was heard.
+
 - Finish the user-facing session history, consistent resume, character/scenario snapshots, event reconciliation, and readable partial-session outcomes on top of W01 persistence.
 - Produce decision briefs with options, strongest arguments, evidence gaps, dissent, explicit rulings, deferred choices, and next actions.
 - Produce rehearsal reports with questions/answers, transcript-linked feedback, assessments, retries, and next practice steps.
@@ -624,6 +658,8 @@ Numbering gives the recommended integration order. Independent environment or co
 **Completion check:** Both modes can be finished, closed, resumed/reopened, reviewed, and exported with no duplicate events or lost ratings/choices. A court-to-council transition creates a linked record containing only reviewed context and leaves the original session intact.
 
 ### W10 — Guided-journey validation, accessibility, and hands-only completion
+
+- Include native room/tone selection, Hindi mode, narrated premise correction, news excerpt review, TV/manual desktop control and headset-stationary presentation in the new-user and failure-recovery walkthroughs.
 
 - Verify realistic/classic appearance selection, capability-aware editing, body-part targets, saved identity, paged readback/context, and setup confirmation without scrolling. Test short desktop viewports and reload during each guide step; buttons must not overlap the character, captions or exit controls.
 - Integrate and refine the assistant-led entry and gesture lessons already delivered in W02–W04 with both finished session modes. Verify the full pacing in section 9; a ten-minute narration or re-skinned form does not satisfy the introduction.
@@ -636,12 +672,14 @@ Numbering gives the recommended integration order. Independent environment or co
 
 ### W11 — Final polish, device performance, and release candidate
 
+- Measure the seated six-person rigs, hand/forearm gestures, news backdrop, Hindi audio and cut-in cancellation on physical Quest. Refine voice acting/laughter and room art from actual listening/device observations; emulation is insufficient.
+
 - Finish and license the compatible realistic appearance asset set, with fallback/loading previews, distinct silhouettes, facial expressions and measured speech animation. Verify texture/morph/rig budgets for the full cast on physical Quest; the current six complete Rocketbox people and facial morphs do not supply modular hair/clothing by themselves.
 - Finish coherent environmental art, avatar variations, animation transitions, lighting, spatial/audio feedback, and voice/caption timing without obscuring the active speaker or controls.
 - Measure Quest 3/3S performance at the supported cast/queue budget during listening, inference waits, speech, model changes, panel use, and environment transitions. Optimise geometry/materials, shadows, textures, animation, and inactive-room culling toward sustained 72 Hz.
 - Run the domain checks, browser journeys, physical-headset walkthroughs, hosted-path checks, and migration/retirement checks required in section 13. Use controlled failures for repeatable recovery checks and real supported connections for live routing/speech validation.
 - Review discussion relevance and rehearsal feedback with representative users; obtain appropriate subject review for specialised templates. Record limitations instead of reporting unmeasured improvement.
-- Fix acceptance failures and replay affected journeys. Produce a release-candidate checklist with evidence for AC-01 through AC-17 and AC-19 through AC-21, device measurements, known limitations, and deployment readiness; AC-18 is confirmed at release.
+- Fix acceptance failures and replay affected journeys. Produce a release-candidate checklist with evidence for AC-01 through AC-17 and AC-19 through AC-23, device measurements, known limitations, and deployment readiness; AC-18 is confirmed at release.
 
 **Completion check:** Both complete release walkthroughs pass on desktop and physical Quest, every functional criterion has evidence, and no unresolved defect blocks a required journey. Record measured performance against the 72 Hz goal and competition's published 60 fps minimum; a miss is a release risk requiring resolution, not a passed check.
 
@@ -653,7 +691,7 @@ Numbering gives the recommended integration order. Independent environment or co
 - Record the full first-release acceptance result and remaining non-blocking limitations. Confirm users can reach the app and complete its actual journeys without a development checkout.
 - Complete the competition access/eligibility checks, correct division/track, public video under three minutes, screenshots, description, and submission form. Submit through the authorised account workflow, verify judge access, and retain the unchanged submitted version during judging.
 
-**Completion check:** The agreed app is released at a verified usable URL with current documentation, assistant-led entry, both full journeys, and evidence for AC-01 through AC-21. The competition package is complete and, when entered, its submission/access are confirmed before the official cutoff. A finished video or submitted form alone does not complete the app.
+**Completion check:** The agreed app is released at a verified usable URL with current documentation, assistant-led entry, both full journeys, and evidence for AC-01 through AC-23. The competition package is complete and, when entered, its submission/access are confirmed before the official cutoff. A finished video or submitted form alone does not complete the app.
 
 ### Acceptance coverage and wave completion rules
 
@@ -680,6 +718,8 @@ Numbering gives the recommended integration order. Independent environment or co
 | AC-19 — Assistant-led capture/readback/correction and form-optional setup | W02, W03, W04, W06, W10 |
 | AC-20 — Action-based five/ten-minute gesture/app introduction | W04, W05, W07, W08, W10, W11 |
 | AC-21 — Durable corrections, real group discussion and clarification recovery | W05/W06 repair before W07; regression in W08–W12 |
+| AC-22 — Seated responsive shows, TV framing and custom premises | W06 follow-up; physical validation in W10/W11 |
+| AC-23 — Hindi/Sarvam, sourced news and bounded heated cut-ins | W03/W05/W06 follow-up; regression and hosted verification in W10–W12 |
 
 At each wave, record delivered behaviour, relevant verification, remaining dependencies, and material risks. Reuse suitable existing checks and add checks for new state/routing behaviour; a successful compile or mocked conversation alone is insufficient evidence of live AI interaction or physical headset comfort. All applicable release criteria are rechecked in W11 and against the hosted release in W12. Physical combat, human multiplayer, and other section-15 exclusions are not required to complete these waves.
 

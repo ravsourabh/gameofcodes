@@ -17,7 +17,7 @@ export function reply(s,text='A distinct point.',fields={}){return {text,positio
 export const turn=(s,r)=>recordDiscussionTurn(s,{requestId:randomUUID(),expectedRevision:s.revision,epoch:s.epoch,participantId:nextDiscussionSpeaker(s).id,reply:r,brain:{provider:'fixture',model:'resolved'}});
 test('discussion requires explicit start, balances participants and commits real referenced objections and answers',()=>{
  let s=readyDiscussion();assert.equal(s.status,'ready');assert.equal(s.discussion,undefined);s=control(s,'start');const ids=[];
- for(let i=0;i<3;i++){ids.push(nextDiscussionSpeaker(s).id);s=turn(s,reply(s,`Opening point ${i}.`,{kind:'opening',relatedIds:[]}));}assert.equal(new Set(ids).size,3);
+ for(let i=0;i<3;i++){ids.push(nextDiscussionSpeaker(s).id);s=turn(s,reply(s,`Opening point ${i}.`,{kind:'opening'}));}assert.equal(new Set(ids).size,3);
  const before=s.contributions.at(-1);s=turn(s,reply(s,'The cost estimate omits recruitment.',{kind:'objection',relatedIds:[before.id],questionForParticipantId:before.participantId}));assert.equal(nextDiscussionSpeaker(s).id,before.participantId);
  s=turn(s,reply(s,'Include recruitment in a capped pilot budget.',{relatedIds:[s.contributions.at(-1).id]}));assert.equal(s.contributions.at(-1).brain.model,'resolved');assert.equal(s.participants.find(p=>p.id===before.participantId).position,'Include recruitment in a capped pilot budget.');
 });
@@ -36,7 +36,7 @@ test('the authoritative clock and turn budget survive pause, reload and completi
  let s=readyDiscussion(),at='2026-10-26T12:00:00Z';s=control(s,'start',{now:at});assert.equal(elapsedDiscussion(s,Date.parse(at)+1500),1500);s=control(s,'pause',{now:'2026-10-26T12:00:02Z'});assert.equal(s.discussion.elapsedMs,2000);assert.equal(elapsedDiscussion(s,Date.parse(at)+100000),2000);
  s=control(s,'resume',{now:'2026-10-26T12:00:03Z'});s.discussion.elapsedMs=600001;assert.throws(()=>turn(s,reply(s)),/budget/);s=control(s,'finish');assert.equal(s.status,'completed');assert.equal(s.discussion.runningSince,null);
 });
-test('provider contracts constrain real participant references and keep initial views independent',async()=>{
+test('provider contracts constrain real participant references and give every new speaker the last actual claim',async()=>{
  let s=control(readyDiscussion(),'start'),requests=[];const ai=createSessionAI({env:{OPENAI_API_KEY:'test-only',ANTHROPIC_API_KEY:'test-only',GEMINI_API_KEY:'test-only'},transport:async(url,options)=>{
   if(url.endsWith('/v1/models'))return Response.json({data:[{id:'gpt-fixture'}]});
   if(url.includes('/v1/models?'))return Response.json({data:[{id:'claude-fixture'}]});
@@ -55,5 +55,5 @@ test('provider contracts constrain real participant references and keep initial 
   const schema=requests.at(-1).schema;assert.ok(!JSON.stringify(schema.properties.questionForParticipantId).includes(actual.id));
   s=recordDiscussionTurn(s,{requestId:randomUUID(),expectedRevision:s.revision,epoch:s.epoch,participantId:actual.id,...result});
  }
- const openaiInput=JSON.parse(requests[0].body.input),anthropicInput=JSON.parse(requests[1].body.messages[0].content);assert.deepEqual(openaiInput.history,[]);assert.deepEqual(anthropicInput.history,[]);assert.equal(s.contributions.at(-1).brain.provider,'gemini');
+ const openaiInput=JSON.parse(requests[0].body.input),anthropicInput=JSON.parse(requests[1].body.messages[0].content);assert.deepEqual(openaiInput.history,[]);assert.equal(anthropicInput.history.at(-1).id,s.contributions[0].id);assert.equal(anthropicInput.latestContribution.text,s.contributions[0].text);assert.equal(s.contributions.at(-1).brain.provider,'gemini');
 });

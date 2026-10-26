@@ -4,7 +4,7 @@ import {CharacterWorkshop} from './character-workshop';
 import {SessionConversation} from './session-conversation';
 
 type Choice={label:string;action:string};
-type Callbacks={profile:()=>string;session:()=>Session|null;ensureSession:()=>Promise<Session|null>;sessionChanged:(s:Session)=>void;changed:()=>void;details:()=>void;startDiscussion?:()=>Promise<void>;startCoaching?:()=>Promise<void>};
+type Callbacks={profile:()=>string;session:()=>Session|null;ensureSession:()=>Promise<Session|null>;sessionChanged:(s:Session)=>void;changed:()=>void;details:()=>void;newSituation?:()=>Promise<void>;startDiscussion?:()=>Promise<void>;startCoaching?:()=>Promise<void>};
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const fieldsFor=(c:Character)=>characterFields({name:c.name,avatar:c.avatar,personality:c.personality,code:c.code,voicePreference:c.voicePreference});
 export class GuideSetup {
@@ -21,6 +21,7 @@ export class GuideSetup {
   private pendingRoster:{sessionId:string;characterId:string;body:object}|null=null;
   private pendingLesson:{signature:string;body:object}|null=null;
   private workId=0;private scope='';
+  private news:{checkedAt:string;articles:{id:string;title:string;source:string;url:string;publishedAt:string;excerpt:string}[];unavailableSources:string[]}|null=null;private newsIndex=0;
   constructor(private cb:Callbacks,private ai:SessionConversation,private workshop:CharacterWorkshop){
     this.element.id='guide-setup';this.element.setAttribute('aria-label','Guide-led setup');document.querySelector('.session-app')!.append(this.element);
     this.element.addEventListener('click',e=>{const button=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-guide]');if(button)void this.handle(button.dataset.guide!);});
@@ -35,7 +36,11 @@ export class GuideSetup {
   get choices():Choice[]{
     if(this.busy)return [{label:'Interrupt',action:'pause'}];
     if(this.retryAction)return [{label:'Retry',action:'retry'},{label:'Details',action:'details'}];
-    if(this.view==='welcome')return [{label:'Quick practice',action:'practice'},{label:'Start talking',action:'direct'}];
+    if(this.view==='welcome')return [{label:'Start a show',action:'show'},{label:'Quick practice',action:'practice'},{label:'Start talking',action:'direct'},{label:'Indian news',action:'news'}];
+    if(this.view==='rooms')return [{label:'Roundtable',action:'room:conference'},{label:'Heated panel',action:'room:heated'},{label:'Comedy room',action:'room:comedy'},{label:'Serious newsroom',action:'room:newsroom'}];
+    if(this.view==='styles')return [{label:'Serious',action:'style:serious'},{label:'Funny',action:'style:funny'},{label:'Satire',action:'style:satire'},{label:'Mix it together',action:'style:mixed'}];
+    if(this.view==='premise')return [{label:'Change room',action:'show'},{label:'Choose tone',action:'styles'},{label:'Indian news',action:'news'},{label:'Add context',action:'context-menu'}];
+    if(this.view==='news')return [{label:'Review this story',action:'choose-news'},{label:'Next story',action:'next-news'},{label:'Read more',action:'next'},{label:'Back',action:'back'}];
     if(this.view==='selection')return [{label:'Skip lesson',action:'skip'},{label:'Explain simply',action:'simple'}];
     if(this.view==='context')return [{label:'Next page',action:'next'},...(this.setup?.context[this.contextIndex]?.status==='pending'?[{label:'Use this excerpt',action:'review-context'}]:[]),{label:'Remove material',action:'remove-context'},{label:(this.setup?.context.length||0)>1?'Other material':'Back',action:(this.setup?.context.length||0)>1?'next-context':'back'}];
     if(this.view==='notes')return [{label:'Next note',action:'next'},{label:'Correct notes',action:'correct'},{label:'Back',action:'back'}];
@@ -48,11 +53,11 @@ export class GuideSetup {
     }
     if(this.view==='recap')return [{label:'Approve setup',action:'approve'},{label:'Try interrupting',action:'demo'},{label:'Change cast',action:'cast'},{label:'Read next',action:'next'}];
     if(this.view==='ready'){const s=this.cb.session(),group=s?.scenario.mode==='discussion',solo=group&&s.participants.filter(p=>p.active).length<2;return [{label:group?solo?'Discuss with others':'Start discussion':'Ask a character',action:group?'start-discussion':'free'},...(solo?[{label:'One-to-one coaching',action:'start-coaching'}]:[]),{label:'Review notes',action:'notes'},{label:'Edit setup',action:'details'}];}
-    return [{label:this.setup?.proposal?'Prepare readback':'Use an example',action:this.setup?.proposal?'propose':'example'},{label:'Add context',action:'context-menu'},{label:'Details',action:'details'}];
+    return [{label:this.setup?.proposal?'Prepare readback':'Use an example',action:this.setup?.proposal?'propose':'example'},{label:'Add context',action:'context-menu'},{label:'Indian news',action:'news'},{label:'Details',action:'details'}];
   }
   private get availableSaved(){const s=this.cb.session();return(this.workshop.library?.characters||[]).filter(c=>c.id!==this.workshop.guide.id&&!s?.participants.some(p=>p.active&&p.characterId===c.id));}
   private pages(text:string){return text.match(/[\s\S]{1,130}(?:\s|$)|\S{1,130}/g)?.map(t=>t.trim())||[''];}
-  private readback(){const p=this.setup!.proposal!;return [p.situation,`Goal: ${p.goal}`,p.constraints.length?`Constraints: ${p.constraints.join('; ')}`:'No constraints stated.',`${p.mode==='rehearsal'?'Council chamber':'Throne court'} · ${p.format} · ${p.intensity} · ${p.durationMinutes} min`,...p.rubric.map(r=>`${r.name}: ${r.description}`)].join('\n');}
+  private readback(){const p=this.setup!.proposal!;return [p.situation,`${p.showRoom||this.cb.session()?.showRoom||'conference'} · ${p.showStyle||this.cb.session()?.showStyle||'serious'}`,`Goal: ${p.goal}`,p.constraints.length?`Constraints: ${p.constraints.join('; ')}`:'No constraints stated.',`${p.mode==='rehearsal'?'Council chamber':'Throne court'} · ${p.format} · ${p.intensity} · ${p.durationMinutes} min`,...p.rubric.map(r=>`${r.name}: ${r.description}`)].join('\n');}
   render(){
     if(!this.initialized)return;
     const view=this.view,p=this.setup?.proposal;let title='Tell me what brings you here',body='Say it, type it, or try an example.';
@@ -66,12 +71,17 @@ export class GuideSetup {
     else if(view==='notes'){const notes=this.cb.session()?.guidance?.notes||[];const pages=notes.flatMap(n=>this.pages(`${n.source==='user'?'Your words':'Guide interpretation'} · ${n.status}\n${n.text}`));title='What I have noted';body=pages.length?pages[this.page%pages.length]:'No notes saved yet.';}
     else if(view==='context-menu'){title='Add supporting context';body='Paste up to 12,000 characters, or choose a text/PDF file under 2 MB. Review the extracted excerpt before it is shared.';}
     else if(view==='help'){title='Learn one interaction';body='Core selection, input and interruption fit into your first session. Brain inspection is optional; scoring and presenters follow when those features arrive.';}
+    else if(view==='news'&&this.news){const story=this.news.articles[this.newsIndex%this.news.articles.length];title=story.source;body=this.pages(`${story.title}\nPublished: ${new Date(story.publishedAt).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})} IST\n${story.excerpt}\nPublisher RSS excerpt; review the original source. Checked: ${this.news.checkedAt}`)[this.page%this.pages(`${story.title}\nPublished: ${new Date(story.publishedAt).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})} IST\n${story.excerpt}\nPublisher RSS excerpt; review the original source. Checked: ${this.news.checkedAt}`).length];}
+    else if(view==='rooms'){title='Choose your show room';body='A calm roundtable, a heated panel, a comedy room or a serious news desk. Or simply tell me the premise.';}
+    else if(view==='styles'){title='What is the tone?';body='Serious, funny, satire, or a mixture. You can also tell me the premise now.';}
+    else if(view==='premise'){const hi=this.cb.session()?.language==='hi';title=hi?'आपके शो की भूमिका क्या है?':'What is the premise of your show?';body=hi?'लिखें या बोलें: क्या हो रहा है, किरदार कौन हैं और वे किस बात पर चर्चा करें? कल्पित कहानी या किसी खबर से शुरू कर सकते हैं।':'Write or narrate what is happening, who is involved and what they should discuss. It can be your own situation, fiction, satire or a news story.';}
     const choices=view==='context-menu'?[{label:'Paste text',action:'paste'},{label:'Back',action:'back'}]:this.choices;
     this.displayCaption=body;
     this.element.hidden=!this.active||this.workshop.isOpen||document.body.classList.contains('details-open');
     this.element.innerHTML=`<span class="eyebrow">${this.lesson?'GUIDED PRACTICE':'WITH YOUR GUIDE'}</span><h2>${esc(title)}</h2><p class="guide-step-text">${esc(body)}</p>${this.message?`<p class="guide-feedback" role="alert">${esc(this.message)}</p>`:''}<div class="guide-choices">${choices.map(c=>`<button class="${choices[0]===c?'primary-button':'text-button'}" data-guide="${esc(c.action)}">${esc(c.label)}</button>`).join('')}</div>${view==='context-menu'?'<label class="outline-button context-upload">Choose file<input id="context-file" type="file" accept=".txt,.pdf,text/plain,application/pdf"></label>':''}<div class="guide-receipt" role="status">${esc(this.receipt)}</div><div class="guide-tools"><button data-guide="notes">Notes</button><button data-guide="help">Help</button><button data-guide="free">Ask freely</button>${this.lesson?'<button data-guide="skip">Skip lesson</button>':''}</div>`;
     document.body.dataset.guideView=this.active?view:'free';document.body.dataset.guidedSetup=String(this.active);
     document.body.dataset.guideDemo=String(this.demoActive);
+    const old=this.element.querySelector('.news-source');old?.remove();if(view==='news'&&this.news){const story=this.news.articles[this.newsIndex%this.news.articles.length],link=document.createElement('a');link.className='news-source';link.href=story.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open original source ↗';this.element.append(link);}
   }
   async boot(){this.initialized=true;this.temporaryView='';this.render();}
   resume(){this.pause();const scope=this.cb.profile()+'/'+(this.cb.session()?.id||'');if(scope!==this.scope){this.pending=null;this.pendingLesson=null;this.pendingRoster=null;this.joinDraft=null;this.retryAction=null;this.receipt='';this.scope=scope;}this.active=true;this.temporaryView='';this.page=0;this.message='';this.render();}
@@ -157,6 +167,11 @@ export class GuideSetup {
     this.joinDraft=null;this.savedPicker=false;this.receipt=`${character.name} joined · saved`;this.castIndex=(this.castIndex+1)%p.cast.length;
   }
   async handle(action:string){
+    if(action==='show'||action==='styles'){this.active=true;this.temporaryView=action==='show'?'rooms':'styles';this.page=0;this.render();this.cb.changed();return;}
+    if(action.startsWith('room:')||action.startsWith('style:')){const room=action.startsWith('room:')?action.slice(5):undefined,style=action.startsWith('style:')?action.slice(6):room==='comedy'?'funny':'serious';const profile=this.cb.profile(),generation=this.generation;let command:object|null=null;await this.run(async()=>{const s=await this.cb.ensureSession();if(!s)throw new Error('Save the show first.');command||={action:'show-style',style,...(room?{room}:{}),requestId:crypto.randomUUID(),expectedRevision:s.revision};const result=await this.ai.request<{session:Session}>(`/api/sessions/${s.id}?profileId=${profile}`,command,undefined,'PATCH');if(profile!==this.cb.profile()||generation!==this.generation||s.id!==this.cb.session()?.id)return;this.cb.sessionChanged(validateSession(result.session));this.temporaryView=room?'styles':'premise';this.ai.say(this.cb.session()?.language==='hi'?'अपने शो की भूमिका लिखें या बोलें।':'Write or narrate the premise of your show.');});return;}
+    if(action==='news'){this.active=true;await this.run(async()=>{this.news=await this.ai.request('/api/news/india');this.newsIndex=0;this.page=0;this.temporaryView='news';this.ai.say('Choose a current story. Review its source and date before starting a new discussion.');});return;}
+    if(action==='next-news'&&this.news){this.newsIndex++;this.page=0;this.render();this.cb.changed();return;}
+    if(action==='choose-news'&&this.news){const story=this.news.articles[this.newsIndex%this.news.articles.length];await this.run(async()=>{await this.cb.newSituation?.();await this.mutate('context',{item:{id:crypto.randomUUID(),name:(story.source+' · '+story.title).slice(0,160),status:'pending',text:`Publisher: ${story.source}\nSource: ${story.url}\nPublished: ${story.publishedAt}\nRetrieved: ${this.news!.checkedAt}\nHeadline: ${story.title}\nRSS excerpt: ${story.excerpt}\nThis is a short publisher excerpt, not independent verification or the full article. Distinguish reported facts, allegations, opinions and unknown developments.`,error:''}});await this.mutate('capture',{text:`Selected Indian news topic: ${story.title}. Discuss its implications, competing views and what remains uncertain.`});this.contextIndex=this.setup!.context.length-1;this.temporaryView='context';this.page=0;});return;}
     if(action==='start-discussion'){await this.cb.startDiscussion?.();return;}
     if(action==='start-coaching'){await this.cb.startCoaching?.();return;}
     if(action==='pause'){await this.interrupted();return;}

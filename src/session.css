@@ -498,3 +498,6 @@ body:has(.character-dialog[open]) .caption-card { display: none; }
 @media(max-height:680px){#discussion-panel{bottom:190px;}}
 #guide-setup,#discussion-panel{bottom:max(190px,var(--court-dock-clearance,190px));}
 #court-scores p{font-size:12px;line-height:1.4;margin:6px 0;}.court-rating{font-size:11px;padding:6px 0;}
+
+.court-look-hint button{pointer-events:auto;background:#122b25dd;color:#e5d0a2;border:1px solid #8c815f;border-radius:14px;padding:6px 12px;font-size:11px;cursor:pointer;}
+.news-source{display:block;color:#dfc98e;font-size:12px;margin-top:8px;}

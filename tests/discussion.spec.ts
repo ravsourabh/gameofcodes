@@ -1,4 +1,4 @@
-import {discussionAction} from './fixtures/desktop';
+import {discussionAction,clickActor} from './fixtures/desktop';
 import {pinchAction,pinchWorld} from './fixtures/xr';
 import {test,expect,type Page} from '@playwright/test';import http from 'node:http';import {mkdtemp,rm,readFile} from 'node:fs/promises';import {tmpdir} from 'node:os';import path from 'node:path';
 import {createSessionService} from '../server/sessions.mjs';import {seedDiscussion,discussionFixtureAI} from './fixtures/discussion.mjs';
@@ -10,7 +10,7 @@ test.beforeEach(async({page})=>{
  await page.route('**/api/**',async route=>{const url=new URL(route.request().url()),response=await route.fetch({url:origin+url.pathname+url.search,headers:{...route.request().headers(),origin,host:new URL(origin).host}});await route.fulfill({response});});
  await page.goto('/?session='+seeded.session.id);await expect(page.locator('body')).toHaveAttribute('data-app-ready','true');await page.locator('#quiet').click();
 });
-test.afterEach(async()=>{await new Promise<void>(r=>{server.close(()=>r());server.closeAllConnections();});expect(root.startsWith(path.join(tmpdir(),'goc-discussion-browser-'))).toBe(true);await rm(root,{recursive:true,force:true});});
+test.afterEach(async({page})=>{await page.unrouteAll({behavior:'ignoreErrors'});await page.close();await new Promise<void>(r=>{server.close(()=>r());server.closeAllConnections();});expect(root.startsWith(path.join(tmpdir(),'goc-discussion-browser-'))).toBe(true);await rm(root,{recursive:true,force:true});});
 const session=async()=>(await(await fetch(`${origin}/api/sessions/${seeded.session.id}?profileId=${seeded.profile}`)).json()).session;
 async function start(page:Page){await page.locator('[data-guide="start-discussion"]').click();await expect.poll(async()=>(await session()).contributions.length,{timeout:20000}).toBeGreaterThan(0);await page.locator('#interrupt').click();await expect(page.locator('body')).toHaveAttribute('data-discussion-state','paused');}
 test('real cast contributions form a referenced objection/answer and user direction governs the next turn',async({page})=>{
@@ -41,7 +41,7 @@ test('spoken playback holds the floor and interrupt prevents a late audio end fr
 test('court selection inspects a view without interrupting, and explicit give-floor redirects it',async({page})=>{
  let release=()=>{};state.gate=new Promise<void>(r=>release=r);await page.locator('[data-guide="start-discussion"]').click();await expect.poll(()=>state.calls.length).toBe(1);await expect(page.locator('#discussion-panel [data-discuss]')).toHaveCount(2);
  await expect(page.locator('body')).toHaveAttribute('data-realistic-avatars','3');const models=JSON.parse((await page.locator('body').getAttribute('data-avatar-models'))!),id=seeded.session.participants[1].characterId,pos=models.find((a:any)=>a.id===id).position;
- const scale=700/(2*Math.tan(55*Math.PI/360));await page.locator('#session-world').click({position:{x:500+pos[0]*scale/(2.5-pos[2]),y:350-(1.1-1.3)*scale/(2.5-pos[2])}});
+ await clickActor(page,id);
  await expect(page.locator('#court-focus')).toContainText('Bryn');expect((await session()).status).toBe('running');expect(state.calls).toHaveLength(1);await page.locator('[data-court="next"]').click();await expect(page.locator('#court-focus')).toContainText('Current view');await page.locator('[data-court="floor"]').click();await expect(page.locator('body')).toHaveAttribute('data-discussion-state','paused');release();await page.waitForTimeout(200);expect((await session()).contributions).toHaveLength(0);expect((await session()).discussion.interventions.at(-1).targetId).toBe(seeded.session.participants[1].id);
  await page.locator('[data-court="scores"]').click();await expect(page.locator('#court-scores')).toContainText('No ratings yet');expect((await session()).ratings).toHaveLength(0);await page.screenshot({path:'test-results/wave-6-court-discussion.png'});
 });

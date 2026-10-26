@@ -42,7 +42,7 @@ function loadModel(name: string) {
 }
 
 // Bones moved procedurally. Rotations are expressed in character space (x right, y up, z towards the viewer).
-const RIG = ['Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LEye', 'REye', 'L Clavicle', 'R Clavicle', 'L UpperArm', 'R UpperArm'] as const;
+const RIG = ['Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LEye', 'REye', 'L Clavicle', 'R Clavicle', 'L UpperArm', 'R UpperArm','L Forearm','R Forearm','L Hand','R Hand','L Thigh','R Thigh','L Calf','R Calf','L Foot','R Foot'] as const;
 type RigName = typeof RIG[number];
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 const q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), v = new THREE.Vector3(), v2 = new THREE.Vector3();
@@ -68,6 +68,8 @@ export class RealisticAvatar implements SceneAvatar {
   private mouth: Mouth = { open: 0, round: 0, wide: 0, hiss: 0 };
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   private presence='Ready';private emphasis=false;
+  private seated=false;private seatDrop=0;private seatedRig=new Map<RigName,{base:THREE.Quaternion;parent:THREE.Quaternion;parentInverse:THREE.Quaternion}>();
+  private gesture=0;private turnKind='opening';private room='conference';
   state:'loading'|'ready'|'error'='loading';
   private ownedMaterials:THREE.Material[]=[];
   private accessoryMeshes:THREE.Mesh[]=[];
@@ -127,6 +129,7 @@ export class RealisticAvatar implements SceneAvatar {
     this.group.updateMatrixWorld(true);
     if (head && leftEye && rightEye) {
       const forward = leftEye.getWorldPosition(v).add(rightEye.getWorldPosition(v2)).multiplyScalar(.5).sub(head.getWorldPosition(new THREE.Vector3()));
+      forward.applyQuaternion(this.group.getWorldQuaternion(new THREE.Quaternion()).invert());
       this.holder.rotation.y = -Math.atan2(forward.x, forward.z);
       this.group.updateMatrixWorld(true);
     }
@@ -155,6 +158,22 @@ export class RealisticAvatar implements SceneAvatar {
       const parent = item.parent.getWorldQuaternion(new THREE.Quaternion()).premultiply(this.group.getWorldQuaternion(q).invert());
       this.rig.set(name, { bone: item, base: item.quaternion.clone(), parent, parentInverse: parent.clone().invert() });
     }
+    const hips=[bone('L Thigh'),bone('R Thigh')].filter(Boolean) as THREE.Bone[];
+    this.seatDrop=hips.length ? .53-hips.reduce((sum,b)=>sum+this.group.worldToLocal(b.getWorldPosition(new THREE.Vector3())).y,0)/hips.length : -.42;
+    this.holder.position.y=this.seatDrop;this.group.updateMatrixWorld(true);
+    const direction=(x:number,y:number,z:number)=>new THREE.Vector3(x,y,z).applyQuaternion(this.group.getWorldQuaternion(new THREE.Quaternion()));
+    for(const side of ['L','R']){
+      const thigh=bone(side+' Thigh'),calf=bone(side+' Calf'),foot=bone(side+' Foot'),toe=bone(side+' Toe0');
+      if(thigh&&calf)this.aim(thigh,calf,direction(side==='L'?-.035:.035,-.045,1));
+      if(calf&&foot)this.aim(calf,foot,direction(0,-1,.055));if(foot&&toe)this.aim(foot,toe,direction(0,0,1));
+      const upper=bone(side+' UpperArm'),fore=bone(side+' Forearm'),hand=bone(side+' Hand');
+      if(upper&&fore)this.aim(upper,fore,direction(side==='L'?-.12:.12,-.55,.82));
+      if(fore&&hand)this.aim(fore,hand,direction(side==='L'?-.12:.12,-.12,1));
+    }
+    this.group.updateMatrixWorld(true);
+    for(const [name,item] of this.rig){const parent=item.bone.parent!.getWorldQuaternion(new THREE.Quaternion()).premultiply(this.group.getWorldQuaternion(q).invert());this.seatedRig.set(name,{base:item.bone.quaternion.clone(),parent,parentInverse:parent.clone().invert()});}
+    for(const item of this.rig.values())item.bone.quaternion.copy(item.base);
+    this.holder.position.y=0;this.setSeated(this.seated);
     document.body.dataset.realisticAvatars = String(Number(document.body.dataset.realisticAvatars || 0) + 1);
   }
 
@@ -200,7 +219,8 @@ export class RealisticAvatar implements SceneAvatar {
   // Rotate a bone about a character-space axis, on top of its rest pose.
   private turn(name: RigName, axis: THREE.Vector3, angle: number) {
     const item = this.rig.get(name); if (!item || !angle) return;
-    item.bone.quaternion.premultiply(q.copy(item.parentInverse).multiply(q2.setFromAxisAngle(axis, angle)).multiply(item.parent));
+    const pose=this.seated?this.seatedRig.get(name)||item:item;
+    item.bone.quaternion.premultiply(q.copy(pose.parentInverse).multiply(q2.setFromAxisAngle(axis, angle)).multiply(pose.parent));
   }
 
   private weight(name: string, value: number) {
@@ -210,6 +230,10 @@ export class RealisticAvatar implements SceneAvatar {
   select() { this.selectedAt = performance.now(); }
   setFeature(feature?:string) { this.feature=feature; }
   setPresence(presence:string,emphasis:boolean){if(this.presence===presence&&this.emphasis===emphasis)return;this.presence=presence;this.emphasis=emphasis;this.updateLabel();}
+  setSeated(value:boolean){this.seated=value;this.holder.position.y=value?this.seatDrop:0;const drop=value?this.seatDrop:0;this.label.position.y=1.98+drop;this.hitbox.position.y=.95+drop;for(const target of this.featureTargets){const y=target.userData.feature==='face'?1.64:target.userData.feature==='colour'?1.15:1.45;target.position.y=y+drop;}for(const m of this.accessoryMeshes)if(m.parent===this.group)m.position.y=1.35+drop;}
+  setTurnKind(kind:string){this.turnKind=kind;}
+  setRoom(room:string){this.room=room;}
+  poseSnapshot(){this.group.updateMatrixWorld(true);const positions:Record<string,number[]>={};for(const name of ['Head','L Hand','R Hand','L Thigh','L Calf','L Foot'] as RigName[]){const bone=this.rig.get(name)?.bone;if(bone)positions[name]=bone.getWorldPosition(new THREE.Vector3()).toArray();}return {seated:this.seated,presence:this.presence,joints:positions};}
 
   animate(time: number, camera: THREE.Vector3, mouth?: Mouth) {
     const dt = Math.min(.1, Math.max(0, (time - this.last) / 1000)); this.last = time;
@@ -217,7 +241,7 @@ export class RealisticAvatar implements SceneAvatar {
     (this.ring.material as THREE.MeshBasicMaterial).color.set(this.presence==='Unavailable'||this.state==='error'?'#cc8c6c':'#e4c993');
     if (!this.loaded) return;
     const t = time / 1000 + this.phase, still = this.reducedMotion ? 0 : 1;
-    for (const item of this.rig.values()) item.bone.quaternion.copy(item.base);
+    for (const [name,item] of this.rig) item.bone.quaternion.copy(this.seated?this.seatedRig.get(name)?.base||item.base:item.base);
 
     // Speech envelope, smoothed so the jaw neither snaps nor lags behind syllables.
     const target = mouth ?? { open: 0, round: 0, wide: 0, hiss: 0 };
@@ -230,8 +254,11 @@ export class RealisticAvatar implements SceneAvatar {
     this.turn('Spine1', X, -.012 * breath); this.turn('Spine2', X, -.01 * breath);
     this.turn('L Clavicle', Z, .012 * breath); this.turn('R Clavicle', Z, -.012 * breath);
     this.turn('L UpperArm', Z, -.02 * sway); this.turn('R UpperArm', Z, -.02 * sway);
-    // A restrained hand emphasis belongs to real speaking; a thinking tilt stays distinct.
-    if(this.presence==='Speaking'&&!this.reducedMotion){this.turn('R UpperArm',X,-.1*(.5+.5*Math.sin(t*2.1)));this.turn('Spine2',Y,.025*Math.sin(t*1.8));}
+    this.gesture=damp(this.gesture,this.presence==='Speaking'?1:0,5,dt);
+    const beat=(.5+.5*Math.sin(t*2.1))*this.gesture*still*(this.room==='heated'?1.4:1),opposition=this.turnKind==='objection'?1.25:1;
+    this.turn('R UpperArm',X,-.18*beat);this.turn('R Forearm',X,-.42*beat*opposition);this.turn('R Forearm',Y,.18*Math.sin(t*1.1)*this.gesture*still);this.turn('R Hand',Z,.18*Math.sin(t*2.1)*this.gesture*still);
+    this.turn('L UpperArm',X,-.1*beat);this.turn('L Forearm',X,-.24*(.5+.5*Math.sin(t*1.7+1))*this.gesture*still);this.turn('L Hand',Y,-.15*beat);this.turn('Spine2',Y,.025*Math.sin(t*1.8)*this.gesture*still);
+    if(this.presence==='Listening'){this.turn('Head',X,.025*Math.sin(t*.8)*still);this.turn('L Hand',X,.025*Math.sin(t*.7)*still);}
     if(this.presence==='Thinking'){this.turn('Head',Z,.035*still);this.turn('Neck',X,.035*still);}
 
     // Attention: the head turns towards the viewer within a comfortable range, eyes lead it.
@@ -261,7 +288,7 @@ export class RealisticAvatar implements SceneAvatar {
     this.weight('AA_VI_07_SS', m.hiss * .5);
     this.weight('AK_25_JawOpen', m.open * .18);
     this.weight('AK_03_BrowInnerUp', talking ? m.open * .25 : 0);
-    const smile = talking ? .06 : .14; this.weight('AK_44_MouthSmileLeft', smile); this.weight('AK_45_MouthSmileRight', smile);
+    const smile = this.room==='comedy'?.24+(talking?.08:0):talking ? .06 : .14; this.weight('AK_44_MouthSmileLeft', smile); this.weight('AK_45_MouthSmileRight', smile);
   }
 
   dispose() {

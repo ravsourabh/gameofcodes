@@ -4,7 +4,8 @@ const check = (ok, message) => { if (!ok) throw new SessionError(message); };
 const text = (v, n, required = false) => typeof v === 'string' && v.length <= n && (!required || v.trim().length > 0);
 const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every(k => keys.includes(k));
 export function validateProposal(p) {
-  check(exact(p, ['title','mode','format','intensity','situation','goal','constraints','durationMinutes','rubric','cast']), 'Unexpected setup proposal.');
+  check(exact(p, ['title','mode','format','intensity','situation','goal','constraints','durationMinutes','rubric','cast','showStyle','showRoom']), 'Unexpected setup proposal.');
+  check((p.showStyle===undefined||['serious','funny','satire','mixed'].includes(p.showStyle))&&(p.showRoom===undefined||['conference','heated','comedy','newsroom'].includes(p.showRoom)),'Invalid proposed show style.');
   check(text(p.title,120,true) && text(p.situation,4000,true) && text(p.goal,1000,true), 'The setup needs a title, situation and goal.');
   check(['discussion','rehearsal'].includes(p.mode) && (p.mode === 'rehearsal' ? p.format === 'panel' : ['roundtable','hearing','adversarial'].includes(p.format)), 'Invalid proposed room or format.');
   check(['calm','formal','probing','heated'].includes(p.intensity) && Number.isInteger(p.durationMinutes) && p.durationMinutes >= 1 && p.durationMinutes <= 120, 'Invalid proposed pace or duration.');
@@ -46,7 +47,7 @@ export function changeSetup(session, mutation) {
     g.notes.push({id:crypto.randomUUID(),text:[payload.proposal.situation,`Goal: ${payload.proposal.goal}`,...payload.proposal.constraints.map(t=>`Constraint: ${t}`)].join('\n'),source:'interpretation',status:'unconfirmed'});
   } else if (operation === 'confirm-notes') {
     check(exact(payload,[]) && setup.stage==='review' && setup.proposal,'Review the guide’s readback first.');
-    const p=setup.proposal;next.title=p.title;
+    const p=setup.proposal;next.title=p.title;if(p.showStyle)next.showStyle=p.showStyle;if(p.showRoom)next.showRoom=p.showRoom;
     Object.assign(next.scenario,{mode:p.mode,format:p.format,intensity:p.intensity,situation:p.situation,goal:p.goal,durationMinutes:p.durationMinutes,rubric:p.rubric.map(r=>({id:crypto.randomUUID(),...r})),updatedAt:now});
     const last=g.notes.filter(n=>n.source==='interpretation').at(-1);if(last)last.status='confirmed';
     setup.confirmedAt=now;setup.stage='cast';g.activeLesson='interruption';

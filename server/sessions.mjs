@@ -7,6 +7,9 @@ import { createCharacterLibrary } from './character-library.mjs';
 import { createSessionAI } from './session-ai.mjs';
 import { changeSetup } from '../shared/setup-domain.mjs';
 import { extractContext } from './context-extract.mjs';
+import {changeLanguage} from '../shared/session-language.mjs';
+import {createIndianNews} from './indian-news.mjs';
+import {changeShowStyle} from '../shared/show-style.mjs';
 import {createDiscussionService} from './discussion-service.mjs';
 
 const fail = (message, status = 400, code) => { throw new SessionError(message, status, code); };
@@ -25,7 +28,7 @@ function sameOrigin(req) {
 }
 
 // The session AI runtime is independent of the retired coding/preview services.
-export function createSessionService({ root, ai = createSessionAI(), onError = () => {} }) {
+export function createSessionService({ root, ai = createSessionAI(), news=createIndianNews(), onError = () => {} }) {
   const characters = createCharacterLibrary({ root });
   const inflight = new Map(), avatarResults = new Map();
   const store = path.resolve(root, '.sovereign', 'sessions', 'v1');
@@ -98,13 +101,14 @@ export function createSessionService({ root, ai = createSessionAI(), onError = (
       try {
         if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { error: 'Use the session service from this application.' });
         if (url.pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'sessions', schemaVersion: SCHEMA_VERSION, previewEnabled: false, inferenceEnabled: true });
-        if (url.pathname === '/api/session-capabilities' && req.method === 'GET') return json(res, 200, { schemaVersion: SCHEMA_VERSION, modes: ['discussion', 'rehearsal'], draftSessions: true, characters: true, guide: true, guidedSetup:true, contextReview:true, tutorialProgress:true, liveSessions: true, discussion:true,liveRehearsal:false, modelRouting: true, voice: true, legacyData: 'preserved' });
+        if (url.pathname === '/api/session-capabilities' && req.method === 'GET') return json(res, 200, { schemaVersion: SCHEMA_VERSION, modes: ['discussion', 'rehearsal'], draftSessions: true, characters: true, guide: true, guidedSetup:true, contextReview:true, tutorialProgress:true, liveSessions: true, discussion:true,showRooms:['conference','heated','comedy','newsroom'],hindi:true,indianNews:true,liveRehearsal:false, modelRouting: true, voice: true, legacyData: 'preserved' });
         if (url.pathname === '/api/ai/catalog' && req.method === 'GET') return json(res, 200, await ai.catalog());
-        const discussionRoute=/^\/api\/discussion\/([0-9a-f-]+)\/(control|turn|brief|cast)$/.exec(url.pathname);
+        if(url.pathname==='/api/news/india'&&req.method==='GET')return json(res,200,await news.get());
+        const discussionRoute=/^\/api\/discussion\/([0-9a-f-]+)\/(control|turn|brief|cast|performance)$/.exec(url.pathname);
         if(discussionRoute){
           if(req.method!=='POST'||!sameOrigin(req))return json(res,403,{error:'Use discussion controls from this application.'});
           const profileId=identifier(url.searchParams.get('profileId')),id=identifier(discussionRoute[1]),input=await body(req),part=discussionRoute[2];
-          keys(input,part==='control'?['requestId','expectedRevision','operation','action','text','characterId','style']:['requestId','expectedRevision']);
+          keys(input,part==='performance'?['requestId','expectedRevision','previousId','interruptedBy','atSeconds','durationSeconds','source']:part==='control'?['requestId','expectedRevision','operation','action','text','characterId','style']:['requestId','expectedRevision']);
           return await discussions.handle(req,res,{profileId,id,part,input,requestId:identifier(input.requestId)});
         }
         if(url.pathname==='/api/context/extract'){
@@ -128,7 +132,7 @@ export function createSessionService({ root, ai = createSessionAI(), onError = (
               const library=await characters.get(profileId),snapshot=input.sessionId?await load(profileId,identifier(input.sessionId)):null;
               const guide=snapshot?.guidance?.guide||library.characters.find(c=>c.id===library.guideId);
               if(!guide?.voice)fail('Choose a guide voice first. Captions remain available.',503);
-              return json(res,200,await ai.speak(profileId,guide,input.text,controller.signal));
+              return json(res,200,await ai.speak(profileId,guide,input.text,controller.signal,snapshot?.language));
             }
             if(url.pathname==='/api/ai/setup'){
               keys(input,['sessionId','requestId','expectedRevision']);const id=identifier(input.sessionId),requestId=identifier(input.requestId),key=profileId+'/'+id;
@@ -166,7 +170,7 @@ export function createSessionService({ root, ai = createSessionAI(), onError = (
             }
             if (url.pathname === '/api/ai/preview') {
               keys(input,['voice','voicePreference']);
-              return json(res,200,await ai.speak(profileId,{voice:input.voice,voicePreference:input.voicePreference},'Hello. Let’s make room for another perspective.',controller.signal));
+              return json(res,200,await ai.speak(profileId,{voice:input.voice,voicePreference:input.voicePreference},input.voice?.provider==='sarvam'?'नमस्ते। आइए, इस विचार को अलग-अलग नज़रियों से समझें।':'Hello. Let’s make room for another perspective.',controller.signal));
             }
             keys(input, url.pathname === '/api/ai/assign' ? ['sessionId','requestId','expectedRevision','characterId','brain','voice'] : ['sessionId','requestId','expectedRevision','characterId','text','exchangeId','contributionId']);
             const id = identifier(input.sessionId), requestId = identifier(input.requestId), characterId = identifier(input.characterId), key = profileId + '/' + id;
@@ -179,8 +183,8 @@ export function createSessionService({ root, ai = createSessionAI(), onError = (
               if(input.exchangeId&&!exchange)fail('That reply does not belong to this character in this session.',404);
               const contribution=input.contributionId?snapshot.contributions.find(c=>c.id===input.contributionId&&c.participantId===participant?.id):null;
               if(input.contributionId&&!contribution)fail('That contribution does not belong to this speaker.',404);
-              const text = contribution?.text||exchange?.text || `Hello, I’m ${character.name}. ${character.code}`;
-              return json(res,200,await ai.speak(profileId,character,text,controller.signal));
+              const text = (contribution?.delivery==='satire'?(snapshot.language==='hi'?'व्यंग्य, कल्पित: ':'Satire, fictional: '):'')+(contribution?.text||exchange?.text || `Hello, I’m ${character.name}. ${character.code}`);
+              return json(res,200,await ai.speak(profileId,{...character,showRoom:snapshot.showRoom},text,controller.signal,snapshot.language));
             }
             if (url.pathname === '/api/ai/assign') {
               if (inflight.has(key)) fail('Interrupt the current reply before changing a brain.',409);
@@ -228,34 +232,34 @@ export function createSessionService({ root, ai = createSessionAI(), onError = (
         if (!sameOrigin(req)) return json(res, 403, { error: 'Session changes require a same-origin request.' });
         const input = await body(req);
         if (req.method === 'POST') {
-          keys(input, ['id', 'requestId', 'draft']);
+          keys(input, ['id', 'requestId', 'draft','language']);
           const sessionId = identifier(input.id), requestId = identifier(input.requestId), draft = normaliseDraft(input.draft);
           return await serial(`${profileId}/${sessionId}`, async () => {
             const existing = await load(profileId, sessionId);
             if (existing) {
               const original = existing.events[0];
-              if (original.requestId !== requestId || original.command !== JSON.stringify({ action: 'create', draft })) fail('A different session already uses this identifier.', 409, 'REQUEST_CONFLICT');
+              if (original.requestId !== requestId || original.command !== JSON.stringify({ action: 'create', draft, ...(input.language?{language:input.language}:{}) })) fail('A different session already uses this identifier.', 409, 'REQUEST_CONFLICT');
               return json(res, 200, { session: existing, replayed: true });
             }
             const library = await characters.get(profileId);
-            const saved = createSession({ id: sessionId, profileId, requestId, draft, guide: library.characters.find(item => item.id === library.guideId) });
+            const saved = createSession({ id: sessionId, profileId, requestId, draft, language:input.language, guide: library.characters.find(item => item.id === library.guideId) });
             await persist(saved); return json(res, 201, { session: saved });
           });
         }
-        keys(input, input?.action==='guidance'?['requestId','expectedRevision','action','operation','payload']:input?.action === 'apply-character' ? ['requestId','expectedRevision','action','characterId'] : input?.action === 'roster' ? ['requestId', 'expectedRevision', 'action', 'entries'] : ['requestId', 'expectedRevision', 'action', 'draft']);
+        keys(input, input?.action==='show-style'?['requestId','expectedRevision','action','style','room']:input?.action==='language'?['requestId','expectedRevision','action','language']:input?.action==='guidance'?['requestId','expectedRevision','action','operation','payload']:input?.action === 'apply-character' ? ['requestId','expectedRevision','action','characterId'] : input?.action === 'roster' ? ['requestId', 'expectedRevision', 'action', 'entries'] : ['requestId', 'expectedRevision', 'action', 'draft']);
         const requestId = identifier(input.requestId);
         if(input.action==='guidance'&&input.operation==='propose')fail('Guide proposals are prepared through the model route.',403);
-        if (!['update', 'cancel', 'roster','apply-character','guidance'].includes(input.action)) fail('This session action is not available.');
+        if (!['update', 'cancel', 'roster','apply-character','guidance','language','show-style'].includes(input.action)) fail('This session action is not available.');
         if (input.action === 'cancel' && input.draft !== undefined) fail('Cancellation does not edit a draft.');
         return await serial(`${profileId}/${id}`, async () => {
           const saved = await load(profileId, id);
           if (!saved) return json(res, 404, { error: 'No session was found in this profile.', code: 'SESSION_NOT_FOUND' });
           const mutation = { requestId, expectedRevision: input.expectedRevision, draft: input.draft, entries: input.entries };
-          if (input.action === 'cancel') inflight.get(`${profileId}/${id}`)?.abort();
+          if (['cancel','language','show-style'].includes(input.action)) inflight.get(`${profileId}/${id}`)?.abort();
           const library = ['roster','apply-character'].includes(input.action) ? await characters.get(profileId) : null;
           const source=input.action==='apply-character'?library.characters.find(c=>c.id===input.characterId):null;
           if(input.action==='apply-character'&&!source)fail('Choose a saved character from this profile.',404);
-          const updated = input.action==='guidance'?changeSetup(saved,{...mutation,operation:input.operation,payload:input.payload}):source ? applyCharacter(saved,mutation,source) : library ? updateRoster(saved, { ...mutation, guide: library.characters.find(item => item.id === library.guideId) }, library.characters) : input.action === 'update' ? updateDraft(saved, mutation) : cancelPending(saved, mutation);
+          const updated = input.action==='show-style'?changeShowStyle(saved,{...mutation,style:input.style,room:input.room}):input.action==='language'?changeLanguage(saved,{...mutation,language:input.language}):input.action==='guidance'?changeSetup(saved,{...mutation,operation:input.operation,payload:input.payload}):source ? applyCharacter(saved,mutation,source) : library ? updateRoster(saved, { ...mutation, guide: library.characters.find(item => item.id === library.guideId) }, library.characters) : input.action === 'update' ? updateDraft(saved, mutation) : cancelPending(saved, mutation);
           if (updated !== saved) await persist(updated);
           return json(res, 200, { session: updated, replayed: updated === saved });
         });

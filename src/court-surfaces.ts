@@ -3,12 +3,13 @@ import type {Session,Character} from '../shared/session-domain.mjs';
 import {currentScopeTurns} from '../shared/discussion-memory.mjs';
 
 export type CourtFocus={id:string;name:string;role:string;code:string;position:string;previous:string;reason:string;brain:string};
-export type CourtState={title:string;status:string;phase:string;speakerId:string;selectedId:string;focus:CourtFocus|null;ratings:{name:string;count:number}[];criteria:string[]};
+export type CourtState={title:string;status:string;phase:string;speakerId:string;selectedId:string;focus:CourtFocus|null;ratings:{name:string;count:number}[];criteria:string[];turnId?:string;turnKind?:string;respondingTo?:string;showRoom?:string;showStyle?:string};
 export function courtState(session:Session|null,guide:Character,phase:string,speakerId:string,selectedId:string):CourtState{
   const active=session?.participants.filter(p=>p.active)||[],id=selectedId||speakerId;
   const p=active.find(p=>p.characterId===id),c=session?.characters.find(c=>c.id===id)||(id===guide.id?guide:null);
   const turns=p?(session?.discussion?currentScopeTurns(session):session!.contributions).filter(t=>t.participantId===p.id):[],last=turns.at(-1),previous=[...turns].reverse().find(t=>t.position&&t.position!==p?.position)?.position||'';
-  return {title:session?.title||'Your throne court',status:session?.status||'welcome',phase,speakerId,selectedId,focus:c?{id:c.id,name:c.name,role:p?.role||'Your guide',code:p?.code||c.code,position:p?.position||'No view stated yet.',previous,reason:last?.text||'Select someone, or ask your guide to help you begin.',brain:last?.brain.model||p?.brain?.model||c.brain?.model||'No brain assigned'}:null,
+  const latest=session?currentScopeTurns(session).at(-1):null,related=latest?.relatedIds.map(id=>session?.contributions.find(t=>t.id===id)).find(t=>t&&t.participantId!==latest.participantId),respondingTo=session?.participants.find(p=>p.id===related?.participantId)?.characterId;
+  return {title:session?.title||'Your throne court',status:session?.status||'welcome',phase,speakerId,selectedId,showRoom:session?.showRoom,showStyle:session?.showStyle,turnId:session?.participants.find(p=>p.id===latest?.participantId)?.characterId===speakerId?latest?.id:undefined,turnKind:last?.turnKind,respondingTo,focus:c?{id:c.id,name:c.name,role:p?.role||'Your guide',code:p?.code||c.code,position:p?.position||'No view stated yet.',previous,reason:last?.text||'Select someone, or ask your guide to help you begin.',brain:last?.brain.model||p?.brain?.model||c.brain?.model||'No brain assigned'}:null,
     ratings:active.map(p=>({name:session!.characters.find(c=>c.id===p.characterId)?.name||'Participant',count:session!.ratings.filter(r=>session!.contributions.some(t=>t.id===r.contributionId&&t.participantId===p.id)).length})),criteria:session?.scenario.rubric.map(r=>r.name)||[]};
 }
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));

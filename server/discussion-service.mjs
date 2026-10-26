@@ -4,6 +4,7 @@ import {generateCharacter,characterFields} from '../shared/character-domain.mjs'
 import {controlDiscussion,nextDiscussionSpeaker,recordDiscussionTurn,elapsedDiscussion,activeParticipants} from '../shared/discussion-domain.mjs';
 import {currentBrief,needsBrief,saveDiscussionBrief,saveCastPlan,completeCastPlan,scopeVersion} from '../shared/discussion-memory.mjs';
 import {AVATAR_MODELS,modelForAppearance} from '../shared/avatar-catalog.mjs';
+import {recordCutOff} from '../shared/room-performance.mjs';
 
 export function discussionId(requestId,label){const bytes=createHash('sha256').update(requestId+'/'+label).digest().subarray(0,16);bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;const h=bytes.toString('hex');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;}
 export function createDiscussionService({ai,characters,load,persist,serial,inflight,json,fail}){
@@ -62,6 +63,7 @@ export function createDiscussionService({ai,characters,load,persist,serial,infli
   }
   return {async handle(req,res,{profileId,id,part,input,requestId}){
     const key=profileId+'/'+id;
+    if(part==='performance')return serial(key,async()=>{const saved=await load(profileId,id);if(!saved)fail('Session not found.',404);const next=recordCutOff(saved,{...input,requestId});if(next!==saved)await persist(next);return json(res,200,{session:next,replayed:next===saved});});
     if(part==='control'){
       if(['pause','stop','finish','intervene'].includes(input.operation))inflight.get(key)?.abort();
       return serial(key,async()=>{const saved=await load(profileId,id);if(!saved)fail('Session not found.',404);const updated=controlDiscussion(saved,{...input,requestId});if(updated!==saved){if(['start','resume'].includes(input.operation))for(const p of activeParticipants(updated)){const c=updated.characters.find(c=>c.id===p.characterId);await ai.validateAssignment(p.brain,c.voice);}await persist(updated);}return json(res,200,{session:updated,replayed:updated===saved});});

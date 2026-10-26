@@ -48,7 +48,7 @@ export function validateRecord(value, expectedKind = value?.kind) {
       check(isId(value.characterId) && text(value.role, 160, true) && text(value.code, 1000) && text(value.position, 4000) && brain(value.brain) && typeof value.active === 'boolean', 'Invalid participant.'); break;
     case 'contribution':
       check(isId(value.participantId) && isId(value.requestId) && integer(value.epoch) && text(value.text, 12000, true) && brain(value.brain) && value.brain !== null && idList(value.relatedIds), 'Invalid contribution.');
-      if(value.discussion!==undefined)check(value.discussion===true&&['opening','objection','answer','reflection','summary'].includes(value.turnKind)&&text(value.position,500,true)&&(value.questionForParticipantId===null||isId(value.questionForParticipantId))&&(value.scopeVersion===undefined||integer(value.scopeVersion))&&(value.needsUserInput===undefined||typeof value.needsUserInput==='boolean'),'Invalid discussion contribution.');break;
+      if(value.discussion!==undefined)check(value.discussion===true&&['opening','objection','answer','reflection','summary'].includes(value.turnKind)&&text(value.position,500,true)&&(value.questionForParticipantId===null||isId(value.questionForParticipantId))&&(value.cutOff===undefined||object(value.cutOff)&&isId(value.cutOff.by)&&Number.isFinite(value.cutOff.atSeconds)&&value.cutOff.atSeconds>0&&(Number.isFinite(value.cutOff.durationSeconds)&&value.cutOff.atSeconds<value.cutOff.durationSeconds||value.cutOff.source==='device'&&value.cutOff.durationSeconds===null))&&(value.delivery===undefined||['serious','humour','satire'].includes(value.delivery))&&(value.scopeVersion===undefined||integer(value.scopeVersion))&&(value.needsUserInput===undefined||typeof value.needsUserInput==='boolean'),'Invalid discussion contribution.');break;
     case 'rating':
       check(isId(value.contributionId) && text(value.criterion, 100, true) && Number.isFinite(value.value) && value.value >= -5 && value.value <= 5 && ['user', 'system'].includes(value.source) && text(value.reason, 2000) && integer(value.revision, 1), 'Invalid rating.'); break;
     case 'decision-point':
@@ -77,6 +77,9 @@ export function validateSession(value) {
     list(guide.notes, 'guide notes', item => check(object(item) && isId(item.id) && text(item.text, 4000) && ['user', 'interpretation'].includes(item.source) && ['unconfirmed', 'confirmed'].includes(item.status), 'Invalid guide note.'));
     if (guide.setup !== undefined) validateSetup(guide.setup);
   }
+  check(value.showRoom===undefined||['conference','heated','comedy','newsroom'].includes(value.showRoom),'Invalid show room.');
+  check(value.showStyle===undefined||['serious','funny','satire','mixed'].includes(value.showStyle),'Invalid show style.');
+  check(value.language===undefined||['en','hi'].includes(value.language),'Invalid session language.');
   validateRecord(value.scenario, 'scenario');
   const all = [value.scenario];
   for (const [field, kind] of [['characters', 'character'], ['participants', 'participant'], ['contributions', 'contribution'], ['ratings', 'rating'], ['decisions', 'decision-point'], ['outcomes', 'outcome']]) {
@@ -101,7 +104,7 @@ export function validateSession(value) {
   check(value.outcomes.every(item => item.references.every(id => recordIds.has(id) && id !== item.id)), 'Outcome has invalid references.');
   list(value.events, 'session events', (item, index) => {
     check(object(item) && item.schemaVersion === SCHEMA_VERSION && isId(item.id) && isId(item.requestId) && item.sequence === index + 1 && timestamp(item.at) && integer(item.epoch) && item.epoch <= value.epoch && text(item.command, 40000, true), 'Invalid session event.');
-    check(['session.created', 'session.updated', 'session.cancelled', 'session.transitioned', 'session.roster-updated', 'session.assigned', 'session.exchange', 'session.character-updated','session.guidance','session.discussion-control','session.discussion-turn','session.discussion-brief','session.discussion-cast'].includes(item.type), 'Unknown session event.');
+    check(['session.created', 'session.updated', 'session.cancelled', 'session.transitioned', 'session.roster-updated', 'session.assigned', 'session.exchange', 'session.character-updated','session.guidance','session.discussion-control','session.discussion-turn','session.discussion-brief','session.discussion-cast','session.language','session.show-style','session.performance'].includes(item.type), 'Unknown session event.');
   });
   check(value.events.length === value.revision && value.events[0]?.type === 'session.created' && value.events[0]?.epoch === 0 && value.events.at(-1)?.epoch === value.epoch && new Set(value.events.map(item => item.requestId)).size === value.events.length && new Set(value.events.map(item => item.id)).size === value.events.length && value.events.every((item, index) => index === 0 || item.epoch >= value.events[index - 1].epoch), 'Inconsistent event ledger.');
   validateDiscussion(value);return value;
@@ -120,11 +123,12 @@ export const appendEvent = (session, type, requestId, command, now) => {
   return validateSession(session);
 };
 
-export function createSession({ id = crypto.randomUUID(), profileId, requestId, draft, guide = null, now = new Date().toISOString() }) {
+export function createSession({ id = crypto.randomUUID(), profileId, requestId, draft, language, guide = null, now = new Date().toISOString() }) {
   check(isId(id) && isId(profileId) && isId(requestId), 'Invalid session, profile, or request identifier.');
   const fields = normaliseDraft(draft);
+  check(language===undefined||['en','hi'].includes(language),'Choose English or Hindi.');
   const scenario = createRecord('scenario', profileId, { mode: fields.mode, format: fields.mode === 'discussion' ? 'roundtable' : 'panel', intensity: 'calm', situation: fields.situation, goal: '', durationMinutes: 10, context: [], rubric: [] }, { now });
-  return appendEvent({ schemaVersion: SCHEMA_VERSION, kind: 'session', id, profileId, title: fields.title, status: 'draft', revision: 0, epoch: 0, createdAt: now, updatedAt: now, scenario, guidance: { schemaVersion: 1, tutorialVersion: 1, guide: guide === null ? null : structuredClone(guide), activeLesson: null, notes: [] }, characters: [], participants: [], contributions: [], ratings: [], decisions: [], outcomes: [], events: [] }, 'session.created', requestId, JSON.stringify({ action: 'create', draft: fields }), now);
+  return appendEvent({ schemaVersion: SCHEMA_VERSION, kind: 'session', ...(language?{language}:{}), id, profileId, title: fields.title, status: 'draft', revision: 0, epoch: 0, createdAt: now, updatedAt: now, scenario, guidance: { schemaVersion: 1, tutorialVersion: 1, guide: guide === null ? null : structuredClone(guide), activeLesson: null, notes: [] }, characters: [], participants: [], contributions: [], ratings: [], decisions: [], outcomes: [], events: [] }, 'session.created', requestId, JSON.stringify({ action: 'create', draft: fields, ...(language?{language}:{}) }), now);
 }
 
 export function updateRoster(session, mutation, libraryCharacters) {

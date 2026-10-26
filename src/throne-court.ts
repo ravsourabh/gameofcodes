@@ -66,8 +66,8 @@ export function buildThroneCourt(room:THREE.Group,assets:EnvironmentAssets){
   // Waiting bay, lectern and a real throne behind the seated viewpoint.
   box([1.8,.12,.62],[3.65,.51,-5.6],wood);box([1.8,.65,.12],[3.65,.88,-5.89],wood);
   for(const x of [2.86,4.44])box([.1,.48,.5],[x,.25,-5.6],wood);
-  box([.48,.85,.38],[.95,.48,-3.45],wood);const top=box([.75,.08,.52],[.95,.94,-3.45],wood);top.rotation.x=.16;
-  box([.69,.018,.05],[.95,.93,-3.17],brass);
+  box([.48,.85,.38],[3.15,.48,-4.7],wood);const top=box([.75,.08,.52],[3.15,.94,-4.7],wood);top.rotation.x=.16;
+  box([.69,.018,.05],[3.15,.93,-4.42],brass);
   box([1.35,.24,1],[0,.42,3.05],wood);box([1.12,.13,.83],[0,.6,3],velvet);
   box([1.45,2.35,.2],[0,1.59,3.53],wood);box([1.08,1.9,.06],[0,1.57,3.39],velvet);
   for(const side of [-1,1]){

@@ -6,6 +6,8 @@ import { RealisticAvatar, realisticModelFor, type Mouth, type SceneAvatar } from
 import {EnvironmentAssets} from './environment-assets';
 import {buildThroneCourt} from './throne-court';
 import {CourtSurface,type CourtState,type SurfaceButton} from './court-surfaces';
+import {Roundtable,conferenceSeat} from './roundtable';
+import {BroadcastCamera} from './broadcast-camera';
 
 export type SceneAction = 'discussion' | 'rehearsal' | 'save' | 'home' | 'exit' | 'characters' | 'character:new' | 'character:reroll' | 'character:save' | 'character:next' | 'character:cast' | 'character:close' | `workshop:${string}` | `ai:${string}` | `key:${string}` | `guide:${string}` | `discuss:${string}` | `court:${string}`;
 type Action = SceneAction;
@@ -52,6 +54,7 @@ export class SessionScene {
   onHeadInspect?: (id:string) => void;
   private lastHead={id:'',at:0};
   private assets=new EnvironmentAssets();
+  private conference=new Roundtable(this.assets);private director:BroadcastCamera;
   private surfaces={caption:new CourtSurface('caption',2.3,.52,[0,1.05,-.2]),actions:new CourtSurface('actions',2.3,.38,[0,.64,-.1]),view:new CourtSurface('view',1.02,1.03,[-1.85,1.42,-.48],.48),scores:new CourtSurface('scores',.95,.78,[1.85,1.44,-.48],-.48)};
   private menuOpen=false;private viewPage=0;private scoresOpen=false;private lastFocus='';
   private drag:{x:number;y:number;yaw:number;pitch:number;moved:boolean}|null=null;private yaw=0;private pitch=0;
@@ -69,6 +72,7 @@ export class SessionScene {
     this.scene.add(new THREE.HemisphereLight(0xe0e7f2, 0x373025, 1.65));
     const sun = new THREE.DirectionalLight(0xffe3bd, 3.1); sun.position.set(-4, 7, 4); this.scene.add(sun);
     this.camera.position.set(0, 1.3, 2.5); this.camera.lookAt(0, 1.3, -3);
+    this.director=new BroadcastCamera(this.camera);this.scene.add(this.conference.group);this.conference.group.visible=false;
     this.origin.add(this.camera); this.scene.add(this.origin);
     for (const [mode, room] of Object.entries(this.rooms) as [SessionMode, THREE.Group][]) { this.buildRoom(room, mode); this.scene.add(room); }
     this.panelCanvas.width = 1000; this.panelCanvas.height = 500;
@@ -92,7 +96,7 @@ export class SessionScene {
       this.controllers.push({ controller, cursor });
     }
     this.renderer.xr.addEventListener('sessionstart', () => {
-      this.active = true; this.origin.position.z = 2.5; this.menuOpen=false; this.sessionChanged(true);this.updateSurfaces();
+      this.director.reset();this.active = true; this.origin.position.z = 2.5; this.menuOpen=false; this.sessionChanged(true);this.updateSurfaces();
       this.positionCharacters();
     });
     this.renderer.xr.addEventListener('sessionend', () => {
@@ -151,7 +155,9 @@ export class SessionScene {
   private positionCharacters() {
     const previewing = [...this.avatars.values()].some(item => item.kind === 'preview');
     const count=[...this.avatars.values()].filter(item=>item.kind==='cast').length;
+    const seated=this.current.mode==='discussion'&&!previewing&&!this.current.character;this.conference.update(count,seated&&count>0,this.current.court?.showRoom,this.current.court?.title,this.current.court?.showStyle);
     for (const { avatar, kind, index } of this.avatars.values()) {
+      (avatar as RealisticAvatar).setSeated(seated&&kind==='cast');
       // On desktop the guide stands back far enough to stay whole above the conversation dock.
       if (kind === 'guide') {
         const x=this.active?(this.current.discussion?-2.7:-1.75):previewing?-2.1:this.current.discussion?-2.8:-.95;
@@ -160,10 +166,9 @@ export class SessionScene {
       }
       else if (kind === 'preview') avatar.group.position.set(this.active ? 1.8 : -.75, 0, this.active ? -.85 : .15);
       else {
-        const x = (index-(count-1)/2)*Math.min(1.35,4.8/Math.max(1,count-1));
-        avatar.group.position.set(x, 0, this.current.mode === 'rehearsal' ? -3.65 : -2.6 + Math.abs(x) * .29);
+        if(seated){const seat=conferenceSeat(index,count);avatar.group.position.copy(seat.position);}else{const x = (index-(count-1)/2)*Math.min(1.35,4.8/Math.max(1,count-1));avatar.group.position.set(x,0,this.current.mode==='rehearsal'?-3.65:-2.6);}
       }
-      avatar.group.rotation.y=kind==='cast'?Math.atan2(-avatar.group.position.x,2.5-avatar.group.position.z)*.65:0;
+      avatar.group.rotation.y=kind==='cast'?seated?conferenceSeat(index,count).yaw:Math.atan2(-avatar.group.position.x,2.5-avatar.group.position.z)*.65:0;
     }
   }
 
@@ -171,11 +176,12 @@ export class SessionScene {
     this.avatars.get(id)?.avatar.select();
     document.body.dataset.selectedCharacter = id;
   }
+  toggleCamera(){this.director.toggle();this.yaw=0;this.pitch=0;document.body.dataset.cameraMode=this.director.enabled?'broadcast':'manual';}
 
   private pointerDown=(event:PointerEvent)=>{if(this.active||event.button!==0)return;this.drag={x:event.clientX,y:event.clientY,yaw:this.yaw,pitch:this.pitch,moved:false};this.canvas.setPointerCapture(event.pointerId);};
-  private pointerMove=(event:PointerEvent)=>{if(!this.drag||this.active||this.current.character)return;const dx=event.clientX-this.drag.x,dy=event.clientY-this.drag.y;if(Math.hypot(dx,dy)>6)this.drag.moved=true;if(!this.drag.moved)return;const yaw=this.drag.yaw-dx*.0025;this.yaw=Math.atan2(Math.sin(yaw),Math.cos(yaw));this.pitch=THREE.MathUtils.clamp(this.drag.pitch-dy*.002,-.6,.7);this.look();};
+  private pointerMove=(event:PointerEvent)=>{if(!this.drag||this.active||this.current.character)return;const dx=event.clientX-this.drag.x,dy=event.clientY-this.drag.y;if(Math.hypot(dx,dy)>6)this.drag.moved=true;if(!this.drag.moved)return;this.director.manual();const yaw=this.drag.yaw-dx*.0025;this.yaw=Math.atan2(Math.sin(yaw),Math.cos(yaw));this.pitch=THREE.MathUtils.clamp(this.drag.pitch-dy*.002,-.6,.7);this.look();};
   private pointerCancel=()=>{this.drag=null;};
-  private lookKey=(event:KeyboardEvent)=>{if(this.active||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(event.key))return;event.preventDefault();if(event.key==='Home'){this.yaw=0;this.pitch=0;}else{const yaw=this.yaw+(event.key==='ArrowLeft'?.08:event.key==='ArrowRight'?-.08:0);this.yaw=Math.atan2(Math.sin(yaw),Math.cos(yaw));this.pitch=THREE.MathUtils.clamp(this.pitch+(event.key==='ArrowUp'?.06:event.key==='ArrowDown'?-.06:0),-.6,.7);}this.look();};
+  private lookKey=(event:KeyboardEvent)=>{if(this.active||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(event.key))return;event.preventDefault();this.director.manual();if(event.key==='Home'){this.yaw=0;this.pitch=0;}else{const yaw=this.yaw+(event.key==='ArrowLeft'?.08:event.key==='ArrowRight'?-.08:0);this.yaw=Math.atan2(Math.sin(yaw),Math.cos(yaw));this.pitch=THREE.MathUtils.clamp(this.pitch+(event.key==='ArrowUp'?.06:event.key==='ArrowDown'?-.06:0),-.6,.7);}this.look();};
   private look(){this.camera.rotation.set(this.pitch,this.yaw,0,'YXZ');document.body.dataset.courtLook=JSON.stringify({yaw:this.yaw,pitch:this.pitch});}
   private surfaceAction(action:string){
     document.body.dataset.courtAction=action;
@@ -249,6 +255,7 @@ export class SessionScene {
   }
   update(state: PanelState) {
     const editingChanged = !!this.current.character !== !!state.character;
+    if(editingChanged||this.current.discussion&&!state.discussion)this.director.reset();
     this.current = state;
     if (editingChanged && this.cast) this.setCast(...this.cast);
     this.rooms.discussion.visible = state.mode === 'discussion'; this.rooms.rehearsal.visible = state.mode === 'rehearsal';
@@ -287,7 +294,7 @@ export class SessionScene {
       { x: 675, y: 365, width: 285, height: 74, label: 'Leave VR', action: 'exit' },
     ];
   }
-  private interactiveButtons(){const list=this.panelButtons();if(this.menuOpen&&!this.current.character&&this.current.keyboard===undefined)list.push({x:890,y:15,width:90,height:50,label:'Close',action:'court:close' as SceneAction});return document.body.dataset.avatarErrors&&document.body.dataset.avatarErrors!=='0'?[...list.filter(b=>!(b.y===15&&b.x>=630&&b.x<880)),{x:650,y:15,width:220,height:50,label:'Retry avatar',action:'ai:avatar-retry' as SceneAction}]:list;}
+  private interactiveButtons(){const list=this.panelButtons();if(this.menuOpen&&!this.current.character&&this.current.keyboard===undefined)list.push({x:890,y:15,width:90,height:50,label:'Close',action:'court:close' as SceneAction},{x:350,y:15,width:165,height:50,label:document.body.dataset.sessionLanguage==='hi'?'English':'हिन्दी',action:'ai:language'},{x:520,y:15,width:120,height:50,label:'News',action:'guide:news'});return document.body.dataset.avatarErrors&&document.body.dataset.avatarErrors!=='0'?[...list.filter(b=>!(b.y===15&&b.x>=630&&b.x<880)),{x:650,y:15,width:220,height:50,label:'Retry avatar',action:'ai:avatar-retry' as SceneAction}]:list;}
   private selectPanel(x: number, y: number) {
     const button = this.interactiveButtons().find(item => x >= item.x && x <= item.x + item.width && y >= item.y && y <= item.y + item.height);
     if (button && (!this.current.busy || button.action === 'exit'||button.action==='ai:stop')) { this.flashUntil = performance.now() + 150; this.surfaceAction(button.action); }
@@ -312,12 +319,16 @@ export class SessionScene {
   }
   private animate = (time: number) => {
     if (this.disposed || !this.active && time - this.lastRender < 33) return;
+    const dt=this.lastRender?(time-this.lastRender)/1000:.033;
     if(this.lastRender)this.frameIntervals.push(time-this.lastRender);if(this.frameIntervals.length>120)this.frameIntervals.shift();this.lastRender = time;
+    const court=this.current.court,speaker=this.avatars.get(court?.speakerId||'')?.avatar.group,other=this.avatars.get(court?.respondingTo||'')?.avatar.group;
+    this.director.update(dt,this.active,!!this.current.discussion&&!this.current.character,court?.phase==='Thinking'?'':court?.turnId||'',speaker?.position,other?.position);
+    document.body.dataset.cameraMode=this.active?'headset':this.director.enabled?'broadcast':'manual';document.body.dataset.cameraShot=this.director.shot;const cameraButton=document.querySelector<HTMLButtonElement>('#camera-mode');if(cameraButton){cameraButton.textContent=this.director.enabled?'TV camera':'Manual view';cameraButton.setAttribute('aria-pressed',String(this.director.enabled));}
     this.camera.getWorldPosition(this.viewer);
     const speech = this.speech?.(), level = speech ? Math.round(speech.mouth.open * 10) / 10 : 0;
     if (level !== this.speechLevel) document.body.dataset.speechLevel = String(this.speechLevel = level); // Observable lip-sync for browser checks.
-    const court=this.current.court,speaker=this.avatars.get(court?.speakerId||'')?.avatar.group;
-    this.avatars.forEach(item => {const own=court?.speakerId===item.avatar.character.id,state=own&&court?.phase==='Speaking'?'Speaking':own&&court?.phase==='Thinking'?'Thinking':own&&/Error|unavailable/.test(court?.phase||'')?'Unavailable':this.current.discussion?'Listening':'Ready';(item.avatar as RealisticAvatar).setPresence(state,court?.selectedId===item.avatar.character.id||own&&['Speaking','Thinking'].includes(state));const attention=!own&&speaker&&this.current.discussion?speaker.position.clone().setY(1.6):this.viewer;item.avatar.animate(time,attention,speech?.id === item.avatar.character.id ? speech.mouth : undefined);});
+    this.avatars.forEach(item => {const own=court?.speakerId===item.avatar.character.id,state=own&&(court?.phase==='Speaking'||court?.phase==='Ready'&&court?.status==='running'&&court?.turnId)?'Speaking':own&&court?.phase==='Thinking'?'Thinking':own&&/Error|unavailable/.test(court?.phase||'')?'Unavailable':this.current.discussion?'Listening':'Ready';const avatar=item.avatar as RealisticAvatar;avatar.setPresence(state,court?.selectedId===avatar.character.id||own&&['Speaking','Thinking'].includes(state));avatar.setTurnKind(court?.turnKind||'opening');avatar.setRoom(court?.showRoom||'conference');const attention=!own&&speaker&&this.current.discussion?speaker.position.clone().setY(1.2):this.viewer;avatar.animate(time,attention,speech?.id === avatar.character.id ? speech.mouth : undefined);});
+    if(this.frameCount%15===0){this.camera.updateMatrixWorld();const vp=new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix,this.camera.matrixWorldInverse);document.body.dataset.courtCamera=JSON.stringify({position:this.camera.position.toArray(),quaternion:this.camera.quaternion.toArray(),fov:this.camera.fov,viewProjection:vp.toArray()});document.body.dataset.courtActors=JSON.stringify([...this.avatars.values()].map(({avatar,kind})=>({id:avatar.character.id,kind,...(avatar as RealisticAvatar).poseSnapshot(),attentionTo:avatar.character.id===court?.speakerId?'viewer':speaker?court?.speakerId:'viewer'})));document.body.dataset.conferenceSeats=String(this.conference.group.visible?[...this.avatars.values()].filter(i=>i.kind==='cast').length:0);}
     if (this.active) for (const { controller, cursor } of this.controllers) {
       const hit = this.intersection(controller); cursor.visible = !!hit;
       if (hit) { cursor.position.copy(hit.point); (cursor.material as THREE.MeshBasicMaterial).color.set(performance.now() < this.flashUntil ? 0xffffff : 0xf6deb1); }
