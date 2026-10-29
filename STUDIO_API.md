@@ -26,6 +26,31 @@ Storage checks each directory and record for redirection, refuses symlinks/junct
 
 ## HTTP routes
 
+Creator story approval uses `PATCH /api/studio/episodes/:id` with the existing
+`requestId`, `expectedRevision`, and `expectedEpoch` receipt fields:
+
+| Operation | Additional fields | Result |
+| --- | --- | --- |
+| `approve-story` | `takeId` | Pins one undeleted performed take in `storyApproval: {takeId, approvedAt}` |
+| `unapprove-story` | none | Removes future story influence without deleting versions |
+| `delete-take` | `takeId` | Hides the version and clears its approval if selected |
+| `delete` | none | Hides the episode and all versions, clears approval, invalidates active production |
+
+The episode list reports the live `takeCount` and `storyApproval` (or `null`).
+Missing approval on old records means unapproved; no write-on-read migration or
+automatic approval occurs. Deleted episodes return 404 and are excluded from
+lists. Deleted takes cannot be exported, approved, or used as editing sources.
+Logical tombstones retain internal receipts and version ancestry; deleting is
+not a purge of shared recordings or media. Only a replay of the original delete
+receipt can acknowledge an already deleted episode.
+
+Writer/reviewer recent-show context uses the last three creator-approved
+versions in the same channel, in their approved edit order, omitting removed
+lines and live drafts. Episode-derived character canon can include
+`sourceTakeId`; it is exposed to performers only while that exact source version
+is approved and undeleted. Older episode-only facts remain stored but do not
+influence writing. Explicit creator characterisation is unaffected.
+
 Except `catalog`, include `?profileId=<uuid>` on every route. Responses use JSON with no caching. Mutations require same-origin JSON requests; cross-site requests are rejected.
 
 | Method and route | Operation/result |

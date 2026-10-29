@@ -1,4 +1,5 @@
 import {editStudioScene,resolveStudioReviewer} from './studio-editor.mjs';
+import {approvedSceneHistory} from '../shared/studio/story-history.mjs';
 import {stagedDelivery,reactionVoicePack} from './studio-delivery.mjs';
 import {SCENE_REVIEW_SCHEMA,validateSceneReview,sceneReviewPassed} from './studio-review.mjs';
 import {motionDuration} from '../shared/studio/motion-library.mjs';
@@ -38,7 +39,7 @@ export function createStudioProduction({store,people,ai,speech,owned,plan,receip
   async function bootstrap(profileId,id,input){return store.serial(profileId+'/channels/'+id,async()=>{
     const saved=await store.load(profileId,'channels',id);if(!saved)fail('Choose an owned channel.',404);
     const ack=receipt(saved,input,'produce'),episodeId=derived(input.requestId,'episode');
-    if(ack.replayed){const episode=await store.load(profileId,'episodes',episodeId);if(!episode)fail('The accepted episode receipt is incomplete. Saved characters are kept.',409);return {channel:saved,episode,library:await people.get(profileId),replayed:true};}
+    if(ack.replayed){const episode=await store.load(profileId,'episodes',episodeId);if(!episode||episode.deletedAt)fail('The accepted episode receipt is incomplete. Saved characters are kept.',409);return {channel:saved,episode,library:await people.get(profileId),replayed:true};}
     const pool=await ai.catalog(),available=pool.providers.filter(provider=>provider.models.length);
     if(!available.length)fail('Connect a reasoning model before asking the cast to collaborate.',503,'MODEL_UNAVAILABLE');
     let library=await people.get(profileId);const entries=[...(saved.definition.defaultCast||[])],slots=saved.definition.cast.filter(slot=>slot.membership!=='guest');
@@ -74,7 +75,7 @@ export function createStudioProduction({store,people,ai,speech,owned,plan,receip
     return Array.from({length:limit},(_,index)=>({beatId:derived(requestId,'beat/'+index),segment:index===0?'setup':index===limit-1?'payoff':'panel',speakerId:regular[index===limit-1&&limit>regular.length?0:index%regular.length].characterId,source:'model'}));
   }
   async function control(profileId,id,input){return store.serial(key(profileId,id),async()=>{
-    const saved=await store.load(profileId,'episodes',id);if(!saved)fail('Choose an owned episode.',404);const operation=input.operation,ack=receipt(saved,input,'production.'+operation);if(ack.replayed)return {episode:saved,replayed:true};
+    const saved=await store.load(profileId,'episodes',id);if(!saved||saved.deletedAt)fail('Choose an owned episode.',404);const operation=input.operation,ack=receipt(saved,input,'production.'+operation);if(ack.replayed)return {episode:saved,replayed:true};
     const next=advance(saved,input,'production.'+operation,ack.hash,['start','pause','stop','resume','continue','prepare-voices','edit-line','regenerate'].includes(operation));
     if(operation==='start'){
       if(saved.status==='cancelled')fail('Revise the cancelled draft before starting.',409);
@@ -152,7 +153,7 @@ export function createStudioProduction({store,people,ai,speech,owned,plan,receip
     const jobKey=key(profileId,id)+'/turn',current=inflight.get(jobKey);if(current){if(current.requestId===input.requestId)return current.promise;fail('One actor is preparing a contribution. Pause or wait.',409);}
     let started=false;const controller=new AbortController();const disconnect=()=>controller.abort();signal?.addEventListener('abort',disconnect,{once:true});
     const work=(async()=>{
-      const snapshot=await store.serial(key(profileId,id),async()=>{const saved=await store.load(profileId,'episodes',id);if(!saved)fail('Choose an owned episode.',404);const ack=receipt(saved,input,'production.turn');return {saved,ack};});
+      const snapshot=await store.serial(key(profileId,id),async()=>{const saved=await store.load(profileId,'episodes',id);if(!saved||saved.deletedAt)fail('Choose an owned episode.',404);const ack=receipt(saved,input,'production.turn');return {saved,ack};});
       const {saved,ack}=snapshot;if(ack.replayed)return {episode:saved,replayed:true};const p=saved.production;
       if(!p||p.status!=='running'||p.awaitingPlayback||p.cursor>=p.schedule.length)fail('Resume the show, or finish its pending line, before another actor speaks.',409);
       if(activeTurns(p).length>=p.turnLimit)fail('This show has reached its contribution budget.',409);
@@ -179,7 +180,7 @@ export function createStudioProduction({store,people,ai,speech,owned,plan,receip
           if(!written||p.cursor<written.atTurn||p.cursor>=written.atTurn+written.lines.length){
             const host=library.characters.find(person=>person.id===saved.plan.cast.find(member=>member.slotId==='host')?.characterId),currentChannel=await store.load(profileId,'channels',saved.plan.channelId),writerBrain=currentChannel?(currentChannel.definition.writingBrain||host?.brain):(saved.plan.channelSnapshot.writingBrain||host?.brain);
             const packets=await Promise.all(present.map(async member=>{const person=library.characters.find(person=>person.id===member.characterId),{canon,...profile}=person.studioProfile||{};return {id:person.id,name:person.name,slotId:member.slotId,personality:person.personality,code:person.code,profile,comicColour:comicCharacterDetails(person.id),knownFactsByCharacter:await Promise.all(present.map(async subject=>{const known=await people.context(profileId,{observerId:person.id,subjectId:subject.characterId,channelId:saved.plan.channelId});return {characterId:subject.characterId,facts:known.canon};}))};}));
-            const recentScenes=(await store.list(profileId,'episodes')).records.filter(episode=>episode.id!==saved.id&&episode.plan.channelId===saved.plan.channelId&&episode.production?.writer).slice(0,3).map(episode=>({summary:episode.production.writer.summary,publicExchanges:activeTurns(episode.production).filter(turn=>present.some(member=>member.characterId===turn.characterId)&&!turn.introductionId&&turn.intent!=='closing').slice(-10).map(({characterId,text})=>({characterId,text})),personalTopic:episode.production.writer.detourUsed===false?null:episode.production.banter?.topic||null,opening:activeTurns(episode.production).slice(0,4).map(turn=>turn.text),ending:activeTurns(episode.production).at(-1)?.text||null}));
+            const recentScenes=approvedSceneHistory((await store.list(profileId,'episodes')).records,{episodeId:saved.id,channelId:saved.plan.channelId,characterIds:present.map(member=>member.characterId)});
             const initial=p.cursor===0,budget=writerSceneBudget({cast:present,initial,maxDialogueLines:initial?MAX_WRITER_DIALOGUE_LINES:p.flow.maxTurns-p.cursor,minDialogueLines:initial?Math.max(4,present.length):4}),{minLines,maxLines}=budget,firstSpeakerId=initial?actor.id:p.flow.pendingQuestionTo||null,writerInput={adultComedy:context.adultComedy,hostId:host.id,requireClosing:true,writerNotes:currentChannel?.definition.writerNotes??saved.plan.channelSnapshot.writerNotes??'',premise:saved.plan.premise,format:saved.plan.formatId,language:saved.plan.language,firstSpeakerId,cast:present,characters:packets,opening,recentScenes,history:activeTurns(p).map(({id,characterId,text,intent,segment})=>({id,characterId,text,intent,segment})),latestContribution:context.latestContribution,conversationDetour:initial&&p.banter?{...p.banter,startIndex:Math.max(present.length,p.banter.startIndex)}:null,...budget,media:context.media,readyActions:CORE_ACTIONS};
             const job=inflight.get(jobKey);if(job)job.phase='writing';
             if(typeof ai.reviewStudio==='function'){
@@ -256,7 +257,7 @@ export function createStudioProduction({store,people,ai,speech,owned,plan,receip
     return {pending:false,error:{status:409,code:'PREPARATION_INTERRUPTED',message:'Preparation was interrupted. Resume the saved show to continue.'}};
   }
   async function voice(profileId,id,input,signal){
-    const snapshot=await store.load(profileId,'episodes',id);if(!snapshot)fail('Choose an owned episode.',404);const accepted=receipt(snapshot,input,'production.voice');
+    const snapshot=await store.load(profileId,'episodes',id);if(!snapshot||snapshot.deletedAt)fail('Choose an owned episode.',404);const accepted=receipt(snapshot,input,'production.voice');
     const turn=snapshot.production?.turns.find(turn=>turn.id===input.turnId);if(!turn)fail('Choose an actual saved contribution.',404);
     if(turn.voiceAssetId)return {episode:snapshot,asset:await speech.get(profileId,turn.voiceAssetId)};
     const controller=new AbortController(),jobKey=key(profileId,id)+'/voice';if(inflight.has(jobKey))fail('Speech is already being prepared.',409);inflight.set(jobKey,{controller});const disconnect=()=>controller.abort();signal?.addEventListener('abort',disconnect,{once:true});

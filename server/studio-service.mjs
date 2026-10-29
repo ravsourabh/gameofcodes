@@ -18,6 +18,7 @@ import {validateEdition,defaultEdition} from '../shared/studio/edition.mjs';
 import {createStudioAvatars} from './studio-avatars.mjs';
 import {avatarRendering} from '../shared/studio/avatar-rendering.mjs';
 import {createStudioPublishing} from './studio-publishing.mjs';
+import {approvedStoryTake} from '../shared/studio/story-history.mjs';
 
 const fail=(message,status=400,code)=>{throw new SessionError(message,status,code);};
 const contract=check=>(...args)=>{try{return check(...args);}catch(error){if(error instanceof SessionError)throw error;fail(error.message);}};
@@ -52,7 +53,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
   const store=createStudioStore({root,validate:validateStudioRecord,replace});
   const avatars=createStudioAvatars({root});
   const publishing=providedPublishing||createStudioPublishing({root});
-  const people=createStudioCharacters({root,legacy:characters});
+  const people=createStudioCharacters({root,legacy:characters,episodes:store});
   const library=profileId=>people.get(profileId);
   async function owned(profileId,assignments){
     if(!Array.isArray(assignments)||assignments.some(member=>!member||typeof member!=='object'))fail('Choose valid character assignments.');
@@ -99,7 +100,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
           return json(res,201,{asset:await output.media(profileId,bytes,url.searchParams.get('mime'),url.searchParams.get('name'))});
         }
         if(url.pathname==='/api/studio/exports'&&req.method==='POST'){
-          if(!sameOrigin(req))fail('Exports require this application.',403);const input=await body(req);fields(input,['id','episodeId','takeId','format','screen','subtitleMode'],'export');const record=await store.load(profileId,'episodes',id(input.episodeId)),take=record?.takes.find(take=>take.id===input.takeId);if(!take?.productionSnapshot)fail('Choose a saved performed take.',404);return json(res,201,{job:await output.create(profileId,input,take,record.id)});
+          if(!sameOrigin(req))fail('Exports require this application.',403);const input=await body(req);fields(input,['id','episodeId','takeId','format','screen','subtitleMode'],'export');const record=await store.load(profileId,'episodes',id(input.episodeId)),take=record?.takes.find(take=>take.id===input.takeId);if(record?.deletedAt||take?.deletedAt||!take?.productionSnapshot)fail('Choose a saved performed take.',404);return json(res,201,{job:await output.create(profileId,input,take,record.id)});
         }
         if(url.pathname==='/api/studio/voices'&&req.method==='GET')return json(res,200,await speech.capabilities());
         const audio=/^\/api\/studio\/audio\/([a-f0-9]{64})$/.exec(url.pathname);
@@ -107,7 +108,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
         const produce=/^\/api\/studio\/channels\/([0-9a-f-]+)\/produce$/.exec(url.pathname);
         const perform=/^\/api\/studio\/episodes\/([0-9a-f-]+)\/production$/.exec(url.pathname);
         if(produce||perform||url.pathname==='/api/studio/speech-preview'){
-          if(perform&&req.method==='GET'){const saved=await store.load(profileId,'episodes',id(perform[1]));if(!saved)fail('Choose an owned episode.',404);const requestId=url.searchParams.get('requestId');if(requestId)id(requestId);const progress=await production.progress(profileId,saved.id,requestId);return json(res,200,progress.error?{pending:false,error:progress.error}:progress);}
+          if(perform&&req.method==='GET'){const saved=await store.load(profileId,'episodes',id(perform[1]));if(!saved||saved.deletedAt)fail('Choose an owned episode.',404);const requestId=url.searchParams.get('requestId');if(requestId)id(requestId);const progress=await production.progress(profileId,saved.id,requestId);return json(res,200,progress.error?{pending:false,error:progress.error}:progress);}
           if(req.method!=='POST')fail('Use a supported production operation.',405);if(!sameOrigin(req))fail('Production requires this application.',403);
           const input=await body(req);id(input?.requestId);
           if(produce){fields(input,['requestId','expectedRevision','expectedEpoch','premise','source'],'cast-led show');if(input.premise!==undefined&&(typeof input.premise!=='string'||!input.premise.trim()||input.premise.length>4000))fail('Use a bounded premise.');if(input.source!==undefined&&!['written','spoken'].includes(input.source))fail('Use written or spoken attribution.');return json(res,200,await production.bootstrap(profileId,id(produce[1]),input));}
@@ -115,7 +116,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
           try{
             if(!perform){fields(input,['requestId','characterId','language','voice'],'voice audition');const actors=await library(profileId),actor=actors?.characters.find(actor=>actor.id===input.characterId);if(!actor)fail('Save this character before auditioning.',404);const language=input.language;if(!language||!['hi-IN','en-IN'].includes(language.primary)||typeof language.codeSwitching!=='boolean')fail('Choose the audition language.');const preview=input.voice?{...actor,voice:sarvamVoice(input.voice,language.primary)}:actor;return json(res,200,{asset:await speech.prepare(profileId,preview,language.primary==='hi-IN'?'पापा बोले, मुंबई में पूरी समिति फिर चुप हो गई।':'Please bring the blue papers. Maybe this meeting needs a meeting.',language,controller.signal)});}
             fields(input,['requestId','expectedRevision','expectedEpoch','operation','mode','turnLimit','turnId','captions','positionMs','beatId','characterId','segment','text','locked','actionId','targetId','atMs','durationMs','intensity','prepareOnly','adaptive','detached','shot','atFraction'],'production');
-            const episodeId=id(perform[1]);if(input.operation==='turn'&&input.detached===true){const saved=await store.load(profileId,'episodes',episodeId);if(!saved)fail('Choose an owned episode.',404);return json(res,202,production.startDetached(profileId,episodeId,input));}return json(res,200,await(input.operation==='turn'?production.turn(profileId,episodeId,input,controller.signal):input.operation==='voice'?production.voice(profileId,episodeId,input,controller.signal):production.control(profileId,episodeId,input)));
+            const episodeId=id(perform[1]);if(input.operation==='turn'&&input.detached===true){const saved=await store.load(profileId,'episodes',episodeId);if(!saved||saved.deletedAt)fail('Choose an owned episode.',404);return json(res,202,production.startDetached(profileId,episodeId,input));}return json(res,200,await(input.operation==='turn'?production.turn(profileId,episodeId,input,controller.signal):input.operation==='voice'?production.voice(profileId,episodeId,input,controller.signal):production.control(profileId,episodeId,input)));
           }finally{res.off('close',closed);}
         }
         if(url.pathname==='/api/studio/characters'&&req.method==='GET')return json(res,200,{library:await library(profileId),readOnly:true});
@@ -187,10 +188,10 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
         if(!match)fail('Unknown studio route.',404);
         const collection=match[1],recordId=match[2]?id(match[2]):null,singular=collection==='channels'?'channel':'episode';
         if(req.method==='GET'){
-          if(recordId){const saved=await store.load(profileId,collection,recordId);if(!saved)fail('No studio record was found in this profile.',404);return json(res,200,{[singular]:saved});}
+          if(recordId){const saved=await store.load(profileId,collection,recordId);if(!saved||saved.deletedAt)fail('No studio record was found in this profile.',404);return json(res,200,{[singular]:saved});}
           const result=await store.list(profileId,collection),channelId=url.searchParams.get('channelId');if(channelId)id(channelId);
-          const records=result.records.filter(record=>!channelId||collection==='channels'&&record.id===channelId||collection==='episodes'&&record.plan.channelId===channelId);
-          return json(res,200,{[collection]:records.map(record=>collection==='channels'?{id:record.id,name:record.definition.name,templateId:record.templateId,revision:record.revision,updatedAt:record.updatedAt}:{id:record.id,channelId:record.plan.channelId,premise:record.plan.premise,status:record.status,revision:record.revision,takeCount:record.takes.length,updatedAt:record.updatedAt}),unavailableCount:result.unavailableCount});
+          const records=result.records.filter(record=>!record.deletedAt&&(!channelId||collection==='channels'&&record.id===channelId||collection==='episodes'&&record.plan.channelId===channelId));
+          return json(res,200,{[collection]:records.map(record=>collection==='channels'?{id:record.id,name:record.definition.name,templateId:record.templateId,revision:record.revision,updatedAt:record.updatedAt}:{id:record.id,channelId:record.plan.channelId,premise:record.plan.premise,status:record.status,revision:record.revision,takeCount:record.takes.filter(take=>!take.deletedAt).length,storyApproval:approvedStoryTake(record)?record.storyApproval:null,updatedAt:record.updatedAt}),unavailableCount:result.unavailableCount});
         }
         if(!['POST','PATCH'].includes(req.method)||req.method==='POST'&&recordId||req.method==='PATCH'&&!recordId)return json(res,405,{error:'Unsupported studio operation.'});
         if(!sameOrigin(req))fail('Studio changes require a same-origin request.',403);
@@ -200,6 +201,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
           const newId=id(input.id),operation=collection+'.create';
           return await store.serial(profileId+'/'+collection+'/'+newId,async()=>{
             const existing=await store.load(profileId,collection,newId),ack=receipt(existing,input,operation);
+            if(existing?.deletedAt)fail('This episode was deleted.',404);
             if(ack.replayed)return json(res,200,{[singular]:existing,replayed:true});
             if(existing)fail('This studio identifier is already saved.',409);
             let saved=first(profileId,newId,'studio-'+singular,input,ack.hash,operation);
@@ -219,20 +221,32 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
           });
         }
         const operation=input.operation;
-        const allowed=collection==='channels'?['revise','screen']:['revise','cancel','accept-take','human-input','headline'];
+        const allowed=collection==='channels'?['revise','screen']:['revise','cancel','accept-take','human-input','headline','approve-story','unapprove-story','delete-take','delete'];
         if(!allowed.includes(operation))fail('Unsupported studio change.');
-        fields(input,['requestId','expectedRevision','expectedEpoch','operation',...(collection==='channels'?['definition','screen']:operation==='headline'?['headline']:operation==='revise'?['plan']:operation==='accept-take'?['takeId','sourceTakeId','edition']:operation==='human-input'?['beatId','participantId','text','source']:[])],'studio change');
+        fields(input,['requestId','expectedRevision','expectedEpoch','operation',...(collection==='channels'?['definition','screen']:operation==='headline'?['headline']:operation==='revise'?['plan']:operation==='accept-take'?['takeId','sourceTakeId','edition']:['approve-story','delete-take'].includes(operation)?['takeId']:operation==='human-input'?['beatId','participantId','text','source']:[])],'studio change');
         if(!Number.isSafeInteger(input.expectedRevision)||input.expectedRevision<1||!Number.isSafeInteger(input.expectedEpoch)||input.expectedEpoch<0)fail('Provide the saved studio revision and epoch.');
         return await store.serial(profileId+'/'+collection+'/'+recordId,async()=>{
           const saved=await store.load(profileId,collection,recordId);if(!saved)fail('No studio record was found in this profile.',404);
+          if(saved.deletedAt&&operation!=='delete')fail('This episode was deleted.',404);
           const ack=receipt(saved,input,operation);if(ack.replayed)return json(res,200,{[singular]:saved,replayed:true});
-          const next=advance(saved,input,operation,ack.hash,['revise','cancel'].includes(operation));
+          if(saved.deletedAt)fail('This episode was deleted.',404);
+          const next=advance(saved,input,operation,ack.hash,['revise','cancel','delete'].includes(operation));
           if(collection==='channels'&&operation==='screen'){
             if(input.screen!==null){fields(input.screen,['assetId','muted','loop','startMs','sourceUrl'],'screen');validateScreenSourceUrl(input.screen.sourceUrl);await output.getMedia(profileId,input.screen.assetId);if(typeof input.screen.muted!=='boolean'||typeof input.screen.loop!=='boolean'||!Number.isFinite(input.screen.startMs)||input.screen.startMs<0)fail('Choose saved screen settings.');}next.screen=structuredClone(input.screen);
           }else if(collection==='channels'){
             validateChannel(input.definition);if(input.definition.id!==recordId)fail('Channel identity mismatch.');await owned(profileId,input.definition.defaultCast||[]);
             if(input.definition.avatarRendering){await owned(profileId,input.definition.avatarRendering.assignments);if(canonical(input.definition.avatarRendering)!==canonical(saved.definition.avatarRendering??null))try{await avatars.validateSelection(input.definition.avatarRendering);}catch(error){fail(error.message);}}
             next.definition=structuredClone(input.definition);
+          }else if(operation==='approve-story'){
+            const take=saved.takes.find(item=>item.id===id(input.takeId)&&!item.deletedAt);
+            if(saved.status==='cancelled'||!take?.productionSnapshot)fail('Choose a saved performed version to approve.',409);
+            next.storyApproval={takeId:take.id,approvedAt:next.updatedAt};
+          }else if(operation==='unapprove-story')next.storyApproval=null;
+          else if(operation==='delete'){
+            next.deletedAt=next.updatedAt;next.storyApproval=null;
+          }else if(operation==='delete-take'){
+            const take=next.takes.find(item=>item.id===id(input.takeId)&&!item.deletedAt);if(!take)fail('Choose a saved version.',404);
+            take.deletedAt=next.updatedAt;if(next.storyApproval?.takeId===take.id)next.storyApproval=null;
           }else if(operation==='headline'){if(input.headline!==null&&(typeof input.headline!=='string'||input.headline.length>100))fail('Use a screen headline of up to 100 characters.');next.headline=input.headline===null?null:input.headline.trim();
             if(input.headline===null&&!saved.production?.writer?.headline&&typeof ai.writeStudio==='function'){
               const room=await store.load(profileId,'channels',saved.plan.channelId),library=await owned(profileId,saved.plan.cast),host=library.characters.find(person=>person.id===saved.plan.cast.find(member=>member.slotId==='host')?.characterId),brain=room?.definition.writingBrain||host?.brain||saved.production?.writer?.brain;
@@ -246,7 +260,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
             fields(input.plan,['premise','formatId','writingMode','language','viewerMode','humanParticipant','cast','media','beats','cues'],'episode plan');
             const planned={...input.plan,id:recordId},actors=await owned(profileId,planned.cast||[]);
             next.plan=plan(planned,saved.plan.channelSnapshot,actors);next.status='draft';
-          }else if(operation==='cancel')next.status='cancelled';
+          }else if(operation==='cancel'){next.status='cancelled';next.storyApproval=null;}
           else{
             if(saved.status!=='draft')fail('Revise the cancelled episode before continuing.',409,'EPISODE_CANCELLED');
             if(operation==='human-input'){
@@ -268,11 +282,11 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
               if(saved.production)next.takes.at(-1).productionSnapshot=structuredClone(saved.production);
               const take=next.takes.at(-1);
               const currentChannel=await store.load(profileId,'channels',saved.plan.channelId);take.avatarRendering=avatarRendering(currentChannel?.definition.avatarRendering);
-              if(input.sourceTakeId){const source=saved.takes.find(take=>take.id===input.sourceTakeId);if(!source?.productionSnapshot||source.planSnapshot.viewerMode!=='director')fail('Choose a saved director take to edit.');Object.assign(take,{sourceTakeId:source.id,planSnapshot:structuredClone(source.planSnapshot),castSnapshots:structuredClone(source.castSnapshots),productionSnapshot:structuredClone(source.productionSnapshot),avatarRendering:avatarRendering(source.avatarRendering)});}
+              if(input.sourceTakeId){const source=saved.takes.find(take=>take.id===input.sourceTakeId&&!take.deletedAt);if(!source?.productionSnapshot||source.planSnapshot.viewerMode!=='director')fail('Choose a saved director take to edit.');Object.assign(take,{sourceTakeId:source.id,planSnapshot:structuredClone(source.planSnapshot),castSnapshots:structuredClone(source.castSnapshots),productionSnapshot:structuredClone(source.productionSnapshot),avatarRendering:avatarRendering(source.avatarRendering)});}
               if(take.productionSnapshot){if(take.productionSnapshot.phase!=='ready'&&take.productionSnapshot.status!=='completed')fail('Finish preparation before accepting a performed take.',409);take.edition=input.edition||defaultEdition(take);try{validateEdition(take.edition,take);}catch(error){fail(error.message);}if(take.edition.screen)await output.getMedia(profileId,take.edition.screen.assetId);}
             }
           }
-          if(collection==='episodes'&&['revise','cancel'].includes(operation)){production.invalidate(next);production.abort(profileId,recordId);}
+          if(collection==='episodes'&&['revise','cancel','delete'].includes(operation)){production.invalidate(next);production.abort(profileId,recordId);}
           await store.persist(next,collection);return json(res,200,{[singular]:next,replayed:false});
         });
       }catch(error){

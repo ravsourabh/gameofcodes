@@ -15,10 +15,11 @@ export function validateCharacterProfile(profile){
   if(!Array.isArray(profile.canon)||profile.canon.length>100)throw new Error('Character canon is limited to 100 facts.');
   const ids=new Set();
   for(const fact of profile.canon){
-    fields(fact,['id','text','visibility','origin','channelId','sourceEpisodeId'],'canon fact');
+    fields(fact,['id','text','visibility','origin','channelId','sourceEpisodeId','sourceTakeId'],'canon fact');
     if(!fact||!short(fact.id,100)||ids.has(fact.id)||!short(fact.text,1000)||!['public','channel','private'].includes(fact.visibility)||!['creator','episode'].includes(fact.origin))throw new Error('Invalid or duplicate character canon fact.');ids.add(fact.id);
     if(fact.visibility==='channel'&&!short(fact.channelId,100))throw new Error('Channel-specific facts need their channel ID.');
     if(fact.origin==='episode'&&!short(fact.sourceEpisodeId,100))throw new Error('Remembered episode facts need their source.');
+    if(fact.sourceTakeId!==undefined&&(fact.origin!=='episode'||!short(fact.sourceTakeId,100)))throw new Error('Remembered version facts need their source take.');
   }
   return profile;
 }

@@ -25,7 +25,7 @@ export function validatePlan(plan){
 }
 export function validateStudioRecord(record,collection){
   const common=['schemaVersion','kind','id','profileId','revision','epoch','createdAt','updatedAt','events'];
-  fields(record,[...common,...(collection==='channels'?['templateId','definition','setup','screen','directionHistory']:['plan','channelRevision','status','takes','humanInputs','production','headline'])],'studio record');
+  fields(record,[...common,...(collection==='channels'?['templateId','definition','setup','screen','directionHistory']:['plan','channelRevision','status','takes','humanInputs','production','headline','storyApproval','deletedAt'])],'studio record');
   need(record.schemaVersion===1&&isId(record.id)&&isId(record.profileId),'Invalid studio identity.');
   need(record.kind===(collection==='channels'?'studio-channel':'studio-episode'),'Invalid studio kind.');
   need(integer(record.revision,1)&&integer(record.epoch)&&record.epoch<record.revision&&date(record.createdAt)&&date(record.updatedAt),'Invalid studio revision/clock.');
@@ -51,13 +51,15 @@ export function validateStudioRecord(record,collection){
     return record;
   }
   if(record.headline!==undefined&&record.headline!==null)need(typeof record.headline==='string'&&record.headline.length<=100,'Use a screen headline of up to 100 characters.');
+  if(record.deletedAt!==undefined)need(date(record.deletedAt)&&record.events.some(event=>event.operation==='delete'&&event.at===record.deletedAt),'Unattributed episode deletion.');
   need(['draft','cancelled'].includes(record.status)&&integer(record.channelRevision,1),'Invalid episode state.');
   validatePlan(record.plan);need(record.plan.id===record.id&&isId(record.plan.channelId),'Episode identity mismatch.');
   validateProduction(record.production,record);
   need(Array.isArray(record.takes)&&record.takes.length<=20&&Array.isArray(record.humanInputs)&&record.humanInputs.length<=100,'Invalid episode history.');
   const takeIds=new Set();
   for(const take of record.takes){
-    fields(take,['schemaVersion','kind','id','acceptedAt','sourceRevision','epoch','channelRevision','libraryRevision','planSnapshot','castSnapshots','humanInputs','productionSnapshot','sourceTakeId','edition','avatarRendering'],'take');
+    fields(take,['schemaVersion','kind','id','acceptedAt','sourceRevision','epoch','channelRevision','libraryRevision','planSnapshot','castSnapshots','humanInputs','productionSnapshot','sourceTakeId','edition','avatarRendering','deletedAt'],'take');
+    if(take.deletedAt!==undefined)need(date(take.deletedAt)&&record.events.some(event=>event.operation==='delete-take'&&event.at===take.deletedAt),'Unattributed version deletion.');
     if(take.avatarRendering!==undefined)validateAvatarRendering(take.avatarRendering);
     need(take.schemaVersion===1&&take.kind==='studio-take'&&isId(take.id)&&!takeIds.has(take.id)&&date(take.acceptedAt)&&integer(take.sourceRevision,1)&&take.sourceRevision<record.revision&&integer(take.epoch)&&take.epoch<=record.epoch&&integer(take.channelRevision,1)&&integer(take.libraryRevision,1),'Invalid accepted take.');
     takeIds.add(take.id);validatePlan(take.planSnapshot);
@@ -70,6 +72,11 @@ export function validateStudioRecord(record,collection){
     need(Array.isArray(take.humanInputs)&&take.humanInputs.length<=100,'Invalid take human input.');
     const answers=new Set();for(const answer of take.humanInputs){validateAnswer(answer,record);need(answer.epoch===take.epoch&&!answers.has(answer.beatId)&&take.planSnapshot.beats.some(beat=>beat.id===answer.beatId&&beat.kind==='human-input'&&beat.speakerId===answer.participantId),'Stale or unrelated take human input.');answers.add(answer.beatId);}
     for(const beat of take.planSnapshot.beats.filter(beat=>beat.kind==='human-input'))need(take.humanInputs.some(answer=>answer.beatId===beat.id&&answer.participantId===beat.speakerId),'Missing take human answer.');
+  }
+  if(record.storyApproval!==undefined&&record.storyApproval!==null){
+    fields(record.storyApproval,['takeId','approvedAt'],'story approval');
+    const take=record.takes.find(item=>item.id===record.storyApproval.takeId);
+    need(!record.deletedAt&&take&&!take.deletedAt&&take.productionSnapshot&&date(record.storyApproval.approvedAt)&&record.events.some(event=>event.operation==='approve-story'&&event.at===record.storyApproval.approvedAt),'Story approval requires a saved, undeleted performed version.');
   }
   const answers=new Set();for(const answer of record.humanInputs){validateAnswer(answer,record);const key=answer.epoch+'/'+answer.beatId;need(!answers.has(key),'Duplicate human answer.');answers.add(key);}
   return record;

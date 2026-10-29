@@ -4,6 +4,7 @@ import {characterFields} from '../shared/character-domain.mjs';
 import {fields,text,array} from '../shared/studio/validation.mjs';
 import {validateCharacterProfile,visibleCharacterFacts} from '../shared/studio/characters.mjs';
 import {createStudioStore} from './studio-store.mjs';
+import {approvedEpisodeFact} from '../shared/studio/story-history.mjs';
 
 const fail=(message,status=400,code='INVALID_STUDIO_CHARACTER')=>{throw new SessionError(message,status,code);};
 const need=(condition,message)=>{if(!condition)fail(message);};
@@ -27,7 +28,7 @@ function validateLibrary(record){
   return record;
 }
 
-export function createStudioCharacters({root,legacy}){
+export function createStudioCharacters({root,legacy,episodes}){
   const store=createStudioStore({root,validate:validateLibrary});
   const load=profileId=>store.load(profileId,'characters',profileId);
   async function get(profileId){
@@ -89,7 +90,9 @@ export function createStudioCharacters({root,legacy}){
     // internal motivation/stress/conflict notes. Own-role context remains richer.
     const profile=observerId===subjectId?fullProfile:{schemaVersion:1,characterId:actor.id,revision:actor.studioProfile.revision,behaviour:{speechStyle:actor.studioProfile.behaviour.speechStyle},psychology:{traits:actor.studioProfile.psychology.traits},likes:actor.studioProfile.likes,dislikes:actor.studioProfile.dislikes,backstory:actor.studioProfile.backstory};
     const knownFactIds=(saved?.knowledge||[]).filter(item=>item.observerId===observerId&&item.subjectId===subjectId&&item.channelId===channelId).map(item=>item.factId);
-    return {id:actor.id,name:actor.name,profile,canon:visibleCharacterFacts(actor.studioProfile,{channelId,knownFactIds})};
+    const visible=visibleCharacterFacts(actor.studioProfile,{channelId,knownFactIds}),sources=new Map();
+    for(const fact of visible.filter(fact=>fact.origin==='episode'))if(!sources.has(fact.sourceEpisodeId))sources.set(fact.sourceEpisodeId,episodes?await episodes.load(profileId,'episodes',fact.sourceEpisodeId):null);
+    return {id:actor.id,name:actor.name,profile,canon:visible.filter(fact=>approvedEpisodeFact(fact,sources.get(fact.sourceEpisodeId)))};
   }
   return {get,mutate,context};
 }

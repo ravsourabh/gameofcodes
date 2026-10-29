@@ -34,6 +34,22 @@ The **Voice** tab exposes 222 Sarvam V4 personas and 37 V3 voices from the pinne
 
 With cameras on **Auto**, show playback starts with a deterministic fly-in, then cuts to a second camera as the host turns toward it. Preview and exported video share the recording clock. Manual camera choices and reduced motion bypass the fly-in; headset view stays under the user's control.
 
+## Episode approval and deletion
+
+In **Episodes**, choose **Review & approve** to open an episode's saved versions.
+Save a take if needed, select the version you want, then choose **Approve this
+version**. Approval is a creator decision separate from the AI review and does
+not publish a video. Only that saved edit supplies recent-show history to future
+writing. New versions remain unapproved until selected explicitly; older shows
+are also unapproved until you choose them.
+
+**Withdraw approval**, **Delete version**, and **Delete episode** remove the
+corresponding material from future story context. Deleting an approved version
+does not approve another automatically. Episode-derived character facts must
+identify the same approved source version; creator-authored characterisation is
+kept. Deletion is logical: hidden records remain internally for durable retries
+and version provenance, while shared cast, voices and media are preserved.
+
 ## Run
 
 Requires **Node.js 22.13+ or Node 24** (including PDF text extraction).

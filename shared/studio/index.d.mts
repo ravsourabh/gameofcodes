@@ -1,7 +1,7 @@
 export type WritingMode='scripted'|'hybrid'|'improvised';
 export type LanguagePolicy={primary:'hi-IN'|'en-IN';codeSwitching:boolean};
 export type ViewerMode='director'|'participant';
-export type CharacterCanonFact={id:string;text:string;visibility:'public'|'channel'|'private';origin:'creator'|'episode';channelId?:string;sourceEpisodeId?:string};
+export type CharacterCanonFact={id:string;text:string;visibility:'public'|'channel'|'private';origin:'creator'|'episode';channelId?:string;sourceEpisodeId?:string;sourceTakeId?:string};
 export type CharacterProfile={schemaVersion:1;characterId:string;revision:number;behaviour:{speechStyle:string;habits:string[];energy:number};psychology:{traits:string[];motivations:string[];values:string[];stressResponse:string;conflictStyle:string};likes:string[];dislikes:string[];backstory:string;canon:CharacterCanonFact[]};
 export type ActionDefinition={id:string;family:string;label:string;lanes:readonly string[];props:readonly string[];requiresTarget:boolean};
 export type PerformanceCue={schemaVersion?:1;id:string;characterId:string;actionId:string;atMs:number;durationMs:number;intensity:number;targetId?:string;beatId?:string};
@@ -35,8 +35,8 @@ export type ChannelRecord=StudioEnvelope&{kind:'studio-channel';templateId:strin
 export type StudioCharacter=import('../session-domain.mjs').Character&{portrait?:string;studioProfile?:CharacterProfile;studioProvenance?:{origin:'creator'|'legacy-enrichment'|'ai-proposal';approvedBy:'creator';legacyRevision?:number}};
 export type StudioLibrary={schemaVersion:1;kind:'studio-character-library';profileId:string;revision:number;studioRevision:number;legacyRevision:number;characters:StudioCharacter[];usage:{characterId:string;channelId:string;at:string}[];updatedAt:string};
 export type HumanInput={beatId:string;participantId:string;text:string;source:'human';epoch:number;receivedAt:string;revision:number};
-export type Take={avatarRendering?:import('./avatar-rendering.mjs').AvatarRendering;schemaVersion:1;kind:'studio-take';id:string;acceptedAt:string;sourceRevision:number;epoch:number;channelRevision:number;libraryRevision:number;planSnapshot:EpisodePlan;castSnapshots:import('../session-domain.mjs').Character[];humanInputs:HumanInput[];productionSnapshot?:Production;sourceTakeId?:string;edition?:import('./edition.mjs').Edition};
-export type EpisodeRecord=StudioEnvelope&{kind:'studio-episode';headline?:string|null;plan:EpisodePlan;channelRevision:number;status:'draft'|'cancelled';takes:Take[];humanInputs:HumanInput[];production?:Production};
+export type Take={deletedAt?:string;avatarRendering?:import('./avatar-rendering.mjs').AvatarRendering;schemaVersion:1;kind:'studio-take';id:string;acceptedAt:string;sourceRevision:number;epoch:number;channelRevision:number;libraryRevision:number;planSnapshot:EpisodePlan;castSnapshots:import('../session-domain.mjs').Character[];humanInputs:HumanInput[];productionSnapshot?:Production;sourceTakeId?:string;edition?:import('./edition.mjs').Edition};
+export type EpisodeRecord=StudioEnvelope&{kind:'studio-episode';deletedAt?:string;storyApproval?:{takeId:string;approvedAt:string}|null;headline?:string|null;plan:EpisodePlan;channelRevision:number;status:'draft'|'cancelled';takes:Take[];humanInputs:HumanInput[];production?:Production};
 export function validatePlan(plan:EpisodePlan):EpisodePlan;
 export function validateStudioRecord(record:ChannelRecord|EpisodeRecord,collection:'channels'|'episodes'):ChannelRecord|EpisodeRecord;
 export function legacySessionView(session:import('../session-domain.mjs').Session):{schemaVersion:1;readOnly:true;source:{kind:string;id:string;schemaVersion:number;revision:number};suggestedPremise:string;language:LanguagePolicy;characterIds:string[];session:import('../session-domain.mjs').Session};

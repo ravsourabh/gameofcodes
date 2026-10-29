@@ -15,7 +15,7 @@ export function createStudioDirector({store,people,ai,receipt,advance,fail}){
       if(ack.replayed){const direction=saved.directionHistory?.find(item=>item.requestId===input.requestId);if(!direction)fail('That director receipt has expired. Use a new request.',409);return {channel:saved,direction,replayed:true};}
       if(typeof input.text!=='string'||!input.text.trim()||input.text.length>2000)fail('Use a direction of up to 2,000 characters.');
       const episode=input.episodeId?await store.load(profileId,'episodes',input.episodeId):null;
-      if(input.episodeId&&(!episode||episode.plan.channelId!==channelId))fail('Choose an episode in this channel.',404);
+      if(input.episodeId&&(!episode||episode.deletedAt||episode.plan.channelId!==channelId))fail('Choose an episode in this channel.',404);
       if(episode&&(episode.revision!==input.episodeRevision||episode.epoch!==input.episodeEpoch))fail('The show changed. Refresh before directing it.',409,'REVISION_CONFLICT');
       if(input.playback){try{fields(input.playback,['playing','positionMs','screenPlaying'],'playback state');}catch(error){fail(error.message);}if(typeof input.playback.playing!=='boolean'||typeof input.playback.screenPlaying!=='boolean'||!Number.isSafeInteger(input.playback.positionMs)||input.playback.positionMs<0||input.playback.positionMs>7200000)fail('Use a bounded playback state.');}
       const library=await people.get(profileId),members=episode?.plan.cast||saved.definition.defaultCast||[];
