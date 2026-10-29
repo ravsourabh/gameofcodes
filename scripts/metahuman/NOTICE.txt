@@ -1,0 +1,29 @@
+Epic MetaHuman Crowd Sample - AverageMale_Head01 browser conversion
+
+Original character, meshes, clothing, textures and facial animation data:
+Copyright Epic Games, Inc. All rights reserved.
+
+Official source acquired through Epic Games Launcher / Fab:
+https://www.fab.com/listings/5f481d73-afb1-4d94-ba6e-7cabf5d296fa
+
+This is a derivative runtime character for Game of Codes, subject to the
+applicable Epic licence terms associated with the acquired content and tools.
+This notice does not replace those terms or grant a separate asset licence.
+It is not covered by the Microsoft Rocketbox MIT licence.
+
+Licence information:
+https://www.fab.com/eula
+https://www.metahuman.com/license
+https://www.unrealengine.com/eula/unreal
+
+Conversion: native Unreal facial poses evaluated with RigLogic and baked to
+51 ARKit-shaped position controls; mouthClose derived from the two native lip
+press poses. A shared native body/eye skeleton, portable PBR materials and
+embedded textures replace Unreal-only rendering dependencies. Outfit surfaces
+were fitted/skin-bound, a fabric collar added, and hidden body surfaces removed.
+Inactive authoring joints retain their reference offsets. Current app animation
+and final-audio lip cues drive the resulting GLB. This is a bald sample character;
+Epic strand-based grooms are not included.
+
+Do not present this runtime conversion as an Epic-authored GLB or as a standalone
+asset pack. Retain the applicable Epic terms and source attribution with copies.

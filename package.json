@@ -11,15 +11,13 @@
     "build": "tsc --noEmit && vite build",
     "start": "node scripts/dev.mjs --production",
     "test": "node node_modules/@playwright/test/cli.js test",
-    "test:legacy": "node node_modules/@playwright/test/cli.js test --config playwright.legacy.config.ts",
-    "dev:legacy": "node scripts/dev.mjs --legacy",
     "setup:browser": "node node_modules/@playwright/test/cli.js install chromium",
-    "test:unit": "node --test tests/protocol.test.mjs tests/court.test.mjs tests/providers.test.mjs tests/speech.test.mjs tests/cloud-providers.test.mjs tests/workspace-setup.test.mjs tests/session-domain.test.mjs tests/sessions.test.mjs tests/characters.test.mjs tests/session-ai.test.mjs tests/interface-intents.test.mjs tests/setup.test.mjs tests/discussion.test.mjs tests/discussion-http.test.mjs tests/atomic-file.test.mjs tests/discussion-repair.test.mjs tests/show.test.mjs"
+    "test:unit": "node scripts/test-unit.mjs",
+    "setup:lips": "node scripts/install-lip-sync.mjs"
   },
   "dependencies": {
     "pdfjs-dist": "6.4.299",
-    "three": "0.186.1",
-    "ws": "^8.18.3"
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

@@ -9,3 +9,7 @@ sovereign.env
 *.key
 test-results
 playwright-report
+
+archive
+tests
+board

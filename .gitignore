@@ -10,3 +10,20 @@ playwright-report/
 !.env.example
 sovereign.env
 elevenlabs_models.json
+
+# Private authoring references and optional licensed Epic downloads stay local.
+concept/host/*.png
+concept/host/*.webp
+concept/host/build/pairs.json
+public/avatars/metahuman/*
+!public/avatars/metahuman/README.md
+# The editable publishing kit is tracked; its duplicate download archive is not.
+publishing/*.zip
+# Never include private OAuth exports, keys, certificates or Unreal build caches.
+client_secret*.json
+*.pem
+*.key
+scripts/metahuman/Authoring/Binaries/
+scripts/metahuman/Authoring/Intermediate/
+scripts/metahuman/Authoring/Saved/
+scripts/metahuman/Authoring/DerivedDataCache/

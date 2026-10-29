@@ -8,7 +8,7 @@ test('new entry saves and reloads a session without invoking the retired product
   const errors: string[] = [], retired: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => { if (/\/api\/court|\/preview|:417[45]/.test(request.url())) retired.push(request.url()); });
-  await page.goto('/');
+  await page.goto('/?legacy-session=1');
   await expect(page.locator('body')).toHaveAttribute('data-app-ready', 'true');
   await leaveGuide(page);
   await expect(page.getByRole('heading', { name: 'What brings you here?' })).toBeVisible();
@@ -39,7 +39,7 @@ test('new entry saves and reloads a session without invoking the retired product
 test('profiles keep sessions separate and preserve legacy browser metadata', async ({ page }) => {
   const profile = randomUUID(), old = [{ id: profile, name: 'Existing profile', projects: { local: randomUUID() } }];
   await page.addInitScript(value => { if (!localStorage.getItem('goc-profiles')) localStorage.setItem('goc-profiles', JSON.stringify(value)); }, old);
-  await page.goto('/?project=' + old[0].projects.local);
+  await page.goto('/?legacy-session=1&project=' + old[0].projects.local);
   await leaveGuide(page);
   await expect(page.locator('#legacy-notice')).toBeVisible();
   await page.getByRole('button', { name: 'Discuss a problem' }).click();
@@ -60,7 +60,7 @@ test('profiles keep sessions separate and preserve legacy browser metadata', asy
 });
 
 test('a lost save response can be retried without creating a duplicate session', async ({ page }) => {
-  await page.goto('/'); await leaveGuide(page); await page.getByRole('button', { name: 'Discuss a problem' }).click();
+  await page.goto('/?legacy-session=1'); await leaveGuide(page); await page.getByRole('button', { name: 'Discuss a problem' }).click();
   await page.getByRole('button', { name: 'Session details', exact: true }).click();
   await page.getByLabel('Session name').fill('One save only');
   let dropped = false;
@@ -78,11 +78,11 @@ test('a lost save response can be retried without creating a duplicate session',
 });
 
 test('conflicting edits remain visible until the user reloads the saved version', async ({ page, request }) => {
-  await page.goto('/'); await leaveGuide(page); await page.getByRole('button', { name: 'Discuss a problem' }).click();
+  await page.goto('/?legacy-session=1'); await leaveGuide(page); await page.getByRole('button', { name: 'Discuss a problem' }).click();
   await page.getByRole('button', { name: 'Session details', exact: true }).click();
   await page.getByRole('button', { name: 'Save session', exact: true }).click(); await expect(page.locator('#save-status')).toHaveText('Saved');
   const id = new URL(page.url()).searchParams.get('session')!, profile = await page.locator('#profile-select').inputValue();
-  await request.patch(`/api/sessions/${id}?profileId=${profile}`, { headers: { Origin: 'http://localhost:5173' }, data: { requestId: randomUUID(), expectedRevision: 1, action: 'update', draft: { title: 'Saved in another tab', mode: 'discussion', situation: '' } } });
+  await request.patch(`/api/sessions/${id}?profileId=${profile}`, { headers: { Origin: new URL(page.url()).origin }, data: { requestId: randomUUID(), expectedRevision: 1, action: 'update', draft: { title: 'Saved in another tab', mode: 'discussion', situation: '' } } });
   await page.getByLabel('Session name').fill('My unsaved edit');
   await page.getByRole('button', { name: 'Save session', exact: true }).click();
   await expect(page.locator('#error-message')).toContainText('another tab');
@@ -92,11 +92,11 @@ test('conflicting edits remain visible until the user reloads the saved version'
 });
 
 test.describe('hands-first WebXR foundation', () => {test.describe.configure({timeout:150000});
-  test.use({ baseURL: 'https://localhost:5443', ignoreHTTPSErrors: true });
+  test.use({ baseURL: process.env.GOC_TEST_PORT?`https://localhost:${Number(process.env.GOC_TEST_PORT)+100}`:'https://localhost:5443', ignoreHTTPSErrors: true });
   test('native hand rays select the council, save, and exit without a preview service', async ({ page }) => {
     const runtime = await readFile('node_modules/iwer/build/iwer.min.js', 'utf8');
     await page.addInitScript({ content: `${runtime}\nwindow.xrDevice = new IWER.XRDevice(IWER.metaQuest3); window.xrDevice.installRuntime({ forceInstall: true }); window.xrDevice.primaryInputMode = 'hand'; window.xrDevice.position.set(0, 1.6, 0);` });
-    await page.goto('/'); await expect(page.locator('#xr-status')).toContainText('Headset ready');
+    await page.goto('/?legacy-session=1'); await expect(page.locator('#xr-status')).toContainText('Headset ready');
     await leaveGuide(page);
     await page.getByRole('button', { name: 'Enter VR', exact: true }).click();
     await expect(page.locator('body')).toHaveAttribute('data-xr-active', 'true');

@@ -16,7 +16,7 @@ test.beforeEach(async({page})=>{
  const ai={catalog:async()=>({providers:[{id:'openai',name:'OpenAI',status:'Explicit test fixture',models:[{id:'gpt-fixture',name:'Fixture'}],audioModels:[]}],voices:[],voiceStatus:'Fixture: captions',localStatus:'Unavailable'}),validateAssignment:async()=>{},setup:async(_p:any,_c:any,s:any)=>{calls++;if(lateSetup)await lateSetup;if(failSetup){failSetup=false;throw new Error('Explicit provider failure fixture');}return {proposal:proposal(s),brain:{provider:'openai',model:'gpt-fixture-resolved'}};},speak:async()=>{throw new Error('Explicit unavailable audio fixture');}};
  const service=createSessionService({root,ai});server=http.createServer((req,res)=>void service.handle(req,res,new URL(req.url!,'http://localhost')));await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));origin=`http://127.0.0.1:${(server.address() as any).port}`;
  await page.route('**/api/**',async route=>{const url=new URL(route.request().url());const response=await route.fetch({url:origin+url.pathname+url.search,headers:{...route.request().headers(),origin,host:new URL(origin).host}});await route.fulfill({response});});
- await page.goto('/');await expect(page.locator('body')).toHaveAttribute('data-app-ready','true');
+ await page.goto('/?legacy-session=1');await expect(page.locator('body')).toHaveAttribute('data-app-ready','true');
 });
 test.afterEach(async()=>{await new Promise<void>(r=>{server.close(()=>r());server.closeAllConnections();});expect(path.resolve(root).startsWith(path.join(tmpdir(),'goc-guide-browser-'))).toBe(true);await rm(root,{recursive:true,force:true});});
 async function send(page:Page,text:string){await page.getByLabel('Your instruction').fill(text);await page.getByRole('button',{name:'Send instruction'}).click();}

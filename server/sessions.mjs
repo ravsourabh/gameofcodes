@@ -11,6 +11,7 @@ import {changeLanguage} from '../shared/session-language.mjs';
 import {createIndianNews} from './indian-news.mjs';
 import {changeShowStyle} from '../shared/show-style.mjs';
 import {createDiscussionService} from './discussion-service.mjs';
+import {createStudioService} from './studio-service.mjs';
 
 const fail = (message, status = 400, code) => { throw new SessionError(message, status, code); };
 const identifier = value => { if (!isId(value)) fail('Invalid profile, session, or request identifier.'); return value.toLowerCase(); };
@@ -28,7 +29,7 @@ function sameOrigin(req) {
 }
 
 // The session AI runtime is independent of the retired coding/preview services.
-export function createSessionService({ root, ai = createSessionAI(), news=createIndianNews(), onError = () => {} }) {
+export function createSessionService({ root, ai = createSessionAI(), news=createIndianNews(), onError = () => {},studioSpeech }) {
   const characters = createCharacterLibrary({ root });
   const inflight = new Map(), avatarResults = new Map();
   const store = path.resolve(root, '.sovereign', 'sessions', 'v1');
@@ -96,8 +97,10 @@ export function createSessionService({ root, ai = createSessionAI(), news=create
     return { sessions, unavailableCount };
   }
   const discussions=createDiscussionService({ai,characters,load,persist,serial,inflight,json,fail});
+  const studio=createStudioService({root,characters,loadLegacySession:load,ai,onError,speech:studioSpeech});
   return {
     async handle(req, res, url) {
+      if(url.pathname.startsWith('/api/studio/'))return studio.handle(req,res,url);
       try {
         if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { error: 'Use the session service from this application.' });
         if (url.pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, service: 'sessions', schemaVersion: SCHEMA_VERSION, previewEnabled: false, inferenceEnabled: true });
@@ -170,7 +173,7 @@ export function createSessionService({ root, ai = createSessionAI(), news=create
             }
             if (url.pathname === '/api/ai/preview') {
               keys(input,['voice','voicePreference']);
-              return json(res,200,await ai.speak(profileId,{voice:input.voice,voicePreference:input.voicePreference},input.voice?.provider==='sarvam'?'नमस्ते। आइए, इस विचार को अलग-अलग नज़रियों से समझें।':'Hello. Let’s make room for another perspective.',controller.signal));
+              return json(res,200,await ai.speak(profileId,{voice:input.voice,voicePreference:input.voicePreference},input.voice?.provider==='sarvam'?'नमस्ते। आइए, इस विचार को अलग-अलग नज़रियों से समझें।':'Hello. Let’s make room for another perspective.',controller.signal,input.voice?.provider==='sarvam'?'hi':'en'));
             }
             keys(input, url.pathname === '/api/ai/assign' ? ['sessionId','requestId','expectedRevision','characterId','brain','voice'] : ['sessionId','requestId','expectedRevision','characterId','text','exchangeId','contributionId']);
             const id = identifier(input.sessionId), requestId = identifier(input.requestId), characterId = identifier(input.characterId), key = profileId + '/' + id;

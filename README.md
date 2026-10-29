@@ -1,50 +1,38 @@
-# Game of Codes · Make room for perspective
+# Game of Codes · Channel Studio
 
-A seated WebXR experience for discussing problems, making decisions, and rehearsing real situations. The complete requirements and delivery waves are in [PRD.md](PRD.md).
+An AI ensemble studio for creating shows from written or narrated premises. The current product direction and scope are in [PRD.md](PRD.md); implementation steps and exit checks are in [DELIVERY_WAVES.md](DELIVERY_WAVES.md).
 
-## Current implementation: Waves 1–6
+## Current priority: Room 1
 
-**Start a show** opens four room choices: roundtable, heated panel, comedy room and serious newsroom. Choose serious, funny, satire or mixed tone, then write or narrate your premise. Virus reads it back before cast/setup approval. A premise can describe your own situation, fiction, a satire or a news programme. You can also simply start talking, or say “start a show”, “heated panel”, “comedy room” or “serious newsroom”. Each saved show keeps its own settings and conversation.
+Build the **Very Serious Meme Desk** first: a fictional Hindi/Hinglish satire newsroom with an original, composed vintage radio-style host, reusable panellists/guests, an in-room media screen, directed performance, retakes and video export. Settings, casting and character design belong inside the channel room. The new entry removes the mandatory Virus guide and sovereign/council journey.
 
-Participants now sit on rigged chairs around a conference table. Hands/forearms gesture during real speaking, listeners look toward the current speaker and the first round reaches everyone before directed follow-ups dominate. Every new speaker receives the latest actual text, including on their first turn. Desktop **TV camera** switches between speaker, two-person and wide framing. Drag/arrow keys/**Home** take manual control; **TV camera** re-enables automatic shots. VR keeps its head-controlled viewpoint.
+Shared contracts cover future news/comedy/reality channels and first-person Participant mode with hosts/judges from the start. Their complete environments and experiences follow Room 1. Character identities are saved for reuse; behaviour, psychology as fictional characterisation, likes/dislikes, backstory and visible canon are versioned and snapshotted per episode.
 
-The heated room can prepare the next reply/audio during playback and cut a speaker short when the response is ready. Actual cut-offs are saved with their timing and next contribution; at least every third contribution can finish. Pause, quiet mode, leaving VR and budget limits still stop the loop. Other rooms and **One contribution** remain sequential. This is bounded character performance, with one active show per client, rather than multiple continuously running background programmes.
+## Implementation status
 
-Select **हिन्दी** or say “Hindi mode” for Hindi replies and Sarvam speech. Existing English assignments are preserved, and Sarvam voices can also be selected/previewed in **Brain & voice**. The reasoning brain remains independently selectable. Text and recorded Hindi/Hinglish use the same confirmation path. Satire is labelled as fictional in captions and speech; mixed shows can combine analysis, humour and labelled satire.
+Fresh visits now open the channel studio and Room 1 workspace. Cast selection/design, rich character profiles, brain/voice preferences, channel/episode language, written or browser-narrated premise review, corrections, saved episodes and source/rundown controls belong inside the room. Realistic previews support desktop interaction and native headset ray/pinch/keyboards. No guide is automatically created or shown. Old session/project links retain the earlier UI through a separate compatibility entry.
 
-**Indian news** browses current publisher headlines/excerpts one at a time. Review the source, publication date and extracted context before using a story in a new discussion. Sources are the [Indian Express RSS feed](https://indianexpress.com/rss/) and BBC India. Feed failure is explicit; the app does not invent fresh headlines or claim to independently verify reports.
+S01–S04 are complete locally. S05–S07 now have the local speech, prepared-conversation and core-performance implementation; see [S05_S07_AUDIT.md](S05_S07_AUDIT.md) and the [earlier audit](S03_S04_AUDIT.md) and [studio API](STUDIO_API.md). Accepted characters save once and remain reusable after leaving a cast. Rich profiles include behaviour, psychology, likes/dislikes, backstory and scoped canon; creator-approved presets are fictional and editable. The studio layer enriches old characters without rewriting their original library. Exact receipts recover lost/partial joins without duplicates, and accepted take data snapshots remain immutable.
 
-Virus is visible when the app opens. Choose **Quick practice** or **Start talking**, then describe the situation in one sentence. Your words save first; Virus proposes a short readback, room, goal, constraints, criteria and useful roles. Correct the readback or choose **That’s right**, mix new people with saved characters, then **Review room & cast → Approve setup**. In discussion mode, **Start discussion** explicitly opens the floor. Browser profiles separate saved sessions and character libraries.
+Room 1 prepares the conversation before voices or playback. Scripts are optional; a delegated starter can save a cast and fictional premise. Each assigned model receives actual prior contributions and the corrected premise. Authored lines lock; selected edits retain other lines and cached recordings. V4 Flash model/persona pairs are available for new casts, with explicit V3 selection and preserved old assignments. Final WAV audio drives a local phonetic mouth track; pause and seek use the recording clock. Core procedural gestures and reactions have per-rig bindings, with remaining actions visibly pending. The fixed title board is replaced by a standalone GIF/video preview screen, without automatic AI ingestion. Room media uploads now persist without AI ingestion. The studio adds directed cameras, saved take editions, line trims/reordering/shot revisions, and horizontal/vertical MP4 recording with captions. Optional media understanding, full action coverage, physical headset acceptance and the separate future Live Desk remain later work. See [S09_S10_S12_AUDIT.md](S09_S10_S12_AUDIT.md).
 
-Characters discuss the reviewed situation through their own assigned brains, refer to committed arguments, answer directed challenges and retain their current positions. Roundtable, hearing and adversarial verbal formats share pause/resume, giving the floor, simpler explanations, examples, evidence requests, challenges, switch-sides and summary controls. Typed corrections save as exact user words and update a durable working topic before another turn. All later speakers receive that topic and the correction history, including after reload or a brain swap; the original setup/transcript remains historical evidence. **One contribution** advances once. **Stop/Finish** saves a partial summary; it does not invent a final user decision.
+S01–S12 focus on Room 1, with an initial recorded pilot at S10. S13–S15 complete additional rooms, Participant mode and live publication. Historical audit counts describe reused foundation tests rather than acceptance of these new experiences.
 
-Group discussion requires at least two real cast members. With only one, **Discuss with others** or “discuss it with others” invites two complementary AI perspectives, saves them in the reusable library and opens the actual group exchange. They initially inherit the current character's selected brain/voice, which can be changed individually. Interrupted invitations resume their saved identities without generating duplicates. **One-to-one coaching** is an explicit alternative. An essential question for the human pauses both scheduling and the clock; answer it or choose **Continue with assumptions**. Repeated intent questions and retired-topic drift get at most one model repair, then pause with an actionable error. See [the conversation repair audit](CONVERSATION_REPAIR_AUDIT.md).
+The current Room 1 app is at [app.gameofcodes.si](https://app.gameofcodes.si), password-protected according to the creator. S09/S10 and the technical S12 pilot are implemented; full S11 animation coverage, physical headset acceptance and human audience/comedy review remain open. The [hosted audit](S09_S10_S12_AUDIT.md) records historical deployment evidence, six real-provider pilots, actual video exports and saved-data preservation.
 
-The scheduler allows at most 20 group contributions within the approved duration, alongside the server's model/audio request budgets. Invalid/repeated output, provider failure, loss of connection or voice failure pauses automatic scheduling. Normal rooms coordinate voices one at a time; Quiet mode leaves reading time between contributions. Reload opens an interrupted discussion paused. A guide explanation, model/roster edit, Repeat, settings or leaving VR yields the floor first; resuming is an explicit user action.
+Recorded YouTube, Shorts and Instagram publishing is planned in [PUBLISHING_WAVES.md](PUBLISHING_WAVES.md), with channel/account setup, asset creation, creator instructions and P01–P10 acceptance gates. This is an approval-driven distribution track, separate from future interactive livestreaming; the plan does not claim existing publishing integrations.
 
-Say or type **Start**, **Continue**, **शुरू करो** or **जारी रखो** to open/resume an approved discussion. These commands do not become topic notes. Closing the character studio restores the discussion controls immediately. Provider shutdown dates remove retired models from the picker; an existing unavailable assignment identifies the affected character for **Brain & voice**, preserving its history until you choose a replacement.
+The [P01 publishing kit](publishing/baat-ka-bawaal/v1/index.html) prepares the creator-confirmed Baat Ka Bawaal channel, with Game of Codes Production as publisher and Chhola Bhatura as the featured host. It contains local artwork previews, editable templates, original-rig cutouts, audio/intro/outro assets, copy and source notices. Account connections and publishing remain later waves; final artwork acceptance is pending review.
 
-The throne court now surrounds the discussion with stone arches, windows, banners, a throne/dais, presenter circle and waiting bay. **Drag** or use arrow keys on the scene to look around; **Home** returns to the throne view. VR head movement stays under the user's control. Participants show real thinking/speaking states and turn their attention toward the speaker.
+P02 now adds **Settings → Publishing** locally, with protected YouTube/Instagram connections and private setup. Start with [creating your social accounts](P02_SETUP.md); no accounts or live grants have been created for you. The [P02 audit](P02_AUDIT.md) records local verification and outstanding DNS/gateway/provider gates. Full publishing and scheduling remain P03–P09.
 
-Select a participant to inspect their guiding code, current/earlier view and latest reasoning on the left. Selection leaves the speaker talking; **Give floor** explicitly pauses and redirects. The judgement surface on the right remains unrated until ratings exist; point awards/presenters arrive in W07. **Controls** reveals secondary discussion actions, and **Tools** reveals optional guide/header links. Native VR has small caption/action/information surfaces; its full panel opens for detailed controls, text entry or the studio.
+## AI director, voices and opening cameras
 
-**Characters** opens the avatar workshop. Point at a character's head/body or select a feature, try visual options directly on the 3D character, keep a feature while shuffling the rest, or speak/type a description for an AI suggestion. **Join the room** saves and adds the character in one action. New previews stay temporary until accepted. Saved characters use the same workshop; name, role and guiding-code edits are optional small controls. The primary journey has no scrolling appearance form or repeated Save buttons.
+Choose the shared **AI director** under **Settings** using the same provider/search/model selector as each character's **AI** tab. **Direct the show** accepts directions for playback, cameras, supported reactions and the existing room screen. Character dialogue models stay independent. The gateway advertises its available commands at `/api/studio/orchestration/capabilities` and rejects unsupported or stale plans; receipts recover a lost response without another inference request. See [STUDIO_API.md](STUDIO_API.md).
 
-The app uses a fixed viewport, one current guide choice group, paged notes/readbacks/context and native hand controls. **Details** keeps the optional form available, **Saved** opens history and **Ask freely** enables direct conversation. **Help** offers practice and simpler explanations. The introduction records actual guide selection, confirmed input, interruption/giving the floor and optional brain inspection; explicit skips remain distinct. Reload resumes saved progress. Core actions are designed for the first five minutes; the complete timed journey and optional scoring/presenter/rehearsal lessons connect in Waves 5–10 and still need unfamiliar-user/physical-headset validation.
+The **Voice** tab exposes 222 Sarvam V4 personas and 37 V3 voices from the pinned official catalogue. The default Hindi/Hinglish filter shows 129 choices; expand **Find a voice** to search and filter by style or display all languages. Existing saved voices and recordings are preserved.
 
-**Add context** accepts pasted text and `.txt`/PDF files under 2 MB. Review the paged excerpt before it is shared: at most 12 PDF pages/12,000 characters per item, four items and 24,000 characters total. Encrypted/scanned/unreadable PDFs need a pasted excerpt; no OCR is claimed. Only reviewed text reaches model requests. Notes distinguish exact user statements from proposed interpretations, and save failures retain a retry path.
-
-Virus and active characters now accept real typed or recorded input with captions, speech, Repeat, Quiet mode and immediate interruption. Choose a character to address them; open **Brain & voice**, or select their head twice, to inspect/change assignments. The connected cloud catalogues supply model choices, with actual response provenance saved per reply. Voice choices include connected OpenAI voices, permitted ElevenLabs voices and explicit device speech. No provider is silently substituted after failure.
-
-Direct requests such as **“open your brain”**, **“show notes”**, **“help”**, **“quiet”** and **“repeat that”** operate the matching controls before conversation or avatar generation. They share the typed/transcribed/in-world input path. Quoted instructions and ordinary questions about brains/models remain conversation; generated replies do not execute interface actions.
-
-Quest supports native hand selection for avatar features, visual choices, joining, brain/voice choices, voice preview, pacing, speech input, group controls and a small in-world keyboard. Detailed identity/role text editing currently uses the desktop control; complete hands-only journey validation remains W10 work. Final throne staging, scoring, presenters and panel rehearsal/feedback remain subsequent waves.
-
-**Human avatars throughout:** the room, Character Studio, previews and VR use six bundled Rocketbox people by default, including older session links and browsers with the former classic preference. A character keeps its selected body through room/editor changes, cast reordering and reload. Choose a person, tint their clothing, add supported accessories, or describe the closest look to the AI. Faces, hair and clothing cut belong to the selected person; independent modular hair/clothes require later compatible art. Model loading has an explicit retry and never substitutes a cartoon. See [ASSETS.md](ASSETS.md).
-
-The [show-room audit](SHOW_ROOMS_AUDIT.md) records the seated staging, TV camera, custom premises, Hindi/news and bounded cut-in follow-up.
-
-The new runtime starts without the retired application-preview service or a headless browser. Existing records and artifacts remain preserved. [Wave 1](WAVE_1_AUDIT.md), [Wave 2](WAVE_2_AUDIT.md), [Wave 3](WAVE_3_AUDIT.md), [Wave 4](WAVE_4_AUDIT.md), [Wave 5](WAVE_5_AUDIT.md) and [Wave 6](WAVE_6_AUDIT.md) record delivery, verification and constraints.
+With cameras on **Auto**, show playback starts with a deterministic fly-in, then cuts to a second camera as the host turns toward it. Preview and exported video share the recording clock. Manual camera choices and reduced motion bypass the fly-in; headset view stays under the user's control.
 
 ## Run
 
@@ -52,8 +40,11 @@ Requires **Node.js 22.13+ or Node 24** (including PDF text extraction).
 
 ```powershell
 npm install
+npm run setup:lips
 npm run dev
 ```
+
+Final-audio alignment uses the pinned Rhubarb 1.14.0 phonetic recognizer; FFmpeg must be available for non-WAV provider recordings. The Docker build installs these dependencies. `npm run setup:lips` installs the local aligner without touching credentials.
 
 Open **http://localhost:5173/** on this computer. For Quest, open the printed **HTTPS Network URL on port 5443** in Quest Browser on the same Wi-Fi, enable hand tracking, and select **Enter VR**. The development certificate may need to be accepted or replaced by a trusted development certificate. No controller or model connection is needed for the room/character-selection and save paths.
 
@@ -63,11 +54,13 @@ The session service binds to loopback on port **4176**. Vite proxies `/api` to i
 
 Put server keys in ignored **`.env.local`**, following `.env.example`, then restart `npm run dev`. One of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` enables that provider's model catalogue. OpenAI also supplies cloud speech/transcription. `SARVAM_API_KEY` enables Hindi speech through [Sarvam's REST API](https://docs.sarvam.ai/api-reference/text-to-speech/convert), using the documented Bulbul v3 model/speaker pairing and WAV output. A missing or failed Sarvam route leaves a visible recovery path and captions. `ELEVENLABS_API_KEY` is optional and needs voice-catalogue read and speech access. If its key lacks `voices_read`, the app reports the restriction; OpenAI/device voices remain separate choices. Never use a `VITE_` prefix for secrets. Local environment files are excluded from Git and Docker build context.
 
-Catalogues establish listed choices, not guaranteed inference access for every model. Requests can still fail because of model access, permissions or usage balance; the user explicitly chooses a replacement. The new session runtime currently supports cloud model calls. The retained local CLI adapters have not been generalised/verified for per-character session model selection and are not offered as connected choices.
+Catalogues establish listed choices, not guaranteed inference access for every model. Requests can still fail because of model access, permissions or usage balance; the user explicitly chooses a replacement. The current session runtime supports cloud model calls. The old local CLI coding adapters are archived and are not offered as connected choices.
 
 ## Saved sessions and compatibility
 
 - New data: `.sovereign/sessions/v1/<profile-id>/<session-id>.json`.
+- Studio channels/episodes: `.sovereign/studio/v1/<profile-id>/{channels,episodes}/<id>.json`. Accepted take snapshots live atomically with their episode. The studio UI uses these records independently of old session storage.
+- Studio character overlays: `.sovereign/studio/v1/<profile-id>/characters/<profile-id>.json`. New accepted characters, rich-profile revisions, portraits, recent use, learned canon and durable receipts live here. Legacy source libraries are unchanged by enrichment.
 - Character library and tutorial progress: `.sovereign/characters/v1/<profile-id>/library.json`. Guide snapshots, attributed notes, reviewed excerpts, proposal/model provenance, confirmations and setup step live with the session. Older drafts remain readable without a write-time migration on load.
 - Browser profile selection: `goc-session-profiles-v1` in local storage. Existing profile names/IDs can be reused without copying their old project context.
 - Session links use `?session=<uuid>`. Select the matching browser profile. Old `?project=` links are identified rather than reinterpreted as new sessions.
@@ -97,12 +90,24 @@ Unit/service coverage includes schemas, appearances/kept attributes, cast limits
 
 `npm start` serves the built client with the same desktop HTTP and headset HTTPS endpoints. Docker includes the shared session domain and does not install or start Chromium for the default runtime.
 
-## Retained legacy regression fixture
+For isolated browser verification, set `GOC_TEST_PORT` to an unused port before running Playwright. The test launcher uses separate desktop, headset and API ports rather than restarting another running app. The launcher also accepts `GOC_HTTP_PORT`, `GOC_HTTPS_PORT` and `GOC_API_PORT`; their defaults are unchanged. Restart an existing local application process to load the new server routes. The wave implementation does not restart another thread's app or deploy production.
 
-The outgoing source and tests remain available for migration/regression work. They do not supply the current default entry or service. Stop the ordinary development server first, then use:
+## Historical implementation and retired launchers
 
-```powershell
-npm run dev:legacy
-```
+The old coding-preview entry and its npm launch aliases are retired. `scripts/dev.mjs --legacy` fails before starting a service. Its unused source, tools, fixtures and assets are retained in [the historical archive](archive/legacy-coding/README.md), denied by the development file server and excluded from Docker. The [retirement inventory](RETIREMENT_PLAN.md) identifies reused modules and the visible guide/court replacement still due in S04/S09. Existing saved work and character IDs remain preserved.
 
-The retained browser suite is available through `npm run test:legacy`; it starts its own legacy server and needs the test browser. Legacy unit tests remain in `npm run test:unit`. The legacy fixture is development-only, uses the old data paths, and is not a prerequisite for the new session shell.
+W01–W06, [the conversation repair audit](CONVERSATION_REPAIR_AUDIT.md), and [the show-room audit](SHOW_ROOMS_AUDIT.md) describe the earlier prototype and its follow-ups. Their completion claims do not mean the new studio release is complete. The former [PRD](archive/product/PRD-discussion-rehearsal-2026-10-27.md) and [prototype README](archive/product/README-prototype-2026-10-27.md) are retained as history.
+
+## Make a recorded show
+
+Prepare the cast conversation and voices, open **Takes**, and save the current take. Select a line to trim, reorder or change its shot; **Save new version** preserves the original for undo. **Preview take** uses the cached recordings. Choose **Horizontal video** or **Vertical video** to record the saved take, then use **Exports** to refresh processing, preview/download MP4 or captions, and retry an interrupted server conversion. Recording is a desktop operation; headset head control remains independent. Pause during recording stops it early and keeps the take so it can be recorded again. Room **Practice** offers skippable five/ten-minute action-based introductions, not a forced timer.
+
+New storage includes profile-owned `media/` and `exports/` below `.sovereign/studio/v1/`. Export manifests retain internal take snapshots; public manifests omit psychology, private canon and credentials. The cloud runtime keeps the lip aligner in `/opt/rhubarb`, outside the persistent data volume. Immutable release deployments use `scripts/deploy-studio-release.sh`, the existing private environment and named data volume, a full data backup, exact release verification and image rollback.
+
+### Optional MetaHuman characters
+
+Settings has an optional MetaHuman switch and per-character appearance choices
+for mixed casts. It remains unavailable until an actual character export passes
+the portable rig/face inspection. Current avatars stay the default. See
+[MetaHuman integration and setup status](METAHUMAN_INTEGRATION.md). No MetaHuman
+production/Quest quality claim is made by the synthetic adapter tests.

@@ -1,0 +1,222 @@
+{
+  "repository": "https://github.com/microsoft/Microsoft-Rocketbox",
+  "revision": "0943055db6ec570bcef9f2c8b41c9e5467c808f9",
+  "clips": [
+    {
+      "id": "m_sit_table_idle_look_around",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_sit_table_idle_look_around.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_sit_table_idle_look_around.max.fbx",
+      "sha256": "57e42e4619f531b979852ae9f08470fd73c02b9fa994c0b6410ce1cb77e8cb06"
+    },
+    {
+      "id": "m_sit_table_idle_dust",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_sit_table_idle_dust.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_sit_table_idle_dust.max.fbx",
+      "sha256": "7196399f2e23239c420dda81527a0f638f84603375873bb19d8747fc66cc19ef"
+    },
+    {
+      "id": "m_sit_table_gestic_thoughtful",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_sit_table_gestic_thoughtful.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_sit_table_gestic_thoughtful.max.fbx",
+      "sha256": "22e4baa64e1a09dfb3a3b4dda433300d21dad72a0e37ebe746c31fe6fe3c1242"
+    },
+    {
+      "id": "m_sit_table_gestic_shrug_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_sit_table_gestic_shrug_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_sit_table_gestic_shrug_01.max.fbx",
+      "sha256": "d69cf86c90b0851c6ef1bd8372c35198020d2ccb57c08f9c9dc5985c9dc791c2"
+    },
+    {
+      "id": "m_sit_table_idle_yawn",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_sit_table_idle_yawn.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_sit_table_idle_yawn.max.fbx",
+      "sha256": "7c4ce491a310a5e9bf6a1bf3affb747924206be1f03c229de4b90b45685e76e5"
+    },
+    {
+      "id": "m_sit_table_idle_touch_face",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_sit_table_idle_touch_face.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_sit_table_idle_touch_face.max.fbx",
+      "sha256": "b595f08d63da949b7f0d82cd2a945055744089b3023dc8533916e7566af8b5dd"
+    },
+    {
+      "id": "m_gestic_listen_accept_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_listen_accept_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_listen_accept_01.max.fbx",
+      "sha256": "a48a54c173b43c683a5c8156205fd4fc5fcabb4e69866041a6eb01d642a14d76"
+    },
+    {
+      "id": "m_gestic_listen_deny_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_listen_deny_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_listen_deny_01.max.fbx",
+      "sha256": "9e867db3e745e06ae08d3e755b9d14af8811312d9e909d7a23103c6d2becc74d"
+    },
+    {
+      "id": "m_gestic_listen_angry_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_listen_angry_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_listen_angry_01.max.fbx",
+      "sha256": "78d9979db8d89c6a91e54ddb69ce6f223e2d693acdc8528d488bddcd12ba0980"
+    },
+    {
+      "id": "m_gestic_listen_neutral_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_listen_neutral_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_listen_neutral_01.max.fbx",
+      "sha256": "8aa72ed1767b7dc79f7d63ef32454a71c31f70c219e6822d67013a74c24d6253"
+    },
+    {
+      "id": "m_gestic_talk_neutral_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_talk_neutral_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_talk_neutral_01.max.fbx",
+      "sha256": "4c2b9ff481a9538dafbbe7f6aa6ffd6b948b5d34bb16a1e2052e943bbbbd3cd8"
+    },
+    {
+      "id": "m_gestic_talk_relaxed_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_talk_relaxed_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_talk_relaxed_01.max.fbx",
+      "sha256": "560c369eeec15c56534cdd8a87bdebd76f365a783c43b473e879a1707721be07"
+    },
+    {
+      "id": "m_gestic_talk_excited_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_talk_excited_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_talk_excited_01.max.fbx",
+      "sha256": "ce7638f6a36e6f49d81f7eeedae3b820eafa35025f6429cc92803155c76926d8"
+    },
+    {
+      "id": "m_gestic_presentation_left_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_presentation_left_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_presentation_left_01.max.fbx",
+      "sha256": "968bf455d5fb80172a4cff903456b9dcff2f0dca91d7b812f36b33ee651d917c"
+    },
+    {
+      "id": "m_gestic_presentation_right_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_presentation_right_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_presentation_right_01.max.fbx",
+      "sha256": "ba9a1e0bdf3dff77a7283d549c5eb69c95d676412069f0566c9d6021baf2760c"
+    },
+    {
+      "id": "m_gestic_laugh_low",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_laugh_low.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_laugh_low.max.fbx",
+      "sha256": "6aa3fe89175327d6b181e7712a3a590274dbac9f7a5a799f8e62409374514c09"
+    },
+    {
+      "id": "m_gestic_laugh_loud",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_laugh_loud.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_laugh_loud.max.fbx",
+      "sha256": "138f00c1a0f41a98d86270438fdc222715ff3e3761283aa88f7948d442124593"
+    },
+    {
+      "id": "m_gestic_laugh_extreme",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_laugh_extreme.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_laugh_extreme.max.fbx",
+      "sha256": "8046ee66ea54dc88f550c8a8c57aba1a926d53d4c8caf3ee8b75c456d3a0d0a3"
+    },
+    {
+      "id": "m_claphands_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_claphands_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_claphands_01.max.fbx",
+      "sha256": "b1db818b9381e959e367d5ce23babf26c27b3f2cdc5540f0cd0b6bda1d8694bc"
+    },
+    {
+      "id": "m_cheer_03",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_cheer_03.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_cheer_03.max.fbx",
+      "sha256": "93bee57cc1edfb9ccf45c530b144464a1fd55686724bb3b747fd12e3f513c4e7"
+    },
+    {
+      "id": "m_dancing_cool",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_dancing_cool.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_dancing_cool.max.fbx",
+      "sha256": "790ee8db973829da4169c05db95db352d1f3e9d6e55fa7b6b030b8287726ba90"
+    },
+    {
+      "id": "m_dancing_silly",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_dancing_silly.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_dancing_silly.max.fbx",
+      "sha256": "daa39a51e09bca3a29de6aee9b52f9ed2f0c2061291ffd92bba64edb708998bf"
+    },
+    {
+      "id": "m_sit_stand_up_chair_01",
+      "path": "Assets/Animations/all_animations_max_motextr_xyz/m_sit_stand_up_chair_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_xyz/m_sit_stand_up_chair_01.max.fbx",
+      "sha256": "69439ca9df8e330af75e82bd1b4e64e5e6858d3de0761515e67bad649a9989ac"
+    },
+    {
+      "id": "m_sit_down_chair_01",
+      "path": "Assets/Animations/all_animations_max_motextr_xyz/m_sit_down_chair_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_xyz/m_sit_down_chair_01.max.fbx",
+      "sha256": "2dbfccc5febc8d37ff9d1593f75253cbd8d5393c6a448695184755535491e4cf"
+    },
+    {
+      "id": "m_drink_drinking",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_drink_drinking.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_drink_drinking.max.fbx",
+      "sha256": "577292a3d7bde584d42bda4dfa98a612a371fa401af73f1634123c6d9fa88799"
+    },
+    {
+      "id": "m_documents_check",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_documents_check.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_documents_check.max.fbx",
+      "sha256": "c1f5f89116004401b5adc491ae1ac47d5467ca4257a350c4c284bf93bf9f35d1"
+    },
+    {
+      "id": "m_documents_note",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_documents_note.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_documents_note.max.fbx",
+      "sha256": "6c94b98eb0eebacb61ddb7afca84430b056e06d7489451a56c25242df4eeb4ed"
+    },
+    {
+      "id": "m_documents_take",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_documents_take.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_documents_take.max.fbx",
+      "sha256": "5e9cfcdf67c915089cb9e0277111c6f52073be90898ff13f4238a4eb9418bc8d"
+    },
+    {
+      "id": "m_work_table",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_work_table.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_work_table.max.fbx",
+      "sha256": "4dca2de964fec11c05c2083f3d9bdf7e36b7d51406d76e1d4704220c27071b90"
+    },
+    {
+      "id": "m_gestic_shrug_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_gestic_shrug_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_gestic_shrug_01.max.fbx",
+      "sha256": "75a4dc6f63a82473c48bf4b7378ddbf7ca431b20849443e8a240b1a460f59f26"
+    },
+    {
+      "id": "m_idle_scratch_head_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_idle_scratch_head_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_idle_scratch_head_01.max.fbx",
+      "sha256": "9e21aa6c05df867e31aeef85540db78ef188c730cf6e87e6d70483dbad391244"
+    },
+    {
+      "id": "m_walk_neutral_01",
+      "path": "Assets/Animations/all_animations_max_motextr_xy/m_walk_neutral_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_xy/m_walk_neutral_01.max.fbx",
+      "sha256": "e6805ae6b6b49fe10f06c1b17b14ddde90d09b9fea689ac34793df252f44dcd0"
+    },
+    {
+      "id": "m_crouch_in",
+      "path": "Assets/Animations/all_animations_max_motextr_xy/m_crouch_in.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_xy/m_crouch_in.max.fbx",
+      "sha256": "754439ed5112f6a88507e5a7e2dcbbf37d5885df233d5a931b121a0a5dad5920"
+    },
+    {
+      "id": "m_crouch_out",
+      "path": "Assets/Animations/all_animations_max_motextr_xy/m_crouch_out.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_xy/m_crouch_out.max.fbx",
+      "sha256": "5d7fd53d161465e828d1991edb76eb7256582872c3e3c3d310e3887e242c2fae"
+    },
+    {
+      "id": "m_idle_stretch_arms_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_idle_stretch_arms_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_idle_stretch_arms_01.max.fbx",
+      "sha256": "7430dc57cd72500dd98403efe6c0da5395321e1ac4787007140687248708ee60"
+    },
+    {
+      "id": "m_idle_roll_head_01",
+      "path": "Assets/Animations/all_animations_max_motextr_static/m_idle_roll_head_01.max.fbx",
+      "source": "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations/all_animations_max_motextr_static/m_idle_roll_head_01.max.fbx",
+      "sha256": "eeb1d957fcc17e585ba947e6a87b7cf3f34afbb4489620b71fc35955810bf082"
+    }
+  ]
+}

@@ -3,7 +3,7 @@ import {SessionError,updateRoster} from '../shared/session-domain.mjs';
 import {generateCharacter,characterFields} from '../shared/character-domain.mjs';
 import {controlDiscussion,nextDiscussionSpeaker,recordDiscussionTurn,elapsedDiscussion,activeParticipants} from '../shared/discussion-domain.mjs';
 import {currentBrief,needsBrief,saveDiscussionBrief,saveCastPlan,completeCastPlan,scopeVersion} from '../shared/discussion-memory.mjs';
-import {AVATAR_MODELS,modelForAppearance} from '../shared/avatar-catalog.mjs';
+import {GENERATED_MODELS,modelForAppearance} from '../shared/avatar-catalog.mjs';
 import {recordCutOff} from '../shared/room-performance.mjs';
 
 export function discussionId(requestId,label){const bytes=createHash('sha256').update(requestId+'/'+label).digest().subarray(0,16);bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;const h=bytes.toString('hex');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;}
@@ -38,7 +38,7 @@ export function createDiscussionService({ai,characters,load,persist,serial,infli
         const characterId=discussionId(requestId,'character-'+index),seed=Number.parseInt(characterId.replaceAll('-','').slice(0,8),16),base=generateCharacter(profile,{seed});
         let name=v.name;if(names.has(name.toLowerCase()))name=(name.slice(0,64)+' '+(index+2));names.add(name.toLowerCase());
         Object.assign(base,{name,personality:v.personality,code:v.code});
-        if(usedModels.has(base.avatar.realistic.modelId))base.avatar.realistic.modelId=AVATAR_MODELS.find(m=>!usedModels.has(m.id))?.id||base.avatar.realistic.modelId;usedModels.add(base.avatar.realistic.modelId);
+        if(usedModels.has(base.avatar.realistic.modelId))base.avatar.realistic.modelId=GENERATED_MODELS.find(m=>!usedModels.has(m.id))?.id||base.avatar.realistic.modelId;usedModels.add(base.avatar.realistic.modelId);
         return {id:characterId,createRequestId:discussionId(requestId,'library-'+index),role:v.role,fields:characterFields(Object.fromEntries(['name','avatar','personality','code','voicePreference'].map(k=>[k,base[k]]))),brain:structuredClone(source.brain),voice:structuredClone(voice)};
       });
       if(controller.signal.aborted)fail('Invitation interrupted.',409);

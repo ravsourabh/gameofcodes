@@ -1,5 +1,5 @@
 import { createRecord, validateRecord, isId, SessionError } from './session-domain.mjs';
-import {AVATAR_MODELS,modelForAppearance,validateRealistic} from './avatar-catalog.mjs';
+import {AVATAR_MODELS,GENERATED_MODELS,modelForAppearance,validateRealistic} from './avatar-catalog.mjs';
 
 export const APPEARANCE_OPTIONS = {
   face: ['oval', 'round', 'angular'],
@@ -27,7 +27,7 @@ function random(seed) {
 }
 export function appearanceFromSeed(seed) {
   const next = random(seed);
-  return { seed, realistic:{modelId:AVATAR_MODELS[seed%AVATAR_MODELS.length].id}, attributes: Object.fromEntries(Object.entries(APPEARANCE_OPTIONS).map(([key, values]) => {const pool=key==='accessory'?values.filter(v=>v!=='staff'):values;return [key,pool[Math.floor(next()*pool.length)]];})) };
+  return { seed, realistic:{modelId:GENERATED_MODELS[seed%GENERATED_MODELS.length].id}, attributes: Object.fromEntries(Object.entries(APPEARANCE_OPTIONS).map(([key, values]) => {const pool=key==='accessory'?values.filter(v=>v!=='staff'):values;return [key,pool[Math.floor(next()*pool.length)]];})) };
 }
 export function validateAppearance(avatar) {
   check(object(avatar) && Object.keys(avatar).every(key => ['seed', 'attributes','realistic'].includes(key)), 'Unexpected appearance fields.');
@@ -47,7 +47,7 @@ export function rerollAppearance(avatar, locked = [], seed = randomSeed(), onlyA
     const alternatives = values.filter(value => value !== attributes[key]);
     attributes[key] = alternatives[Math.floor(next() * alternatives.length)];
   }
-  const current=modelForAppearance(avatar),alternatives=AVATAR_MODELS.filter(m=>m.id!==current);
+  const current=modelForAppearance(avatar),alternatives=GENERATED_MODELS.filter(m=>m.id!==current);
   const modelId=(!onlyAttribute||onlyAttribute==='model')&&!locked.includes('model')?alternatives[Math.floor(next()*alternatives.length)].id:current;
   return { seed, attributes,realistic:{modelId} };
 }

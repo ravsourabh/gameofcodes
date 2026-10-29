@@ -1,0 +1,24 @@
+{
+  "modelId": "Business_Female_02",
+  "source": "public/avatars/rocketbox/Business_Female_02.glb",
+  "expressions": {
+    "neutral": {},
+    "smile": {
+      "AK_44_MouthSmileLeft": 0.58,
+      "AK_45_MouthSmileRight": 0.58
+    },
+    "surprised": {
+      "AK_03_BrowInnerUp": 0.6,
+      "AK_04_BrowOuterUpLeft": 0.42,
+      "AK_05_BrowOuterUpRight": 0.42,
+      "AK_25_JawOpen": 0.22
+    }
+  },
+  "renderer": "Blender 4.5 Cycles CPU",
+  "dimensions": [
+    768,
+    1024
+  ],
+  "transparent": true,
+  "note": "Original shipped model, original clothing; asset ID is not an episode character assignment."
+}

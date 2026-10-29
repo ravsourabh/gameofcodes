@@ -1,0 +1,3 @@
+export type SceneCraft={schemaVersion:1;situation:string;comicRule:string;objectives:{characterId:string;want:string;selfImage:string;pressure:string}[];characterBeats?:{characterId:string;trait:string;expression:string;mode:'active'|'restrained';reason:string}[];relationships:{characterId:string;otherId:string;basis:'established'|'episode';tension:string}[];alternatives:{discovery:string;consequence:string;payoff:string}[];chosenAlternative:number;detourOpportunity:string;ending:string};
+export function sceneCraftSchema(characterIds:string[]):unknown;
+export function validateSceneCraft(value:unknown,characterIds:string[]):SceneCraft|undefined;

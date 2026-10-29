@@ -1,5 +1,5 @@
 (() => {
-  const quotes = ['Different codes. One dilemma. Your call.', 'Make room for a different perspective.', 'A thoughtful question opens the discussion.'];
+  const quotes = ['Your characters. Your premise. Your show.', 'Every character has a story.', 'A straight face. An unexpected turn.'];
   let index = 0, finished = false;
   const rotate = setInterval(() => {
     index = (index + 1) % quotes.length;
@@ -16,9 +16,9 @@
   window.addEventListener('goc-ready', () => {
     finished = true; clearTimeout(timeout); document.getElementById('boot-screen').hidden = true;
   });
-  window.addEventListener('goc-boot-error', event => fail(event.detail || 'The court could not open. Please try again.'));
+  window.addEventListener('goc-boot-error', event => fail(event.detail || 'The studio could not open. Please try again.'));
   window.addEventListener('error', event => {
-    if (event.target?.tagName === 'SCRIPT' || event.error) fail('The court could not open. Please try again.');
+    if (event.target?.tagName === 'SCRIPT' || event.error) fail('The studio could not open. Please try again.');
   }, true);
   window.addEventListener('pagehide', () => clearInterval(rotate));
 })();

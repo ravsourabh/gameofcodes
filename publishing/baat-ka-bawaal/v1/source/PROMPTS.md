@@ -1,0 +1,7 @@
+# Profile badge prompt
+
+Generated October 30, 2026 with the built-in image generation tool. Edit target: `public/branding/baat-ka-bawaal/logo.png`. Original output is retained as `profile-badge-generated.png`; the app's existing logo is unchanged.
+
+Use case: logo-brand. Edit target: the attached existing Baat Ka Bawaal logo. Create ONE square 1:1 social profile badge for the exact same fictional Hindi comedy newsroom. Preserve the exact Hindi spelling 'बात का बवाल', the cream-gold 'बात का' and red 'बवाल', navy extrusion, red microphone and little yellow burst, the identity and its polished broadcast-graphics character. Recompose the long title into two compact bold readable rows inside the central 72% of a square dark midnight-navy background; make it readable within a circular profile crop. No part of the title or microphone should be clipped in the central circle. Warm gold fine border ring and a restrained red accent; strong simple silhouette, less busy than the source. No extra words, no Roman letters, no handle, no network trademarks, no watermarks, no mockup, no people. Premium clean crisp real finished badge art. Keep existing mark identity rather than inventing a different logo.
+
+All other kit artwork is composed from retained imagery and editable project-native HTML/CSS. Cast cutouts are Blender renders of shipped GLBs. No external-image search, new face generation or voice cloning is used in this kit.

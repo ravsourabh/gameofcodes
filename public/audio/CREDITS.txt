@@ -1,0 +1,19 @@
+"News Theme" Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0 License
+https://creativecommons.org/licenses/by/4.0/
+Source: https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1100544
+Original audio: https://incompetech.com/music/royalty-free/mp3-royaltyfree/News%20Theme.mp3
+ISRC USUAN1100544. Retrieved 2026-10-27.
+Adaptations: short excerpts, fades, volume reduced beneath dialogue.
+
+"Group giggling" by Nocturnal_Vanguard / AuraVoice. CC0.
+Source: https://opengameart.org/content/group-giggling
+Asset: https://opengameart.org/sites/default/files/group_giggling.ogg
+Adaptations: short excerpt, fades and volume adjustment.
+
+"Voices - Essentials" by Nox_Sound_Design. CC0-1.0.
+Source: https://nox-sound-design.itch.io/essentials-series-sfx-nox-sound
+Selected human chuckles and sighs from the two male and two female recording sets.
+Adaptations: short excerpts, silence trimmed, quiet loudness, fades, 24 kHz mono Vorbis.
+These optional character reaction clips are stock recordings, not cloned dialogue voices.
+Source filenames and hashes: reactions/SOURCES.json.

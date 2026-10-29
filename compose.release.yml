@@ -1,0 +1,13 @@
+services:
+  sovereign:
+    build: .
+    image: ${GOC_IMAGE:-sovereign:latest}
+    restart: always
+    ports:
+      - "5443:5443"
+    env_file:
+      - /home/deploy/sovereign/sovereign.env
+    volumes:
+      - sovereign-data:/app/.sovereign
+volumes:
+  sovereign-data:

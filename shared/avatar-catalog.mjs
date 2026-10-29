@@ -2,12 +2,19 @@
 export const AVATAR_MODELS = [
   {id:'Business_Male_04',name:'Adrian',description:'Bald, clean-shaven, shirt and waistcoat'},
   {id:'Business_Female_01',name:'Elena',description:'Shoulder-length hair, business jacket'},
-  {id:'Male_Adult_05',name:'Jonah',description:'Casual short-sleeved shirt and shorts'},
+  {id:'Male_Adult_05',name:'Jonah',description:'Grey stubble, tan vest over a green sweater, brown trousers'},
   {id:'Business_Male_02',name:'Marcus',description:'Business suit and short hair'},
   {id:'Business_Female_02',name:'Sofia',description:'Shoulder-length hair, glasses and a jacket'},
   {id:'Female_Adult_07',name:'Nadia',description:'Pulled-back hair, jacket and jeans'},
+  // Custom identity built on Rocketbox Male_Adult_15 from the creator's own reference images.
+  // Reserved: chosen deliberately, never handed out to generated or suggested characters.
+  {id:'Host_Anchor_01',name:'Host',description:'Oiled side-parted hair, moustache and goatee, cream kurta with a pen',reserved:true},
 ];
+// Characters saved without an explicit model were assigned by seed over the original six. Keep that
+// list fixed so appending people never changes an existing character's face.
+const LEGACY_MODELS=AVATAR_MODELS.slice(0,6);
+export const GENERATED_MODELS=AVATAR_MODELS.filter(m=>!m.reserved);
 export const REALISTIC_FEATURES=['model','colour','accessory'];
 export const OUTFIT_TINTS={plum:'#aaa0bc',teal:'#8db8af',rust:'#bc9a88',navy:'#8899b5',sage:'#a6b59c',ivory:'#e6e0d2',original:'#ffffff'};
-export function modelForAppearance(avatar){return avatar.realistic?.modelId || AVATAR_MODELS[avatar.seed%AVATAR_MODELS.length].id;}
+export function modelForAppearance(avatar){return avatar.realistic?.modelId || LEGACY_MODELS[avatar.seed%LEGACY_MODELS.length].id;}
 export function validateRealistic(value){return value && typeof value==='object' && !Array.isArray(value) && Object.keys(value).length===1 && AVATAR_MODELS.some(m=>m.id===value.modelId);}

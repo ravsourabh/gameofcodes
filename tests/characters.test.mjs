@@ -7,7 +7,17 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { generateCharacter, appearanceFromSeed, rerollAppearance, characterFields, validateAppearance } from '../shared/character-domain.mjs';
 import { createSessionService } from '../server/sessions.mjs';
-import {modelForAppearance} from '../shared/avatar-catalog.mjs';
+import {modelForAppearance,AVATAR_MODELS} from '../shared/avatar-catalog.mjs';
+
+test('reserved people are never generated and appended models keep older characters\' faces', () => {
+ const reserved=new Set(AVATAR_MODELS.filter(m=>m.reserved).map(m=>m.id)),original=AVATAR_MODELS.slice(0,6).map(m=>m.id);
+ assert.ok(reserved.size>0);
+ for(let seed=0;seed<400;seed++){
+  const generated=appearanceFromSeed(seed);assert.ok(!reserved.has(generated.realistic.modelId));
+  assert.ok(!reserved.has(rerollAppearance(generated,[],seed+1,'model').realistic.modelId));
+  assert.equal(modelForAppearance({seed,attributes:generated.attributes}),original[seed%6]);
+ }
+});
 
 test('appearance generation is deterministic and partial rerolls preserve explicit kept attributes', () => {
   for (const seed of [0, 72, 0x80000000, 0xffffffff]) {

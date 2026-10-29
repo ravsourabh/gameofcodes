@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "brandVersion": "baat-ka-bawaal-publishing-v1",
+  "createdAt": "2026-10-30",
+  "status": "prepared-for-visual-review",
+  "identityConfirmedByCreator": true,
+  "showName": "बात का बवाल",
+  "romanName": "Baat Ka Bawaal",
+  "channelDisplayName": "बात का बवाल | Baat Ka Bawaal",
+  "publisher": "Game of Codes Production",
+  "featuredCharacter": {"characterId": "c0c0e500-0e76-4667-ae3c-9890333ac8bb", "name": "Chhola Bhatura", "role": "host", "modelId": "Male_Adult_05", "expression": "neutral", "source": "Saved character appearance in episode-history-2026-10-27; creator confirmed host should lead the artwork on October 30."},
+  "supportingCharacters": [{"characterId": "c0d17c35-bde5-4fa4-8a3c-2c2ffa20b6ce", "name": "Chintu", "modelId": "Business_Male_02", "role": "panelist"}],
+  "tagline": "मुद्दा छोटा। बवाल बड़ा!",
+  "languages": ["hi-IN", "en-IN"],
+  "timezone": "Asia/Calcutta",
+  "studioOrigin": "https://app.gameofcodes.si",
+  "publicWebsite": null,
+  "contactEmail": null,
+  "youtubeChannelId": null,
+  "instagramAccountId": null,
+  "handleCandidates": ["baatkabawaal", "baatkabawaalshow", "baatkabawaalofficial"],
+  "handleAvailabilityChecked": false,
+  "palette": {"navy": "#06152a", "deepNavy": "#020813", "red": "#e52831", "gold": "#f5c76b", "cream": "#fff3d6", "muted": "#a6b7c9"},
+  "typography": {"hindi": "Noto Sans Devanagari", "latin": "Noto Sans Devanagari", "fontSource": "source/NotoSansDevanagari.ttf"},
+  "defaults": {
+    "format": "Fictional Hindi/Hinglish comedy newsroom",
+    "madeForKids": null,
+    "syntheticMediaDisclosure": null,
+    "postingSchedule": null,
+    "creditPolicy": "Include source, creator, license link and changes for every CC BY music excerpt; preserve in every derivative description."
+  },
+  "guidelines": {
+    "thumbnailHook": "A short accurate Hindi hook, ideally 2–6 words; no fabricated episode claim or dialogue.",
+    "captions": "At most two short lines per cue; phrase timing follows saved audio, not the whole speech. Keep away from faces and platform controls.",
+    "characterIdentity": "Chhola Bhatura is the default face of channel and lead episode artwork. Chintu is supporting or episode-specific. Use the actual accepted-take model and appearance; rig cutouts are not automatic character assignments.",
+    "publisherCredit": "Game of Codes Production",
+    "privateStudioLink": "Do not put the password-protected studio URL in public channel/episode calls to action."
+  }
+}

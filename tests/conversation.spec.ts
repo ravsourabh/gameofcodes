@@ -6,7 +6,7 @@ async function prepare(page:Page){
  let assigned:Session;
  await page.route('**/api/ai/catalog',r=>r.fulfill({json:{providers:[{id:'openai',name:'OpenAI',status:'Explicit test fixture',models:[{id:'gpt-test',name:'Fixture'}],audioModels:[]}],voices:[{provider:'openai',id:'alloy',name:'Alloy'}],voiceStatus:'Fixture',localStatus:'Unavailable'}}));
  await page.route('**/api/ai/assign?*',async r=>{const input=r.request().postDataJSON(),profile=new URL(r.request().url()).searchParams.get('profileId');const response=await page.request.get(`/api/sessions/${input.sessionId}?profileId=${profile}`);assigned=structuredClone((await response.json()).session);assigned.guidance!.guide!.brain=input.brain;assigned.guidance!.guide!.voice=input.voice;await r.fulfill({json:{session:assigned}});});
- await page.goto('/');await expect(page.locator('body')).toHaveAttribute('data-app-ready','true');
+ await page.goto('/?legacy-session=1');await expect(page.locator('body')).toHaveAttribute('data-app-ready','true');
  await leaveGuide(page);
  return(input:any,text:string)=>{const s=structuredClone(assigned),at=new Date().toISOString();s.exchanges=[{id:randomUUID(),requestId:input.requestId,characterId:input.characterId,userText:input.text,text,brain:{provider:'openai',model:'gpt-test-resolved'},epoch:s.epoch,at}];s.revision++;s.updatedAt=at;s.events.push({schemaVersion:1,id:randomUUID(),requestId:input.requestId,sequence:s.revision,type:'session.exchange',at,epoch:s.epoch,command:JSON.stringify({action:'talk',characterId:input.characterId,text:input.text})});return s;};
 }
