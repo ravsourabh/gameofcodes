@@ -4,6 +4,8 @@ Updated October 30, 2026 · Asia/Calcutta. This plan supersedes the earlier plan
 
 **Focus: Room 1, बात का बवाल (Baat Ka Bawaal).** The common structure includes future news/comedy/reality channels and first-person Participant mode immediately. Complete their full experiences after Room 1. No new date estimates are implied by wave numbering.
 
+**Latest cleanup release, October 30:** `studio-95777dd2baa17aa4` removes the retired Council/guide UI, legacy write/discussion/news/context APIs, PDF dependencies and obsolete verification/deployment scripts. Historical session links remain read-only. Watch mode auto-hides its overlay after inactivity and restores it on input. Current/previous release packages, saved records, credentials and required runtime assets are retained.
+
 **Production update, October 30:** `studio-db14a131cba5e943` is live at the private
 `app.gameofcodes.si` origin. The workspace UI, episode approval/deletion,
 approved-only story history, P01 asset gallery and P02 account-setup interface
