@@ -4,6 +4,18 @@ Updated October 30, 2026 · Asia/Calcutta. This plan supersedes the earlier plan
 
 **Focus: Room 1, बात का बवाल (Baat Ka Bawaal).** The common structure includes future news/comedy/reality channels and first-person Participant mode immediately. Complete their full experiences after Room 1. No new date estimates are implied by wave numbering.
 
+**Production update, October 30:** `studio-db14a131cba5e943` is live at the private
+`app.gameofcodes.si` origin. The workspace UI, episode approval/deletion,
+approved-only story history, P01 asset gallery and P02 account-setup interface
+are deployed. The motion inventory has 155 bindings, with 140 enabled and 15
+stage/partner actions withheld pending acceptance. MetaHuman/Unreal project
+integration is removed. Social accounts and OAuth credentials remain
+unconfigured; automatic publishing/scheduling is still future work. Live checks
+covered password protection, profile recovery, both export orientations and
+cloud cleanup. All 742 pre-existing stored files were preserved unchanged.
+
+The earlier milestone descriptions and October 28 subset below are historical.
+
 Current status: **S01–S04 are complete locally**. The first-room workspace, rich character library, exact premise review/correction and native headset controls are implemented. Evidence is in [S01_S02_AUDIT.md](S01_S02_AUDIT.md) and [S03_S04_AUDIT.md](S03_S04_AUDIT.md). S05–S07 now have local speech/alignment, optional prepared conversation and core procedural-performance implementations; see [S05_S07_AUDIT.md](S05_S07_AUDIT.md) for evidence and remaining acceptance. S09/S10 now add the newsroom set, directed cameras, practice, saved editions and horizontal/vertical MP4 output. S12 deploys the supported core pilot; S07/S11 now have 110 bound actions across all seven rigs, backed by native Rocketbox clips and authored contacts; see [S07_S11_AUDIT.md](S07_S11_AUDIT.md). Fifteen stage/partner actions, physical Quest acceptance and human audience pilots remain separate release gates. See [S09_S10_S12_AUDIT.md](S09_S10_S12_AUDIT.md).
 
 **Hosted animation subset, October 28:** the Microsoft/Rocketbox browser studio

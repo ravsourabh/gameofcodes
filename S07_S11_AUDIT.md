@@ -1,5 +1,15 @@
 # S07/S11 animation expansion
 
+**October 30 production update:** release `studio-db14a131cba5e943` at
+`app.gameofcodes.si` has 155 bindings, 140 enabled actions and 15 stage/partner
+actions gated out of preview, saved playback, validation and writer/director
+choices. Stationary continuity fixes were checked on one actual rig and
+structural capability checks covered all seven. This does not establish full
+visual acceptance on every rig or physical Quest performance. The MetaHuman
+adapter, settings, import tools and project assets have been removed; legacy
+saved rendering metadata remains readable. The October 28 account below is
+retained as historical verification, not current renderer scope.
+
 October 28, 2026. The supported Microsoft/Rocketbox animation subset is released
 on gameofcodes.si. S11 as a whole is not complete.
 

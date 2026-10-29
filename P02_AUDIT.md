@@ -2,7 +2,14 @@
 
 October 30, 2026 · Asia/Calcutta.
 
-**Status:** implemented and verified locally; live acceptance remains open. The creator confirmed that the YouTube and Instagram accounts have not been created. No real grant, account upload, public post, gateway/DNS change or production credential change was performed. No commits.
+**Status:** account setup and the protected asset gallery are deployed in release
+`studio-db14a131cba5e943` at `https://app.gameofcodes.si`. DNS, HTTPS, password
+protection, loopback-only upstream access, gateway proof and owner-profile
+recovery passed live checks. The full existing data set was preserved unchanged.
+YouTube and Instagram accounts have not been created and provider OAuth
+credentials remain unconfigured. Real grant/upload acceptance is still open;
+automatic publishing and scheduling remain future waves. No public content was
+posted. Source is pushed on the Channel Studio review branch.
 
 ## Implemented
 
