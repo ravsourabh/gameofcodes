@@ -36,6 +36,17 @@ With cameras on **Auto**, show playback starts with a deterministic fly-in, then
 
 ## Episode approval and deletion
 
+The desktop workspace keeps the stage beside a dedicated controls column.
+**Watch mode** expands the stage; **Show controls** returns to the workspace.
+Playback keeps its main actions visible, with **Direct the performance** and
+**Script & versions** opening the less frequent tools.
+
+**Takes** separates **Versions** (review and story approval), **Edit** (dialogue
+order, audio trims and camera shots), and **Export** (horizontal/vertical video
+and subtitle choices). **Episodes** supports search and approval filtering.
+**Settings** groups the writer, independent reviewer and director as the AI
+team, with language, sound, audience and workspace settings below.
+
 In **Episodes**, choose **Review & approve** to open an episode's saved versions.
 Save a take if needed, select the version you want, then choose **Approve this
 version**. Approval is a creator decision separate from the AI review and does
