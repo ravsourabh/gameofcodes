@@ -131,10 +131,19 @@ Prepare the cast conversation and voices, open **Takes**, and save the current t
 
 New storage includes profile-owned `media/` and `exports/` below `.sovereign/studio/v1/`. Export manifests retain internal take snapshots; public manifests omit psychology, private canon and credentials. The cloud runtime keeps the lip aligner in `/opt/rhubarb`, outside the persistent data volume. Immutable release deployments use `scripts/deploy-studio-release.sh`, the existing private environment and named data volume, a full data backup, exact release verification and image rollback.
 
-### Optional MetaHuman characters
+### Production renderer and private access
 
-Settings has an optional MetaHuman switch and per-character appearance choices
-for mixed casts. It remains unavailable until an actual character export passes
-the portable rig/face inspection. Current avatars stay the default. See
-[MetaHuman integration and setup status](METAHUMAN_INTEGRATION.md). No MetaHuman
-production/Quest quality claim is made by the synthetic adapter tests.
+The studio uses the Microsoft/Rocketbox browser renderer. The experimental
+MetaHuman renderer, import tools, settings and project assets have been removed.
+Legacy saved rendering fields remain readable without changing stored episodes.
+
+Production runs at **https://app.gameofcodes.si** behind the private studio
+password gate. Docker binds the studio port to server loopback; only the gateway
+can reach it. Publishing setup is available in Settings, together with the
+channel asset kit. Account creation and OAuth configuration are still required;
+automatic uploads and scheduling are later publishing waves.
+
+`node scripts/prepare-studio-release.mjs` builds and checks an explicitly scoped
+runtime archive in `.sovereign/releases/`. The archive excludes private storage,
+credentials and authoring experiments. Deploy it with the immutable release
+script and verify its exact release identity before considering it live.

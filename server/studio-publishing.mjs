@@ -93,7 +93,15 @@ export function createStudioPublishing({root,env=process.env,adapter=createPubli
    if(url.pathname===BASE+'/setup'&&req.method==='GET'){
     if(req.headers['sec-fetch-site']==='cross-site')fail('Open Publishing in this studio.',403);const setup=configuration();setup.ownerMatches=!!owner&&url.searchParams.get('profileId')?.toLowerCase()===owner;return json(res,200,{setup}),true;
    }
-   gatewayProof(req);profile(url);
+   gatewayProof(req);
+   // Moving the private studio to its canonical hostname must not strand the
+   // creator's records behind an origin-specific browser profile identifier.
+   // Only the authenticated canonical gateway can reveal this configured ID.
+   if(url.pathname===BASE+'/workspace-profile'&&req.method==='GET'){
+    if(req.headers['sec-fetch-site']==='cross-site')fail('Open your saved studio at its private address.',403);
+    return json(res,200,{profile:{id:owner,name:'My saved studio'}}),true;
+   }
+   profile(url);
    if(url.pathname===BASE+'/session'&&req.method==='POST'){
     sameOrigin(req);await input(req);let s=await session(req);if(!s){const payload=encode(JSON.stringify({owner,nonce:encode(randomBytes(24)),exp:now()+12*3600000}));const raw=payload+'.'+await mac(payload);s={raw};res.setHeader('Set-Cookie',cookie(cookieName,raw,12*3600));}
     return json(res,200,{csrf:await mac('csrf:'+s.raw),...await serial(async()=>snapshot(await load()))}),true;

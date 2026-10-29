@@ -1,4 +1,4 @@
-import {StudioMotionRig,loadStudioMotions,studioMotionsReady} from './studio-motion';
+import {StudioMotionRig,loadStudioMotions,studioMotionsReady,type StagePosture} from './studio-motion';
 import type {ActiveAction} from '../shared/studio/performance.mjs';
 import {facialReactionSample} from '../shared/studio/faces.mjs';
 import * as THREE from 'three';
@@ -6,8 +6,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import type { Character } from '../shared/session-domain.mjs';
 import {AVATAR_MODELS,modelForAppearance,OUTFIT_TINTS} from '../shared/avatar-catalog.mjs';
-import {metaHumanMorphWeights,type MetaHumanModel} from '../shared/studio/avatar-rendering.mjs';
-import {prepareMetaHumanModel} from './metahuman-model';
 
 // What the scene needs from any avatar, stylised or realistic.
 export interface SceneAvatar {
@@ -28,12 +26,9 @@ export const realisticModelFor = (character:Character) => modelForAppearance(cha
 
 const loader = new GLTFLoader();
 const models = new Map<string, Promise<THREE.Object3D>>();
-function loadModel(name: string,metaHuman?:MetaHumanModel) {
-  if(!metaHuman&&!AVATAR_MODELS.some(m=>m.id===name))return Promise.reject(new Error('Unknown human avatar.'));
-  if(metaHuman&&(metaHuman.status!=='ready'||metaHuman.url!==`/avatars/metahuman/${metaHuman.id}.glb`||!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(metaHuman.id)))return Promise.reject(new Error('This MetaHuman import is not ready.'));
-  const key=metaHuman?'metahuman:'+metaHuman.id+':'+metaHuman.sha256:name;
-  if (!models.has(key)) models.set(key, loader.loadAsync(metaHuman?metaHuman.url+'?v='+metaHuman.sha256:`/avatars/rocketbox/${name}.glb`).then(gltf => {
-    if(metaHuman)return prepareMetaHumanModel(gltf.scene,gltf.parser.json,metaHuman);
+function loadModel(name: string) {
+  if(!AVATAR_MODELS.some(m=>m.id===name))return Promise.reject(new Error('Unknown human avatar.'));
+  if (!models.has(name)) models.set(name, loader.loadAsync(`/avatars/rocketbox/${name}.glb`).then(gltf => {
     gltf.scene.traverse(object => {
       if (!(object instanceof THREE.Mesh)) return;
       object.frustumCulled = false; // Bounds come from the T-pose; posed arms can leave them.
@@ -45,8 +40,8 @@ function loadModel(name: string,metaHuman?:MetaHumanModel) {
       }
     });
     return gltf.scene;
-  }).catch(error=>{models.delete(key);throw error;}));
-  return models.get(key)!;
+  }).catch(error=>{models.delete(name);throw error;}));
+  return models.get(name)!;
 }
 
 // Bones moved procedurally. Rotations are expressed in character space (x right, y up, z towards the viewer).
@@ -78,25 +73,25 @@ export class RealisticAvatar implements SceneAvatar {
   private presence='Ready';private emphasis=false;
   private seatStyle=0;
   get stageSeat(){return this.seatStyle;}
-  get stageStand(){return this.motionPosture.stand;}
+  // The chair stays pushed back while its person is away from it.
+  get stageStand(){return Math.max(this.motionPosture.stand,this.motionPosture.away);}
   setSeatStyle(index:number){this.seatStyle=index%4;}
   private seatedFaceAnchor=new THREE.Vector3(0,1.1,0);
-  cameraAnchor(){this.group.updateWorldMatrix(true,false);const local=this.seatedFaceAnchor.clone();if(!this.seated)local.y-=this.seatDrop;else local.y-=this.seatDrop*this.motionPosture.stand;local.y+=this.motionPosture.jump+this.motionPosture.rootY;local.z+=this.motionPosture.back;return this.group.localToWorld(local);}
+  cameraAnchor(){this.group.updateWorldMatrix(true,false);const local=this.seatedFaceAnchor.clone();if(!this.seated)local.y-=this.seatDrop;else local.y-=this.seatDrop*this.motionPosture.stand;local.y+=this.motionPosture.jump+this.motionPosture.rootY;local.z+=this.motionPosture.back;local.x+=this.motionPosture.x;return this.group.localToWorld(local);}
   private seated=false;private seatDrop=0;private seatedFeet:Record<string,number[]>={};private standingFeet:Record<string,number[]>={};private floorFootY=.1;private holderYaw=0;private seatedRig=new Map<RigName,{base:THREE.Quaternion;parent:THREE.Quaternion;parentInverse:THREE.Quaternion}>();
   private gesture=0;private turnKind='opening';private room='conference';
   private studioActions:ActiveAction[]=[];private studioEnergy=.5;
-  private facialValues:Record<string,number>={};
   setStudioActions(actions:ActiveAction[],energy=.5){this.studioActions=actions;this.studioEnergy=energy;}
-  private skeletonBones=new Map<string,THREE.Bone>();private motions:StudioMotionRig;private motionError='';private nativeGlasses=false;private motionPosture={stand:0,jump:0,rootY:0,yaw:0,back:0};
+  private skeletonBones=new Map<string,THREE.Bone>();private motions:StudioMotionRig;private motionError='';private nativeGlasses=false;private motionPosture:StagePosture={stand:0,jump:0,rootY:0,yaw:0,back:0,x:0,away:0};
   async readyForMotions(){await loadStudioMotions();this.motionError='';}
   get motionFailed(){return !!this.motionError;}
-  capabilities(){return {motionReady:studioMotionsReady(),props:this.seated?['desk','chair','microphone','notes','pen','cup','laptop','watch',...(this.character.avatar.attributes.accessory==='glasses'||this.nativeGlasses?['glasses']:[])]:[],verified:this.state==='ready',bones:[...this.rig.keys()],morphs:this.metaHuman?['AA_VI_01_PP','AA_VI_02_FF','AA_VI_10_aa','AA_VI_11_E','AA_VI_13_O','AA_VI_14_U',...Object.keys(this.facialValues)]:[...new Set(this.faces.flatMap(face=>Object.keys(face.morphs)))]};}
+  capabilities(){return {motionReady:studioMotionsReady(),props:this.seated?['desk','chair','microphone','notes','pen','cup','laptop','watch',...(this.character.avatar.attributes.accessory==='glasses'||this.nativeGlasses?['glasses']:[])]:[],verified:this.state==='ready',bones:[...this.rig.keys()],morphs:[...new Set(this.faces.flatMap(face=>Object.keys(face.morphs)))]};}
   state:'loading'|'ready'|'error'='loading';
   private ownedMaterials:THREE.Material[]=[];
   private accessoryMeshes:THREE.Mesh[]=[];
   private feature?:string;
 
-  constructor(readonly character: Character, readonly model: string, private environment: THREE.Texture | null, private changed:()=>void=()=>{},readonly metaHuman?:MetaHumanModel) {
+  constructor(readonly character: Character, readonly model: string, private environment: THREE.Texture | null, private changed:()=>void=()=>{}) {
     this.motions=new StudioMotionRig({group:this.group,bone:name=>this.skeletonBones.get(name),aim:(bone,child,direction)=>this.aim(bone,child,direction),twist:(bone,child,index,pinky,direction)=>this.twist(bone,child,index,pinky,direction),turn:(name,axis,angle)=>this.turn(name,axis,angle)});
     void loadStudioMotions().then(()=>{if(!this.disposed)this.changed();}).catch(error=>{this.motionError=String(error);if(!this.disposed)this.changed();});
     this.phase = (character.avatar.seed % 1000) / 1000 * Math.PI * 2;
@@ -119,7 +114,7 @@ export class RealisticAvatar implements SceneAvatar {
 
   private load(){
     this.state='loading';this.updateLabel();this.changed();
-    loadModel(this.model,this.metaHuman).then(source=>{if(this.disposed)return;this.attach(cloneSkinned(source));this.state='ready';this.updateLabel();this.changed();}).catch(()=>{if(this.disposed)return;this.state='error';this.updateLabel();this.changed();});
+    loadModel(this.model).then(source=>{if(this.disposed)return;this.attach(cloneSkinned(source));this.state='ready';this.updateLabel();this.changed();}).catch(()=>{if(this.disposed)return;this.state='error';this.updateLabel();this.changed();});
   }
   private updateLabel(){const canvas=this.labelTexture.image as HTMLCanvasElement,ctx=canvas.getContext('2d')!;ctx.clearRect(0,0,512,100);ctx.fillStyle=this.emphasis?'#3e3625ed':'#132b28da';ctx.roundRect(8,8,496,84,20);ctx.fill();ctx.fillStyle=this.emphasis?'#ffe2a2':'#f3e8ca';ctx.font='27px Georgia';ctx.textAlign='center';ctx.fillText((this.state==='error'?'Avatar unavailable · Retry':this.state==='loading'?'Loading '+this.character.name:this.character.name+(this.presence==='Speaking'?' · Speaking':this.presence==='Thinking'?' · Thinking':'')).slice(0,35),256,61);this.labelTexture.needsUpdate=true;this.label.material.opacity=this.emphasis||this.state!=='ready'?1:.75;}
   retry(){if(this.state==='error')this.load();if(this.motionError)void this.readyForMotions().then(()=>this.changed()).catch(error=>{this.motionError=String(error);this.changed();});}
@@ -251,7 +246,6 @@ export class RealisticAvatar implements SceneAvatar {
   }
 
   private weight(name: string, value: number, signed=false) {
-    if(this.metaHuman){this.facialValues[name]=THREE.MathUtils.clamp(value,signed?-.35:0,1);return;}
     for (const { mesh, morphs } of this.faces) { const index = morphs[name]; if (index !== undefined) mesh.morphTargetInfluences![index] = THREE.MathUtils.clamp(value, signed?-.35:0, 1); }
   }
 
@@ -271,12 +265,11 @@ export class RealisticAvatar implements SceneAvatar {
     this.ring.visible = this.emphasis||!!this.feature || performance.now() - this.selectedAt < 2200 || this.state!=='ready';
     (this.ring.material as THREE.MeshBasicMaterial).color.set(this.presence==='Unavailable'||this.state==='error'?'#cc8c6c':'#e4c993');
     if (!this.loaded) return;
-    if(this.metaHuman){this.facialValues={};for(const face of this.faces)face.mesh.morphTargetInfluences!.fill(0);}
     const freeze=Math.max(0,...this.studioActions.filter(a=>['drama.freeze-disbelief','drama.dramatic-pause','comedy.deadpan-stare'].includes(a.actionId)).map(a=>a.intensity));
     const t = time / 1000 + this.phase, still = this.reducedMotion ? 0 : 1-freeze;
     if(freeze>0)camera=camera.clone().lerp(this.group.localToWorld(new THREE.Vector3(0,1.3,3)),Math.min(1,freeze));
     this.motionPosture=this.motions.posture(this.studioActions);const standing=this.motionPosture.stand;
-    this.holder.position.y=(this.seated?this.seatDrop*(1-standing):0)+this.motionPosture.jump+this.motionPosture.rootY;this.holder.position.z=this.motionPosture.back;this.holder.rotation.y=this.holderYaw+this.motionPosture.yaw;
+    this.holder.position.y=(this.seated?this.seatDrop*(1-standing):0)+this.motionPosture.jump+this.motionPosture.rootY;this.holder.position.z=this.motionPosture.back;this.holder.position.x=this.motionPosture.x;this.holder.rotation.y=this.holderYaw+this.motionPosture.yaw;
     for (const [name,item] of this.rig){item.bone.quaternion.copy(this.seated?this.seatedRig.get(name)?.base||item.base:item.base);if(standing)item.bone.quaternion.slerp(item.base,standing);}
 
     // Speech envelope, smoothed so the jaw neither snaps nor lags behind syllables.
@@ -356,9 +349,8 @@ export class RealisticAvatar implements SceneAvatar {
         case 'debate.lean-to-interject':this.turn('Spine',X,.16*k);this.turn('R Forearm',X,-.9*k);break;
       }
     }
-    if(this.metaHuman){const weights=metaHumanMorphWeights(this.facialValues);for(const face of this.faces)for(const [name,value] of Object.entries(weights)){const index=face.morphs[name];if(index!==undefined)face.mesh.morphTargetInfluences![index]=value;}}
-    this.motions.apply(this.studioActions,this.studioEnergy,this.seated,this.seatStyle,standing);this.motions.settleHands(this.studioActions,this.seatStyle,this.seated,standing);if(this.seated){const targets:Record<string,number[]>={};for(const side of ['L','R']){const rest=new THREE.Vector3().fromArray(this.seatedFeet[side]);rest.lerp(new THREE.Vector3().fromArray(this.standingFeet[side]),standing);rest.z+=this.motionPosture.back;targets[side]=rest.toArray();}this.motions.plantFeet(targets,1-THREE.MathUtils.smoothstep(standing,.35,1));}
-    this.label.position.y=1.98+(this.seated?this.seatDrop*(1-standing):0)+this.motionPosture.jump+this.motionPosture.rootY;
+    this.motions.apply(this.studioActions,this.studioEnergy,this.seated,this.seatStyle,standing);this.motions.settleHands(this.studioActions,this.seatStyle,this.seated,standing);if(this.seated){const targets:Record<string,number[]>={};for(const side of ['L','R']){const rest=new THREE.Vector3().fromArray(this.seatedFeet[side]);rest.lerp(new THREE.Vector3().fromArray(this.standingFeet[side]),standing);rest.z+=this.motionPosture.back;rest.x+=this.motionPosture.x;targets[side]=rest.toArray();}this.motions.plantFeet(targets,1-THREE.MathUtils.smoothstep(standing,.35,1));}
+    this.label.position.y=1.98+(this.seated?this.seatDrop*(1-standing):0)+this.motionPosture.jump+this.motionPosture.rootY;this.label.position.x=this.hitbox.position.x=this.motionPosture.x;this.label.position.z=this.hitbox.position.z=this.motionPosture.back;
     if(standing>0){this.group.updateMatrixWorld(true);const feet=['L Foot','R Foot'].map(name=>this.rig.get(name)?.bone.getWorldPosition(new THREE.Vector3()).y).filter((y):y is number=>y!==undefined);if(feet.length)this.holder.position.y+=THREE.MathUtils.clamp(this.floorFootY+this.motionPosture.jump-Math.min(...feet),-.45,.45)*THREE.MathUtils.smoothstep(standing,.05,.95);}
   }
 

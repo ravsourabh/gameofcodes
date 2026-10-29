@@ -18,6 +18,7 @@ test('publishing setup explains account creation and requires a separate private
  try{
   await page.goto('http://127.0.0.1:'+address.port+'/panel');await page.waitForFunction(()=>Boolean((window as unknown as {panelReady:boolean}).panelReady));
   await expect(page.getByRole('heading',{name:'Publishing connections'})).toBeVisible();await expect(page.getByRole('button',{name:'Connect Instagram'})).toBeDisabled();
+  await expect(page.getByRole('link',{name:'Open Baat Ka Bawaal brand kit'})).toHaveAttribute('href','/publishing/baat-ka-bawaal/v1/index.html');
   await page.getByText('1. Create your channel and account',{exact:true}).click();await expect(page.getByText('Game of Codes Production',{exact:true}).first()).toBeVisible();await expect(page.getByText('Creator',{exact:true})).toBeVisible();
   await page.getByText('2. Configure the developer apps',{exact:true}).click();await expect(page.getByRole('textbox',{name:'youtube callback'})).toHaveValue(setup.callbackUrls.youtube);
   connected=true;await page.getByRole('button',{name:'Refresh connections'}).click();await expect(page.getByText('Account ID: UC-CORRECT',{exact:false})).toBeVisible();

@@ -5,28 +5,29 @@ const families = {
   speaking: ['open-palms','explain-one-hand','count-on-fingers','emphasise-word','point-at-evidence','gesture-to-person','raise-finger','spread-arms','lean-forward'],
   listening: ['track-speaker','attentive-nod','puzzled-tilt','thoughtful-pause','acknowledge-point','look-between-speakers','prepare-response'],
   response: ['nod','shake-head','shrug','raise-eyebrow','sceptical-look','concede-point','dismiss-argument','reluctantly-agree','look-to-host'],
-  expression: ['smile','disgust','grin','frown','surprise','confusion','concern','embarrassment','frustration','disbelief','eye-roll','jaw-drop','relief'],
-  comedy: ['smirk','chuckle','laugh','belly-laugh','suppress-laughter','facepalm','double-facepalm','double-take','mock-shock','deadpan-stare','exaggerated-bow'],
+  expression: ['smile','disgust','grin','frown','surprise','confusion','concern','embarrassment','frustration','disbelief','eye-roll','jaw-drop','relief','wink','squint','pout','eyebrow-flash','puppy-eyes'],
+  comedy: ['smirk','chuckle','laugh','belly-laugh','suppress-laughter','facepalm','double-facepalm','double-take','mock-shock','deadpan-stare','exaggerated-bow','wink-at-camera','slow-clap','mic-drop','side-eye'],
   debate: ['raise-hand','lean-to-interject','stop-hand','point-to-opponent','fold-arms','push-chair-back','stand-to-object','turn-away','walk-out'],
   social: ['invite-speaker','yield-floor','introduce-guest','reassure','applaud','handshake','high-five','offer-help','knowing-glance'],
   movement: ['sit','stand','turn','walk','approach-person','change-seat','enter','exit','pace','crouch','jump','hop'],
-  celebration: ['fist-pump','victory-pose','cheer','clap-overhead','seated-dance','shoulder-groove','celebratory-jump','dance','group-dance'],
+  celebration: ['fist-pump','victory-pose','cheer','clap-overhead','seated-dance','shoulder-groove','celebratory-jump','dance','group-dance','raise-the-roof'],
   fatigue: ['yawn','slump','check-time','tap-fingers','chin-on-hand','drooping-eyelids','nod-off','sleep-on-desk','startle-awake'],
   props: ['rest-elbows','lean-on-desk','tap-table','read-notes','write','turn-page','pick-up-microphone','adjust-microphone','drink-water','type-on-laptop','hand-over-note'],
-  drama: ['freeze-disbelief','slow-turn-to-camera','dramatic-pause','exaggerated-sigh','pretend-faint','staged-stumble','awkward-recovery','storm-off','return-sheepishly'],
+  drama: ['freeze-disbelief','slow-turn-to-camera','dramatic-pause','exaggerated-sigh','pretend-faint','staged-stumble','awkward-recovery','storm-off','return-sheepishly','hands-on-head','sob'],
+  gesture: ['heart-hands','thumbs-up','thumbs-down','wave','blow-kiss','namaste','salute','ok-sign','peace-sign','finger-guns','air-quotes','chef-kiss','shush','mind-blown','hand-on-heart','beckon','rub-hands','call-me'],
 };
 const fullBody = new Set(['stretch','push-chair-back','stand-to-object','walk-out','exaggerated-bow','victory-pose','celebratory-jump','dance','group-dance','pretend-faint','staged-stumble','awkward-recovery','storm-off','return-sheepishly']);
-const facial = new Set(['blink','raise-eyebrow','sceptical-look','smirk','mock-shock','deadpan-stare','drooping-eyelids']);
-const vocal = new Set(['chuckle','laugh','belly-laugh','cheer','yawn','exaggerated-sigh']);
+const facial = new Set(['blink','raise-eyebrow','sceptical-look','smirk','deadpan-stare','drooping-eyelids','wink-at-camera','side-eye']);
+const vocal = new Set(['chuckle','laugh','belly-laugh','cheer','yawn','exaggerated-sigh','sob']);
 const propNeeds = {
   'check-time':['watch'],'adjust-glasses':['glasses'],'push-chair-back':['chair'],'change-seat':['chair'],'sit':['chair'],
   'sleep-on-desk':['desk'],'rest-elbows':['desk'],'lean-on-desk':['desk'],'tap-table':['desk'],
   'read-notes':['notes'],'write':['notes','pen'],'turn-page':['notes'],'hand-over-note':['notes'],
-  'pick-up-microphone':['microphone'],'adjust-microphone':['microphone'],'drink-water':['cup'],'type-on-laptop':['laptop'],
+  'pick-up-microphone':['microphone'],'adjust-microphone':['microphone'],'mic-drop':['microphone'],'drink-water':['cup'],'type-on-laptop':['laptop'],
 };
 function lanes(family,name) {
   if (name==='sleep-on-desk') return ['posture','upper-body','face','gaze','voice'];
-  if (family==='movement'||fullBody.has(name)) return ['posture','locomotion','upper-body'];
+  if (family==='movement'||fullBody.has(name)||['handshake','high-five','hand-over-note'].includes(name)) return ['posture','locomotion','upper-body'];
   if (family==='expression'||facial.has(name)) return ['face'];
   if (family==='listening'&&['track-speaker','look-between-speakers'].includes(name)) return ['gaze'];
   if (vocal.has(name)) return ['upper-body','face','voice'];

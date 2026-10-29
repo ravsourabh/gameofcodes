@@ -9,8 +9,8 @@ Current status: **S01–S04 are complete locally**. The first-room workspace, ri
 **Hosted animation subset, October 28:** the Microsoft/Rocketbox browser studio
 now includes 110 bound actions backed by 36 native clips. Fifteen stage/partner
 actions and the remaining S11 acceptance work are still pending. The experimental
-MetaHuman GLB is excluded. Native Unreal development is a separate renderer path;
-see [the separation strategy](METAHUMAN_INTEGRATION.md).
+MetaHuman/Unreal integration has since been pruned at the creator's request.
+The active renderer remains Microsoft/Rocketbox.
 
 ## Overview
 
@@ -37,7 +37,7 @@ S10 is the first usable recorded-pilot milestone with an explicitly supported ac
 
 ## Recorded publishing priority P01 to P10
 
-The October 30 publishing request adds an independent execution sequence in [PUBLISHING_WAVES.md](PUBLISHING_WAVES.md). Start from the usable Room 1 take/export pipeline, before additional rooms and live broadcasting; pending universal animation, Unreal and physical-headset gates do not block recorded publishing development. Actual output-quality checks still gate each approved release. S16 remains last/future.
+The October 30 publishing request adds an independent execution sequence in [PUBLISHING_WAVES.md](PUBLISHING_WAVES.md). Start from the usable Room 1 take/export pipeline, before additional rooms and live broadcasting; pending physical-headset gates do not block recorded publishing development. Actual output-quality checks still gate each approved release. S16 remains last/future. The MetaHuman/Unreal experiment is removed from current scope.
 
 | Wave | Outcome |
 | --- | --- |

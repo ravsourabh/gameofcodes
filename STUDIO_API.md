@@ -187,25 +187,11 @@ Settings presents separate Dialogue writer and Performance director controls. Ca
 
 Scene turns can use `detached: true`. The production endpoint returns HTTP 202 with the request ID immediately; the client polls the owned progress endpoint with `requestId` until the saved contribution is ready. This avoids keeping a model request open through a reverse proxy. Repeating the same background request does not launch a second model call; conflicting reuse of a request ID is rejected. Pause still cancels the model task, and a returning browser can attach to a task already running. Completed scripts remain checkpointed before director staging.
 
-## Optional MetaHuman appearance
+## Rendering compatibility
 
-`GET /api/studio/avatar-renderers` returns the installed, inspected MetaHuman
-catalogue, per-model readiness/reason and an `available` flag. It never fetches
-remote character URLs. The default catalogue is empty.
-
-Channel `definition.avatarRendering` is optional:
-
-```json
-{
-  "metaHuman": true,
-  "assignments": [{"characterId": "<owned UUID>", "modelId": "epic-sample-v1"}]
-}
-```
-
-The normal revision/receipt PATCH applies. Enabling/selecting requires a ready
-installed asset and owned character IDs; disabling remains possible when an
-asset is missing. Other channel edits and reads preserve prior choices. This
-does not edit character appearance, personality, voice or AI assignments. New
-takes snapshot the current rendering preference; derived editions inherit the
-source take's preference, and legacy takes retain the original avatars.
-See [asset import and acceptance](METAHUMAN_INTEGRATION.md).
+The active renderer is Microsoft/Rocketbox. The experimental avatar catalogue
+endpoint and MetaHuman selection are retired. Existing optional
+`definition.avatarRendering` and take snapshot fields remain valid legacy data;
+they do not select a renderer or require an Epic asset. Reads do not rewrite
+saved records. New takes use the current avatars without renderer-selection
+metadata.

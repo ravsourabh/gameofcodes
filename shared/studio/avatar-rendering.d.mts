@@ -1,12 +1,4 @@
 export type AvatarRendering={metaHuman:boolean;assignments:{characterId:string;modelId:string}[]};
-export type MetaHumanModel={id:string;name:string;url:string;sha256:string;heightM:number;status:'ready'|'unavailable';reason?:string;sourceUrl:string};
-export type MetaHumanCatalogue={schemaVersion:1;models:MetaHumanModel[];available:boolean;reason?:string};
 export const DEFAULT_AVATAR_RENDERING:Readonly<AvatarRendering>;
 export function validateAvatarRendering(value:unknown):AvatarRendering;
 export function avatarRendering(value?:AvatarRendering):AvatarRendering;
-export function metaHumanFor(characterId:string,value?:AvatarRendering):string|null|undefined;
-export const METAHUMAN_BONES:Readonly<Record<string,string>>;
-export const METAHUMAN_REQUIRED_BONES:string[];
-export const METAHUMAN_REQUIRED_MORPHS:string[];
-export function inspectMetaHumanGltf(gltf:any):{bones:number;morphs:number};
-export function metaHumanMorphWeights(values:Record<string,number>):Record<string,number>;

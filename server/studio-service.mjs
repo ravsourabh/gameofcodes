@@ -15,8 +15,6 @@ import {createStudioSpeech} from './studio-speech.mjs';
 import {createStudioProduction} from './studio-production.mjs';
 import {createStudioOutput} from './studio-output.mjs';
 import {validateEdition,defaultEdition} from '../shared/studio/edition.mjs';
-import {createStudioAvatars} from './studio-avatars.mjs';
-import {avatarRendering} from '../shared/studio/avatar-rendering.mjs';
 import {createStudioPublishing} from './studio-publishing.mjs';
 import {approvedStoryTake} from '../shared/studio/story-history.mjs';
 
@@ -51,7 +49,6 @@ function advance(record,input,operation,hash,invalidate=false){
 
 export function createStudioService({root,characters,loadLegacySession,ai,onError=()=>{},replace,speech:providedSpeech,publishing:providedPublishing}){
   const store=createStudioStore({root,validate:validateStudioRecord,replace});
-  const avatars=createStudioAvatars({root});
   const publishing=providedPublishing||createStudioPublishing({root});
   const people=createStudioCharacters({root,legacy:characters,episodes:store});
   const library=profileId=>people.get(profileId);
@@ -72,7 +69,6 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
         if(await publishing.handle(req,res,url))return;
         if(req.headers['sec-fetch-site']==='cross-site')return json(res,403,{error:'Use the studio service from this application.'});
         if(url.pathname==='/api/studio/catalog'&&req.method==='GET')return json(res,200,studioCatalogue());
-        if(url.pathname==='/api/studio/avatar-renderers'&&req.method==='GET')return json(res,200,await avatars.catalogue());
         if(url.pathname==='/api/studio/orchestration/capabilities'&&req.method==='GET')return json(res,200,directorCapabilities());
         const profileId=id(url.searchParams.get('profileId'));
         const directing=/^\/api\/studio\/channels\/([0-9a-f-]+)\/orchestrate$/.exec(url.pathname);
@@ -209,7 +205,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
               if(!Object.hasOwn(CHANNELS,input.templateId))fail('Choose a registered channel template.');
               const definition=input.definition===undefined?{...structuredClone(CHANNELS[input.templateId]),id:newId}:input.definition;
               validateChannel(definition);if(definition.id!==newId)fail('Channel identity mismatch.');await owned(profileId,definition.defaultCast||[]);
-              if(definition.avatarRendering){await owned(profileId,definition.avatarRendering.assignments);try{await avatars.validateSelection(definition.avatarRendering);}catch(error){fail(error.message);}}
+              if(definition.avatarRendering)await owned(profileId,definition.avatarRendering.assignments);
               Object.assign(saved,{templateId:input.templateId,definition});
             }else{
               const channel=await store.load(profileId,'channels',id(input.channelId));if(!channel)fail('Choose a saved channel in this profile.',404);
@@ -235,7 +231,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
             if(input.screen!==null){fields(input.screen,['assetId','muted','loop','startMs','sourceUrl'],'screen');validateScreenSourceUrl(input.screen.sourceUrl);await output.getMedia(profileId,input.screen.assetId);if(typeof input.screen.muted!=='boolean'||typeof input.screen.loop!=='boolean'||!Number.isFinite(input.screen.startMs)||input.screen.startMs<0)fail('Choose saved screen settings.');}next.screen=structuredClone(input.screen);
           }else if(collection==='channels'){
             validateChannel(input.definition);if(input.definition.id!==recordId)fail('Channel identity mismatch.');await owned(profileId,input.definition.defaultCast||[]);
-            if(input.definition.avatarRendering){await owned(profileId,input.definition.avatarRendering.assignments);if(canonical(input.definition.avatarRendering)!==canonical(saved.definition.avatarRendering??null))try{await avatars.validateSelection(input.definition.avatarRendering);}catch(error){fail(error.message);}}
+            if(input.definition.avatarRendering)await owned(profileId,input.definition.avatarRendering.assignments);
             next.definition=structuredClone(input.definition);
           }else if(operation==='approve-story'){
             const take=saved.takes.find(item=>item.id===id(input.takeId)&&!item.deletedAt);
@@ -281,8 +277,7 @@ export function createStudioService({root,characters,loadLegacySession,ai,onErro
               next.takes.push({schemaVersion:1,kind:'studio-take',id:takeId,acceptedAt:next.updatedAt,sourceRevision:saved.revision,epoch:saved.epoch,channelRevision:saved.channelRevision,libraryRevision:actors.revision,planSnapshot:acceptedPlan,castSnapshots,humanInputs:structuredClone(answers)});
               if(saved.production)next.takes.at(-1).productionSnapshot=structuredClone(saved.production);
               const take=next.takes.at(-1);
-              const currentChannel=await store.load(profileId,'channels',saved.plan.channelId);take.avatarRendering=avatarRendering(currentChannel?.definition.avatarRendering);
-              if(input.sourceTakeId){const source=saved.takes.find(take=>take.id===input.sourceTakeId&&!take.deletedAt);if(!source?.productionSnapshot||source.planSnapshot.viewerMode!=='director')fail('Choose a saved director take to edit.');Object.assign(take,{sourceTakeId:source.id,planSnapshot:structuredClone(source.planSnapshot),castSnapshots:structuredClone(source.castSnapshots),productionSnapshot:structuredClone(source.productionSnapshot),avatarRendering:avatarRendering(source.avatarRendering)});}
+              if(input.sourceTakeId){const source=saved.takes.find(take=>take.id===input.sourceTakeId&&!take.deletedAt);if(!source?.productionSnapshot||source.planSnapshot.viewerMode!=='director')fail('Choose a saved director take to edit.');Object.assign(take,{sourceTakeId:source.id,planSnapshot:structuredClone(source.planSnapshot),castSnapshots:structuredClone(source.castSnapshots),productionSnapshot:structuredClone(source.productionSnapshot)});}
               if(take.productionSnapshot){if(take.productionSnapshot.phase!=='ready'&&take.productionSnapshot.status!=='completed')fail('Finish preparation before accepting a performed take.',409);take.edition=input.edition||defaultEdition(take);try{validateEdition(take.edition,take);}catch(error){fail(error.message);}if(take.edition.screen)await output.getMedia(profileId,take.edition.screen.assetId);}
             }
           }

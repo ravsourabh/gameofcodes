@@ -4,7 +4,7 @@ services:
     image: sovereign:latest
     restart: always
     ports:
-      - "5443:5443"
+      - "127.0.0.1:5443:5443"
     env_file:
       - sovereign.env
     volumes:

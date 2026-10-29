@@ -113,20 +113,6 @@ generated characters. Build steps: `concept/host/build/README.md`.
 
 Rebuild: `python scripts/fetch-studio-motions.py`, then Blender 4.5 `--background --python scripts/convert-studio-motions.py`. Inputs remain in ignored `.sovereign/asset-build/rocketbox/motions/`. The shipped JSON is about 3.6 MB and is cached once per page, with 20 Hz source joint directions, palms and pelvis tracks; frames are interpolated on the recording clock. Retargeting preserves each destination skeleton's bone lengths.
 
-`src/studio-motion.ts` supplies authored contact IK, seated/standing transitions, jump/hop arcs and procedural desk props (cup, microphone, paper, pen, laptop and watch). These are local geometry; no extra downloaded prop licence is required. Facial reactions reuse the shipped face shapes and leave speech visemes authoritative. Some related action IDs deliberately share a native clip with different pose/contact/face treatment. See [coverage and remaining staging](S07_S11_COVERAGE.md); 110 bindings are not 110 distinct mocap recordings.
+`src/studio-motion.ts` supplies authored contact IK, seated/standing transitions, jump/hop arcs and procedural desk props (cup, microphone, paper, pen, laptop and watch). These are local geometry; no extra downloaded prop licence is required. Hand gestures (heart hands, thumbs, namaste, salute, finger guns and others) place a wrist or fingertip by IK with per-finger curls and an explicitly aimed thumb, because the Rocketbox rest thumb points into the palm. Facial reactions reuse the shipped face shapes and leave speech visemes authoritative; winks close one eye and pouts use the rounded-lip visemes only while silent. Some related action IDs deliberately share a native clip with different pose/contact/face treatment.
 
-## Optional MetaHuman assets
-
-The Settings renderer switch supports per-character assignments alongside current
-avatars in the opt-in local lab. `public/avatars/metahuman/epic-average-male-01-v1.glb` is an experimental local
-conversion of `AverageMale_Head01` from Epic's [MetaHuman Crowd Sample](https://www.fab.com/listings/5f481d73-afb1-4d94-ba6e-7cabf5d296fa).
-It is about 35.2 MB, with 68,965 triangles, one shared skin and 52 facial controls.
-The adjacent notice retains Epic provenance and licence references. Reproduction
-sources are in `scripts/metahuman/`; licensed intermediates remain ignored.
-The earlier OpenRigLogic sample supplies DNA/controls rather than a character
-mesh and is not the source of this identity. See [integration and acceptance](METAHUMAN_INTEGRATION.md).
-Synthetic rig tests use the existing MIT model solely as a format fixture; that
-fixture is not shipped as a MetaHuman. Epic asset licences remain distinct from
-the Microsoft MIT licences and the OpenRigLogic software licence. This character
-failed visual acceptance and is excluded from the Rocketbox website release. Physical Quest performance
-and strand-based hair are outside the verified conversion.
+Walking, exits, partner meetings and seat changes follow authored routes in `shared/studio/stage-paths.mjs`: out through the gap beside the chair, along a lane behind the chairs, and back. Legs use the native `m_walk_neutral_01` cycle phase-locked to distance travelled (1.0 m per cycle measured best on the bundled rigs). The studio scene gives partnered actions the partner's seat offset and adds the partner's mirrored part. See [coverage](S07_S11_COVERAGE.md); 155 bindings are not 155 distinct mocap recordings.

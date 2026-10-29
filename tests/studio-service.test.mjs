@@ -11,8 +11,6 @@ import {createStudioStore} from '../server/studio-store.mjs';
 import {validateStudioRecord} from '../shared/studio/records.mjs';
 import {episodeInput} from '../shared/studio/episodes.mjs';
 import {seedDiscussion,discussionFixtureAI} from './fixtures/discussion.mjs';
-import {metaHumanRigFixture} from './fixtures/metahuman-rig.mjs';
-import {installMetaHuman} from '../scripts/install-metahuman.mjs';
 
 async function fixture(run){
   const root=await mkdtemp(path.join(tmpdir(),'goc-studio-test-')),seed=await seedDiscussion(root),ai=discussionFixtureAI().ai;
@@ -43,14 +41,34 @@ test('studio HTTP persists two independent channels and episodes across restart,
   assert.equal((await call(route('channels'))).data.channels.length,2);
 }));
 
-test('MetaHuman room choices are owned, reversible and pinned in takes without changing characters',()=>fixture(async({root,call,route,createChannel,createEpisode,actors,change,restart})=>{
-  let channel=await createChannel();const people=(await call(route('characters'))).data.library.characters,episode=await createEpisode(channel),setting={metaHuman:true,assignments:[{characterId:actors[0],modelId:'test-rig'}]};
-  assert.equal((await call('/api/studio/avatar-renderers')).data.available,false);const denied=await call(route('channels/'+channel.id),'PATCH',change(channel,'revise',{definition:{...channel.definition,avatarRendering:setting}}));assert.equal(denied.status,400);assert.equal((await call(route('channels/'+channel.id))).data.channel.revision,channel.revision);
-  const input=path.join(root,'fixture.glb'),license=path.join(root,'NOTICE.txt');await writeFile(input,await metaHumanRigFixture());await writeFile(license,'MIT synthetic adapter test, not an Epic MetaHuman.');await installMetaHuman({root,input,license,id:'test-rig',name:'Synthetic rig fixture',sourceUrl:'https://www.fab.com/listings/27a81942-69bf-498e-a41f-004d0d2db37b'});
-  const save=change(channel,'revise',{definition:{...channel.definition,avatarRendering:setting}});channel=(await call(route('channels/'+channel.id),'PATCH',save)).data.channel;assert.deepEqual(channel.definition.avatarRendering,setting);restart();assert.equal((await call(route('channels/'+channel.id),'PATCH',save)).data.replayed,true);
-  const accepted=(await call(route('episodes/'+episode.id),'PATCH',change(episode,'accept-take',{takeId:randomUUID()}))).data.episode;assert.deepEqual(accepted.takes[0].avatarRendering,setting);
-  channel=(await call(route('channels/'+channel.id),'PATCH',change(channel,'revise',{definition:{...channel.definition,avatarRendering:{...setting,metaHuman:false}}}))).data.channel;assert.equal(channel.definition.avatarRendering.metaHuman,false);assert.deepEqual((await call(route('characters'))).data.library.characters,people);assert.deepEqual((await call(route('episodes/'+episode.id))).data.episode.takes[0],accepted.takes[0]);
-  const unknown=await call(route('channels/'+channel.id),'PATCH',change(channel,'revise',{definition:{...channel.definition,avatarRendering:{metaHuman:true,assignments:[{characterId:randomUUID(),modelId:'test-rig'}]}}}));assert.equal(unknown.status,400);assert.equal(unknown.data.code,'UNKNOWN_CHARACTER');
+test('legacy avatar metadata remains readable across restart without an avatar catalog or new renderer selections',()=>fixture(async({root,profileId,call,route,createChannel,createEpisode,actors,change,restart})=>{
+  let channel=await createChannel(),episode=await createEpisode(channel);
+  const people=(await call(route('characters'))).data.library.characters;
+  const setting={metaHuman:true,assignments:[{characterId:actors[0],modelId:'removed-model'}]};
+  episode=(await call(route('episodes/'+episode.id),'PATCH',change(episode,'accept-take',{takeId:randomUUID()}))).data.episode;
+  // Seed records as saved by the retired integration; no avatar asset is needed.
+  channel.definition.avatarRendering=structuredClone(setting);
+  episode.plan.channelSnapshot.avatarRendering=structuredClone(setting);
+  episode.takes[0].avatarRendering=structuredClone(setting);
+  episode.takes[0].planSnapshot.channelSnapshot.avatarRendering=structuredClone(setting);
+  const store=createStudioStore({root,validate:validateStudioRecord});
+  await store.persist(channel,'channels');await store.persist(episode,'episodes');
+  const oldTake=structuredClone(episode.takes[0]);restart();
+  assert.equal((await call(route('avatar-renderers'))).status,404);
+  assert.deepEqual((await call(route('channels/'+channel.id))).data.channel,channel);
+  assert.deepEqual((await call(route('episodes/'+episode.id))).data.episode,episode);
+  const revise=change(channel,'revise',{definition:{...channel.definition,name:'Legacy room renamed'}});
+  channel=(await call(route('channels/'+channel.id),'PATCH',revise)).data.channel;
+  assert.deepEqual(channel.definition.avatarRendering,setting);restart();
+  assert.equal((await call(route('channels/'+channel.id),'PATCH',revise)).data.replayed,true);
+  const accepted=await call(route('episodes/'+episode.id),'PATCH',change(episode,'accept-take',{takeId:randomUUID()}));
+  assert.equal(accepted.status,200);episode=accepted.data.episode;
+  assert.deepEqual(episode.takes[0],oldTake);
+  assert.equal(Object.hasOwn(episode.takes[1],'avatarRendering'),false);
+  restart();assert.deepEqual((await call(route('episodes/'+episode.id))).data.episode,episode);
+  assert.deepEqual((await call(route('characters'))).data.library.characters,people);
+  const unknown=await call(route('channels/'+channel.id),'PATCH',change(channel,'revise',{definition:{...channel.definition,avatarRendering:{...setting,assignments:[{characterId:randomUUID(),modelId:'removed-model'}]}}}));
+  assert.equal(unknown.status,400);assert.equal(unknown.data.code,'UNKNOWN_CHARACTER');
 }));
 
 test('channel cast defaults resolve owned identities without adding a mandatory guide',()=>fixture(async({call,route,createChannel,actors,change})=>{

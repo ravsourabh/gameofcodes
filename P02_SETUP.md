@@ -4,6 +4,28 @@ October 30, 2026 · Asia/Calcutta. P02 supplies the local Publishing settings an
 
 ## Start with these two accounts
 
+### Open the P01 downloads in the app
+
+In the authenticated studio, open **Settings → Publishing → Open Baat Ka Bawaal brand kit**.
+The same-origin address is `/publishing/baat-ka-bawaal/v1/index.html`. It provides all
+48 media outputs, individual downloads, channel copy and license notices. Accounts
+have not been created; OAuth credentials remain unconfigured. Automatic episode
+uploads and scheduling remain future work.
+
+`npm run build` packages the reviewed kit into `dist/publishing/baat-ka-bawaal/v1`
+through `scripts/copy-publishing-kit.mjs`. The release contains 57 files: 48 media
+outputs and nine gallery/copy/identity/font/license files. It excludes authoring
+templates, internal source records, cast metadata, source artwork, private host
+references, concept files and the duplicate ZIP. The source kit remains editable
+locally. Changed inputs fail the build until their reviewed hashes are updated in
+the copy script; rebuilding the artwork alone does not silently publish changes.
+
+The parent deployment task owns the full password gateway for `app.gameofcodes.si`,
+including **every `/publishing/` request**, media downloads and font/license files.
+The kit uses the app's existing static handler and requires that gateway; the
+studio link itself does not authenticate assets. Keep the backend port private.
+No gateway, DNS, credential or production change is performed by the build hook.
+
 ### YouTube
 
 1. Sign in to [YouTube](https://www.youtube.com/) using the Google account you want to own the show. You can use an existing Google account and create a separate show channel; you do not need to rename your personal Google account.

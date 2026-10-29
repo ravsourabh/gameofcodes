@@ -62,6 +62,14 @@ test('secure publishing requires gateway proof, canonical origin, owner, session
  assert.ok(owner);
 },{secure:true}));
 
+test('canonical private gateway restores the owner profile without opening a publishing session',()=>fixture(async({call,owner,root})=>{
+ assert.equal((await call('/workspace-profile','GET',undefined,{'X-GOC-Publishing-Gateway':null})).status,403);
+ assert.equal((await call('/workspace-profile','GET',undefined,{'X-Forwarded-Host':'gameofcodes.si'})).status,403);
+ assert.equal((await call('/workspace-profile','GET',undefined,{'Sec-Fetch-Site':'cross-site'})).status,403);
+ const result=await call('/workspace-profile');assert.equal(result.status,200);assert.deepEqual(result.data.profile,{id:owner,name:'My saved studio'});
+ assert.equal(result.headers.get('cache-control'),'no-store');assert.deepEqual(await readdir(root),[]);
+},{secure:true}));
+
 test('OAuth uses one-time browser-bound state, PKCE and a fixed callback; tokens remain encrypted',()=>fixture(async({root,connect,call,finish,stats,origin})=>{
  const b=await connect();assert.equal(new URL(b.url.searchParams.get('redirect_uri')).origin,origin);assert.equal(b.url.searchParams.get('code_challenge').length,43);
  const snapshot=await call('');assert.equal(snapshot.data.connections[0].account.name,'Baat Ka Bawaal');assert.equal(snapshot.data.connections[0].status,'connected');assert.equal(snapshot.data.unattendedPublishingEnabled,false);assert.doesNotMatch(snapshot.text,/ACCESS-SECRET|REFRESH-SECRET|verifier|csrf/);

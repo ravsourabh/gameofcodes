@@ -6,10 +6,10 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {XRHandModelFactory} from 'three/addons/webxr/XRHandModelFactory.js';
 import {RealisticAvatar,realisticModelFor} from './realistic-avatar';
-import {metaHumanFor,type AvatarRendering,type MetaHumanModel} from '../shared/studio/avatar-rendering.mjs';
 import {CourtSurface} from './court-surfaces';
 import type {Character} from '../shared/session-domain.mjs';
-import {performanceSample,performanceCatalogue} from '../shared/studio/performance.mjs';
+import {performanceSample,performanceCatalogue,type ActiveAction} from '../shared/studio/performance.mjs';
+import {PARTNER_ACTIONS,SEAT_SPACING} from '../shared/studio/stage-paths.mjs';
 import {activeTurns} from '../shared/studio/production.mjs';
 import type {EpisodeRecord} from '../shared/studio/index.mjs';
 import type {Mouth} from './realistic-avatar';
@@ -36,6 +36,27 @@ export class StudioScene{
   onFrame(callback:()=>void){this.afterFrame=callback;}
   audience(value:boolean){this.audienceMode=value;}
   private actorPositions(){return new Map([...this.avatars].map(([id,item])=>[id,item.avatar.cameraAnchor()]));}
+  // Gives travelling actions their partner's seat offset and adds the partner's
+  // mirrored part: both meet halfway, swap seats or join a group dance.
+  private stageActions(sampled:Map<string,ActiveAction[]>){
+    const seatX=(id:string)=>this.avatars.get(id)?.avatar.group.position.x??0,occupied=new Set([...this.avatars.values()].map(item=>item.avatar.stageSeat));
+    for(const [id,actions] of [...sampled]){for(const action of actions){
+      if(action.stage)continue;const other=action.targetId&&action.targetId!==id&&this.avatars.has(action.targetId)?action.targetId:undefined;
+      const nearest=()=>[...this.avatars.keys()].filter(key=>key!==id).sort((a,b)=>Math.abs(seatX(a)-seatX(id))-Math.abs(seatX(b)-seatX(id)))[0];
+      if(PARTNER_ACTIONS.includes(action.actionId)||action.actionId==='movement.approach-person'){
+        const partner=other||nearest();if(!partner)continue;const dx=seatX(partner)-seatX(id);action.stage={dx,role:'lead'};action.targetId=partner;
+        const echo=action.actionId==='movement.approach-person'?{...action,actionId:'listening.track-speaker',targetId:id,stage:undefined}:{...action,targetId:id,stage:{dx:-dx,role:'partner' as const}};
+        sampled.set(partner,[...(sampled.get(partner)||[]).filter(item=>item.actionId!==action.actionId),echo]);
+      }else if(action.actionId==='movement.change-seat'){
+        const seat=this.avatars.get(id)!.avatar.stageSeat,free=[0,1,2,3].filter(n=>!occupied.has(n)).sort((a,b)=>Math.abs(a-seat)-Math.abs(b-seat))[0];
+        if(free!==undefined){action.stage={dx:(free-seat)*SEAT_SPACING,role:'lead'};continue;}
+        const partner=other||nearest();if(!partner)continue;const dx=seatX(partner)-seatX(id);action.stage={dx,role:'lead',swap:true};
+        sampled.set(partner,[...(sampled.get(partner)||[]).filter(item=>item.actionId!==action.actionId),{...action,targetId:id,stage:{dx:-dx,role:'partner',swap:true}}]);
+      }else if(action.actionId==='celebration.group-dance'&&!action.stage){
+        action.stage={dx:0,role:'lead'};for(const key of this.avatars.keys())if(key!==id&&!(sampled.get(key)||[]).some(item=>item.actionId===action.actionId))sampled.set(key,[...(sampled.get(key)||[]),{...action,intensity:action.intensity*.85,stage:{dx:0,role:'partner'}}]);
+      }
+    }}
+  }
   private opening(frame:ReturnType<typeof this.sample>){
     if(!frame.playing||this.editing||this.timedCamera(frame)||this.shot!=='auto'||matchMedia('(prefers-reduced-motion: reduce)').matches)return null;
     const manual=(frame as typeof frame&{shot?:Shot}).shot;if(manual&&manual!=='auto')return null;
@@ -106,14 +127,13 @@ export class StudioScene{
     }
     document.body.dataset.studioSeatCount=String(count);
   }
-  setCast(characters:Character[],preview:Character|null=null,rendering?:AvatarRendering,metaHumans:MetaHumanModel[]=[],seats?:{characterId:string;seatIndex:number}[]){
+  setCast(characters:Character[],preview:Character|null=null,seats?:{characterId:string;seatIndex:number}[]){
     const wanted=preview?[preview]:characters.slice(0,4);this.editing=!!preview;this.branding.group.visible=this.brandingEnabled&&!preview;this.arrangeSeats(preview?0:4);document.body.dataset.studioSeatCount=String(preview?0:wanted.length);document.body.dataset.studioSeatCapacity=String(preview?0:4);this.desk.visible=!preview;this.screenMesh.visible=!preview;
     for(const [id,item] of this.avatars)if(!wanted.some(actor=>actor.id===id)){this.scene.remove(item.avatar.group);item.avatar.dispose();this.avatars.delete(id);}
     wanted.forEach((actor,index)=>{
       const seat=preview?0:seats?.find(member=>member.characterId===actor.id)?.seatIndex??index;
-      const metaId=metaHumanFor(actor.id,rendering),metaHuman=metaId?(metaHumans.find(model=>model.id===metaId)||{id:metaId,name:'Unavailable MetaHuman',url:`/avatars/metahuman/${metaId}.glb`,heightM:1.75,sha256:'',sourceUrl:'',status:'unavailable' as const}):undefined;
-      const signature=JSON.stringify([actor.name,actor.avatar,metaHuman?.id,metaHuman?.sha256,metaHuman?.status]);let item=this.avatars.get(actor.id);
-      if(item?.signature!==signature){if(item){this.scene.remove(item.avatar.group);item.avatar.dispose();}const avatar=new RealisticAvatar(actor,metaId||realisticModelFor(actor),this.environment,()=>queueMicrotask(()=>{if(this.disposed)return;document.body.dataset.studioAvatarErrors=String([...this.avatars.values()].filter(item=>item.avatar.state==='error').length);document.body.dataset.studioMotionErrors=String([...this.avatars.values()].filter(item=>item.avatar.motionFailed).length);this.action('assets-changed');}),metaHuman);item={avatar,signature};this.avatars.set(actor.id,item);this.scene.add(avatar.group);}
+      const signature=JSON.stringify([actor.name,actor.avatar]);let item=this.avatars.get(actor.id);
+      if(item?.signature!==signature){if(item){this.scene.remove(item.avatar.group);item.avatar.dispose();}const avatar=new RealisticAvatar(actor,realisticModelFor(actor),this.environment,()=>queueMicrotask(()=>{if(this.disposed)return;document.body.dataset.studioAvatarErrors=String([...this.avatars.values()].filter(item=>item.avatar.state==='error').length);document.body.dataset.studioMotionErrors=String([...this.avatars.values()].filter(item=>item.avatar.motionFailed).length);this.action('assets-changed');}));item={avatar,signature};this.avatars.set(actor.id,item);this.scene.add(avatar.group);}
       item.avatar.group.position.set(preview?0:(seat-1.5)*1.05,0,preview?-1.55:-2.8);item.avatar.setSeatStyle(seat);item.avatar.setSeated(!preview);item.avatar.setPresence(preview?'Preview':'Ready',!!preview);item.avatar.setRoom('conference');
     });
   }
@@ -145,13 +165,17 @@ export class StudioScene{
     const introductionId=production&&activeTurns(production).find(turn=>turn.id===frame.turnId)?.introductionId;
     const performanceCues=performanceTimelineCues(production,frame.cueLines),animationMs=frame.turnId?(frame as typeof frame&{programmeTimeMs?:number}).programmeTimeMs??frame.timeMs:time;
     document.body.dataset.studioClocks=JSON.stringify({sourceMs:frame.timeMs,animationMs,playing:frame.playing,speakerId:frame.speakerId,turnId:frame.turnId});
-    this.avatars.forEach((item,id)=>{item.avatar.group.rotation.y=intro?.host===id?openingState!.hostYaw:0;const actor=item.avatar.character as Character&{studioProfile?:{behaviour:{energy:number}}};let actions=frame.playing?performanceSample(performanceCues,animationMs,{characterId:id,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches}):[];
+    const sampled=new Map<string,ActiveAction[]>();
+    this.avatars.forEach((item,id)=>{let actions=frame.playing?performanceSample(performanceCues,animationMs,{characterId:id,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches}):[];
       if(this.preview?.id===id){const elapsed=time-this.preview.at;const duration=motionDuration(this.preview.actionId);if(elapsed<duration)actions=performanceSample([{id:'preview',characterId:id,actionId:this.preview.actionId,atMs:0,durationMs:duration,intensity:.8,targetId:this.preview.targetId}],elapsed,{characterId:id,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches});else this.preview=null;}
+      sampled.set(id,actions);});
+    this.stageActions(sampled);
+    this.avatars.forEach((item,id)=>{item.avatar.group.rotation.y=intro?.host===id?openingState!.hostYaw:0;const actor=item.avatar.character as Character&{studioProfile?:{behaviour:{energy:number}}};const actions=sampled.get(id)||[];
       const broadcast=this.renderer.xr.isPresenting?this.viewer.clone():new THREE.Vector3(0,1.5,2.8),neutral=item.avatar.cameraAnchor().add(new THREE.Vector3(.08*(item.avatar.character.id.charCodeAt(0)%3-1),-.07,2.6));
       const gaze=attentionSample({characterId:id,turns:production?activeTurns(production):[],timeMs:frame.timeMs,hostId:this.episode?.plan.cast.find(member=>member.slotId==='host')?.characterId,script:production?.writer?.lines,atTurn:production?.writer?.atTurn,energy:actor.studioProfile?.behaviour.energy});
       let attention=production?new THREE.Vector3():this.viewer.clone();if(production)for(const [targetId,weight] of Object.entries(gaze.weights)){const point=targetId==='broadcast'?broadcast:targetId==='neutral'?neutral:this.avatars.get(targetId)?.avatar.cameraAnchor()||neutral;attention.addScaledVector(point,weight);}
       const directed=actions.find(action=>(action.targetId||action.actionId==='listening.track-speaker')&&action.intensity>.05),directedActor=this.avatars.get(directed?.targetId||frame.speakerId||'')?.avatar;if(directed){const point=directedActor?.cameraAnchor()||(directed.targetId==='main-screen'?this.screenMesh.position.clone():item.avatar.cameraAnchor().add(new THREE.Vector3(0,-.4,.5)));attention.lerp(point,Math.min(1,directed.intensity));}
-      const hostLook=actions.find(a=>a.actionId==='response.look-to-host'),cameraLook=actions.find(a=>a.actionId==='drama.slow-turn-to-camera'),between=actions.find(a=>a.actionId==='listening.look-between-speakers');
+      const hostLook=actions.find(a=>a.actionId==='response.look-to-host'),cameraLook=actions.find(a=>a.actionId==='drama.slow-turn-to-camera'||a.actionId==='comedy.wink-at-camera'),between=actions.find(a=>a.actionId==='listening.look-between-speakers');
       if(hostLook){const host=this.episode?.plan.cast.find(member=>member.slotId==='host')?.characterId,person=host&&this.avatars.get(host);if(person)attention.lerp(person.avatar.cameraAnchor(),hostLook.envelope||hostLook.intensity);}
       if(cameraLook)attention.lerp(this.viewer,Math.min(1,cameraLook.progress*2)*(cameraLook.envelope||cameraLook.intensity));
       if(between){const people=[...this.avatars.values()].filter(other=>other!==item),a=people[0]?.avatar.cameraAnchor(),b=people[1]?.avatar.cameraAnchor();if(a&&b)attention.lerp(a.lerp(b,THREE.MathUtils.smoothstep(between.progress,.25,.70)),between.envelope||between.intensity);}
@@ -167,7 +191,7 @@ export class StudioScene{
     const exit=frame as typeof frame&{outro?:boolean;outroProgress?:number};document.body.dataset.studioClosing=exit.outro?'fly-out':'none';if(exit.outro&&this.directed&&!this.renderer.xr.isPresenting){const host=this.episode?.plan.cast.find(member=>member.slotId==='host')?.characterId,at=this.actorPositions().get(host||'');if(at)closingCameraPose(this.camera,exit.outroProgress||0,at,this.camera.aspect);}
     this.avatars.forEach(item=>item.avatar.audience(this.audienceMode));if(!this.exportFrame)this.renderer.render(this.scene,this.camera);this.afterFrame?.();document.body.dataset.studioShot=this.renderer.xr.isPresenting?'headset':this.currentShot;document.body.dataset.studioCamera=JSON.stringify({position:this.camera.position.toArray(),quaternion:this.camera.quaternion.toArray(),speaker:this.cameraSpeaker});
     document.body.dataset.studioFrame=String(++this.frames);
-    if(this.frames%20===0){document.body.dataset.studioActors=JSON.stringify([...this.avatars.values()].map(item=>({id:item.avatar.character.id,state:item.avatar.state,model:item.avatar.model,renderer:item.avatar.metaHuman?'metahuman':'rocketbox',attention:item.avatar.group.userData.attention,readyActions:this.actions(item.avatar.character.id).filter(action=>action.status==='ready').map(action=>action.actionId),...item.avatar.poseSnapshot()})));document.body.dataset.realisticAvatars=String([...this.avatars.values()].filter(item=>item.avatar.state==='ready').length);document.body.dataset.studioSurfaces=JSON.stringify([this.menu,this.keys].filter(surface=>surface.mesh.visible).map(surface=>({position:surface.mesh.position.toArray(),size:[surface.mesh.geometry.parameters.width,surface.mesh.geometry.parameters.height],canvas:[surface.canvas.width,surface.canvas.height],buttons:surface.buttons})));}
+    if(this.frames%20===0){document.body.dataset.studioActors=JSON.stringify([...this.avatars.values()].map(item=>({id:item.avatar.character.id,state:item.avatar.state,model:item.avatar.model,renderer:'rocketbox',attention:item.avatar.group.userData.attention,readyActions:this.actions(item.avatar.character.id).filter(action=>action.status==='ready').map(action=>action.actionId),...item.avatar.poseSnapshot()})));document.body.dataset.realisticAvatars=String([...this.avatars.values()].filter(item=>item.avatar.state==='ready').length);document.body.dataset.studioSurfaces=JSON.stringify([this.menu,this.keys].filter(surface=>surface.mesh.visible).map(surface=>({position:surface.mesh.position.toArray(),size:[surface.mesh.geometry.parameters.width,surface.mesh.geometry.parameters.height],canvas:[surface.canvas.width,surface.canvas.height],buttons:surface.buttons})));}
   };
   dispose(){this.disposed=true;this.observer.disconnect();this.renderer.setAnimationLoop(null);this.avatars.forEach(item=>item.avatar.dispose());this.arrangeSeats(0);this.menu.dispose();this.keys.dispose();this.branding.dispose();this.studioSet.dispose();this.screenMesh.geometry.dispose();this.screenMesh.material.dispose();this.captureTarget?.dispose();this.captureLinear?.dispose();this.captureOutput.dispose();this.environment.dispose();this.renderer.dispose();}
 }
