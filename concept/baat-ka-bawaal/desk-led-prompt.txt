@@ -1,0 +1,9 @@
+Generated with built-in image_gen from logo.png and banner.png. The LED surface uses the central safe band and animates lights in the 3D renderer.
+
+Use case: logo-brand
+Asset type: wide artwork for the LED front of a Hindi comedy newsroom desk.
+Edit the supplied "बात का बवाल" branding into a much wider, shallower desk-front lockup. Keep the same red, warm ivory, amber and deep navy identity and bold exact Devanagari title.
+Primary request: One very wide horizontal wordmark, with the microphone/burst icon moved to the FAR LEFT inline beside the title instead of above it. Large title on ONE LINE. Strong red and navy broadcast ribbons and subtle horizontal light trails across the full width. Premium clear newsroom branding.
+Text (verbatim): "बात का बवाल". No tagline, no other text.
+Composition: create a 3:1 landscape image as a safe source texture; CRITICAL: all meaningful content, including every letter and the microphone icon, must sit entirely within the middle 42 percent of the image height, and span nearly the entire image width. The top and bottom 29 percent are just matching dark navy atmosphere and fine abstract broadcast ribbons, with no words or important objects. This permits a shallow 7:1 center crop on a full-width LED desk fascia without clipping the title. Keep all letters well inside that central band with generous vertical padding. Relocate icon horizontally to keep the logo short in height. The final shallow strip should be strong and readable across the whole desk.
+Constraints: no room mockup, no desk or people, no watermark, do not change the exact spelling "बात का बवाल", no tall icon above the text. Opaque finished artwork.

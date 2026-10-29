@@ -1,0 +1,10 @@
+export type EditorialBrain={provider:string;model:string};
+export type EditorialIssue={lineNumbers:number[];category:string;severity:'required'|'optional';problem:string;instruction:string};
+export type SceneReview={balanced:boolean;fresh:boolean;coherent:boolean;responsive:boolean;earnedEnding:boolean;inCharacter:boolean;reason:string;verdict:'approve'|'revise';issues:EditorialIssue[];preserveLines:number[]};
+export type EditorialJournal={schemaVersion:1;inputHash:string;atTurn:number;runId:string;writerBrain:EditorialBrain;reviewerBrain:EditorialBrain;status:'writing'|'reviewing'|'revising'|'approved'|'needs-attention'|'outdated';inputs:{writerNotes:string;adultComedy:boolean};attempts:{number:number;at:string;brain:EditorialBrain;draft?:{headline?:string;sceneCraft?:import('./scene-craft.mjs').SceneCraft;summary:string;lines:{characterId:string;text:string}[]};reviewBrain?:EditorialBrain;review?:SceneReview;failure?:string;polishRequested?:boolean}[]};
+export const REVIEW_CHECKS:string[];
+export const REVIEW_CATEGORIES:string[];
+export function sameReviewModel(a:{provider:string|null;model:string|null}|null|undefined,b:{provider:string|null;model:string|null}|null|undefined):boolean;
+export function validateSceneReview(value:unknown,options?:{lineCount?:number}):SceneReview;
+export function sceneReviewPassed(value:SceneReview):boolean;
+export function validateEditorialJournal(value:unknown):void;

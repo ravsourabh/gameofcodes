@@ -1,5 +1,49 @@
 # Environment asset inventory
 
+## बात का बवाल broadcast identity
+
+### P01 publishing kit October 30
+
+The [publishing kit](publishing/baat-ka-bawaal/v1/index.html) prepares a dedicated
+**Baat Ka Bawaal** channel with the creator-confirmed publisher credit **Game of
+Codes Production**. Chhola Bhatura's saved `Male_Adult_05` identity leads the
+channel banner and default thumbnail/portrait artwork; Chintu is a separately
+labelled supporting example. This does not change casting or appearance in the
+running app.
+
+The square profile badge is a built-in image-generation edit of the existing
+logo; its original output and exact prompt are retained under the kit's `source/`.
+Other artwork is authored as editable HTML/CSS with the original logo and bundled
+Noto font. Transparent neutral/smile/surprised cutouts come from Blender renders
+of all seven shipped rigs, not invented replacement faces. They use original
+clothing; episode-specific tint/accessories must match the actual accepted take.
+
+The kit includes channel and episode artwork, portrait covers, short caption and
+nameplate overlays, a watermark, landscape/portrait intro/outro MP4s, audio
+excerpts and Hindi/Hinglish public copy. `manifest.json` records output hashes;
+`SOURCES.json` and `notices/` retain provenance, MIT/OFL notices and audio credits.
+Third-party episode screen media is not cleared by a brand template. The current
+runtime branding below remains unchanged; P01 does not connect accounts or
+publish anything externally. Final visual acceptance belongs to the creator.
+
+`public/branding/baat-ka-bawaal/logo.png` (transparent) and `banner.png` were generated
+with the built-in image_gen tool for the original Hindi comedy show. The prompts
+are retained in `concept/baat-ka-bawaal/prompts.txt`. The logo appears on the idle
+media screen and on framed, wall-mounted rear signs. `desk-led.png` is the shallow
+desk-front variant, generated from the same artwork with the microphone placed
+beside the title. Its prompt is retained in `concept/baat-ka-bawaal/desk-led-prompt.txt`.
+It fills the desk fascia and uses a lightweight shader for moving light sweeps;
+the letters stay still. The sign backs, metal rims, fixing screws and mounting
+rails are local geometry. The rails meet the rear wall.
+`src/studio-branding.ts` renders the Breaking News header and a carousel of the
+actual episode premise on physical set surfaces, including VR and video exports.
+It does not generate or invent additional headlines. Animation uses the saved
+programme clock during playback/export and respects reduced motion.
+
+The bundled `public/fonts/NotoSansDevanagari.ttf` comes from Google Fonts
+(`ofl/notosansdevanagari`), under the adjacent SIL Open Font License. It keeps
+the live topic text readable without depending on an installed Hindi font.
+
 The environment uses local Three.js geometry rather than downloaded GLB models.
 `src/scene.ts` assembles the spaces; `src/environment-assets.ts` supplies reusable
 materials, vegetation, furniture, lanterns and static geometry batching.
@@ -52,4 +96,23 @@ The additional source revision is `0943055db6ec570bcef9f2c8b41c9e5467c808f9`. Op
 
 ## Throne court (W06)
 
-`src/throne-court.ts` authors the current discussion hall using local geometry and deterministic stone/wood/cloth textures from `EnvironmentAssets`. It includes the sovereign throne/dais, ribbed arches, columns, rose/aisle windows, heraldic banners, lanterns, radial floor inlay, presenter seal, lectern and waiting bench. Static meshes are merged by material; inactive rooms are hidden. Two bounded warm lights supplement the shared daylight; there are no dynamic shadows or downloaded environment assets. `scripts/review-court.mjs` renders all six bundled people with an explicit AI fixture, captures a screenshot and reports integration timings/draw counts without provider calls. Physical Quest performance remains to be measured.
+The earlier Council/throne environment and its dedicated verification script are retired. The active newsroom is authored by `src/studio-set.ts` with Studio branding, local geometry and the retained Rocketbox rigs. No retired environment source is required for saved records.
+
+### Custom host (Host_Anchor_01)
+
+`Host_Anchor_01.glb` is derived from Rocketbox `Male_Adult_15` (MIT): its skullcap is reshaped
+into slicked hair, the face texture is painted from the creator's own Gemini-generated reference
+sheet, and the kurta is tinted cream with a pen in the pocket. It keeps the shared skeleton and
+the same 23 face shapes, so lip-sync and actions work as for the other people. It is marked
+`reserved` in `shared/avatar-catalog.mjs`, so it is chosen deliberately and never assigned to
+generated characters. Build steps: `concept/host/build/README.md`.
+
+## Studio motion library (S07/S11, October 28)
+
+`public/motions/rocketbox/body.json` contains 36 skeleton-only clips derived from the official [Microsoft Rocketbox animation library](https://github.com/microsoft/Microsoft-Rocketbox/tree/0943055db6ec570bcef9f2c8b41c9e5467c808f9/Assets/Animations), pinned at `0943055db6ec570bcef9f2c8b41c9e5467c808f9`. `SOURCES.json` records each FBX URL, Git blob and SHA-256; the adjacent MIT `LICENSE.md` is retained. No additional avatar identities are introduced.
+
+Rebuild: `python scripts/fetch-studio-motions.py`, then Blender 4.5 `--background --python scripts/convert-studio-motions.py`. Inputs remain in ignored `.sovereign/asset-build/rocketbox/motions/`. The shipped JSON is about 3.6 MB and is cached once per page, with 20 Hz source joint directions, palms and pelvis tracks; frames are interpolated on the recording clock. Retargeting preserves each destination skeleton's bone lengths.
+
+`src/studio-motion.ts` supplies authored contact IK, seated/standing transitions, jump/hop arcs and procedural desk props (cup, microphone, paper, pen, laptop and watch). These are local geometry; no extra downloaded prop licence is required. Hand gestures (heart hands, thumbs, namaste, salute, finger guns and others) place a wrist or fingertip by IK with per-finger curls and an explicitly aimed thumb, because the Rocketbox rest thumb points into the palm. Facial reactions reuse the shipped face shapes and leave speech visemes authoritative; winks close one eye and pouts use the rounded-lip visemes only while silent. Some related action IDs deliberately share a native clip with different pose/contact/face treatment.
+
+Walking, exits, partner meetings and seat changes follow authored routes in `shared/studio/stage-paths.mjs`: out through the gap beside the chair, along a lane behind the chairs, and back. Legs use the native `m_walk_neutral_01` cycle phase-locked to distance travelled (1.0 m per cycle measured best on the bundled rigs). The studio scene gives partnered actions the partner's seat offset and adds the partner's mirrored part. See [coverage](S07_S11_COVERAGE.md); 155 bindings are not 155 distinct mocap recordings.

@@ -1,0 +1,18 @@
+Generated with the built-in image_gen tool. Project assets: public/branding/baat-ka-bawaal/logo.png and banner.png.
+
+Use case: logo-brand
+Asset type: finished transparent broadcast show logo, intended as a texture in a 3D Hindi comedy newsroom and reusable PNG brand asset.
+Primary request: Create an original premium Hindi satirical breaking-news show logo for "बात का बवाल".
+Text (verbatim): "बात का बवाल"
+Design: one compact wide horizontal lockup, extremely legible bold Devanagari lettering, "बात का" in warm ivory and "बवाल" in warm vivid red with an ivory edge, angular broadcast badge behind part of the lettering and a subtle small microphone/speech-burst motif integrated into the badge. Palette: deep midnight navy, broadcast red, warm ivory, tiny amber accent.
+Composition: logo centered, generous transparent outer margin, wide approximately 2:1 composition. Crisp clean flat graphic shapes with restrained dimensional depth, strong silhouette. Suitable for a real television newsroom but with lively comic energy.
+Constraints: Exact Hindi spelling and natural Devanagari shaping, no English text, no tagline, no mockup, no surrounding studio scene, no people, no extra decorative text, no watermark. Truly transparent background; retain alpha.
+
+--- BANNER ---
+
+Use case: logo-brand
+Asset type: wide broadcast show banner texture for the rear wall and desk front of a realistic 3D Hindi comedy newsroom.
+Input image: reference image, the approved "बात का बवाल" show logo. Preserve its exact title, recognizable microphone burst, Devanagari shaping and red/ivory/navy identity.
+Primary request: design a polished wide horizontal banner about 3:1 aspect ratio, the logo large and centered, on a rich deep navy broadcast background with layered red angular ribbons at both sides, very subtle fine news-grid lines and warm amber light accents. Refined energetic newsroom visual rather than a busy poster. Give the logo generous breathing room.
+Text (verbatim): "बात का बवाल" as the dominant title, and below it in smaller but legible Devanagari "मुद्दा छोटा। बवाल बड़ा।"
+Constraints: consistent with the reference logo, high readability across a studio wide shot, no other text, no people, no TV studio mockup, no watermark, no fake website or random English letters. Full opaque rectangular finished banner.

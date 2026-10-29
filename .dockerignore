@@ -9,3 +9,13 @@ sovereign.env
 *.key
 test-results
 playwright-report
+
+archive
+tests
+board
+concept
+.claude
+publishing/*.zip
+client_secret*.json
+scripts/metahuman
+public/avatars/metahuman

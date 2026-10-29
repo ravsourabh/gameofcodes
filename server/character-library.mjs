@@ -12,12 +12,18 @@ export function createCharacterLibrary({ root }) {
     const work = (locks.get(profileId) || Promise.resolve()).catch(() => {}).then(operation); locks.set(profileId, work);
     try { return await work; } finally { if (locks.get(profileId) === work) locks.delete(profileId); }
   }
-  async function location(profileId) {
+  async function location(profileId, create = true) {
     if (!isId(profileId)) fail('Invalid character profile.');
     const folders = [path.resolve(root), path.resolve(root, '.sovereign'), path.resolve(root, '.sovereign', 'characters'), path.resolve(root, '.sovereign', 'characters', 'v1'), path.resolve(root, '.sovereign', 'characters', 'v1', profileId)];
     for (const folder of folders) {
-      try { await mkdir(folder); } catch (error) { if (error.code !== 'EEXIST') throw error; }
-      const info = await lstat(folder);
+      let info;
+      try { info = await lstat(folder); }
+      catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+        if (!create) return null;
+        try { await mkdir(folder); } catch (creationError) { if (creationError.code !== 'EEXIST') throw creationError; }
+        info = await lstat(folder);
+      }
       if (!info.isDirectory() || info.isSymbolicLink()) fail('Character storage is unavailable. Existing data has been kept.', 409, 'STORAGE_CONFLICT');
     }
     return path.join(folders.at(-1), 'library.json');
@@ -29,8 +35,9 @@ export function createCharacterLibrary({ root }) {
     const temporary = `${file}.${randomUUID()}.tmp`;
     await writeFile(temporary, data, { flag: 'wx' }); await replaceFile(temporary, file);
   }
-  async function load(profileId) {
-    const file = await location(profileId);
+  async function load(profileId, initialise = true) {
+    const file = await location(profileId, initialise);
+    if (!file) return null;
     try {
       const info = await lstat(file);
       if (!info.isFile() || info.isSymbolicLink() || info.size > 8_000_000) fail('This library cannot be read safely. It has not been changed.', 409);
@@ -40,11 +47,14 @@ export function createCharacterLibrary({ root }) {
       if (library.profileId !== profileId) fail('Library profile does not match its storage.', 409);
       return { file, library };
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (!initialise) return null;
     const guide = generateCharacter(profileId, { seed: 72, guide: true });
     const library = { schemaVersion: 1, kind: 'character-library', profileId, revision: 1, updatedAt: new Date().toISOString(), guideId: guide.id, characters: [guide], guideProgress: newGuideProgress(profileId, guide.id), events: [{ requestId: randomUUID(), revision: 1, command: 'bootstrap-guide' }] };
     await persist(file, library); return { file, library };
   }
   return {
+    // Studio reads must never create a guide, folders or a write-on-read migration.
+    peek: profileId => serial(profileId, async () => (await load(profileId, false))?.library ?? null),
     get: profileId => serial(profileId, async () => (await load(profileId)).library),
     progress: (profileId,input) => serial(profileId,async()=>{
       const {file,library}=await load(profileId);

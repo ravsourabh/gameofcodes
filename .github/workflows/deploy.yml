@@ -1,4 +1,4 @@
-name: Deploy to gameofcodes.si
+name: Deploy private Channel Studio
 
 on:
   push:
@@ -12,29 +12,41 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy to server
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Build verified runtime archive
+        id: release
+        run: |
+          npm ci
+          node scripts/prepare-studio-release.mjs
+          node --input-type=module -e 'import fs from "node:fs"; const r=JSON.parse(fs.readFileSync(".sovereign/releases/latest.json")); for(const key of ["revision","archive","archiveSha256"]) console.log(key+"="+r[key]);' >> "$GITHUB_OUTPUT"
+      - name: Deploy immutable release with data preservation and rollback
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          REVISION: ${{ steps.release.outputs.revision }}
+          ARCHIVE: ${{ steps.release.outputs.archive }}
+          ARCHIVE_SHA256: ${{ steps.release.outputs.archiveSha256 }}
         run: |
-          # Write deploy key
+          set -euo pipefail
+          [[ "$REVISION" =~ ^studio-[a-f0-9]{16}$ ]]
+          [[ "$ARCHIVE_SHA256" =~ ^[a-f0-9]{64}$ ]]
           mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" | base64 -d > ~/.ssh/deploy_key
+          printf '%s' "$DEPLOY_KEY" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          trap 'rm -f ~/.ssh/deploy_key' EXIT
           ssh-keyscan -H 167.71.227.218 >> ~/.ssh/known_hosts 2>/dev/null
-
-          ssh -i ~/.ssh/deploy_key deploy@167.71.227.218 << 'ENDSSH'
-            set -e
-            cd ~/sovereign
-
-            # Pull latest code from GitHub
-            git pull --ff-only origin main
-
-            # Retain saved state, verify the served revision, and restore the old
-            # image automatically if the new runtime does not become healthy.
-            bash scripts/deploy.sh
-
-            echo "Deployed $(git rev-parse --short HEAD) at $(date)"
-          ENDSSH
+          scp -i ~/.ssh/deploy_key "$ARCHIVE" "deploy@167.71.227.218:/home/deploy/sovereign-releases/$REVISION.tgz"
+          ssh -i ~/.ssh/deploy_key deploy@167.71.227.218 bash -s -- "$REVISION" "$ARCHIVE_SHA256" <<'REMOTE'
+          set -euo pipefail
+          revision=$1
+          archive="/home/deploy/sovereign-releases/$revision.tgz"
+          printf '%s  %s\n' "$2" "$archive" | sha256sum --check --status
+          release="/home/deploy/sovereign-releases/$revision"
+          mkdir -p "$release"
+          tar -xzf "$archive" -C "$release"
+          expected=$(docker inspect sovereign-sovereign-1 --format '{{.Config.Image}}')
+          bash "$release/scripts/deploy-studio-release.sh" "$revision" "$expected"
+          REMOTE

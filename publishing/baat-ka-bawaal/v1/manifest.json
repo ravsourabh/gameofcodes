@@ -1,0 +1,398 @@
+{
+  "schemaVersion": 1,
+  "brandVersion": "baat-ka-bawaal-publishing-v1",
+  "generatedAt": "2026-10-29T19:55:44.553Z",
+  "identityConfirmed": true,
+  "visualAcceptance": "pending creator review",
+  "assets": [
+    {
+      "file": "assets/profile-800.png",
+      "type": "profile",
+      "width": 800,
+      "height": 800,
+      "bytes": 704038,
+      "sha256": "0aceeceeb5c5d73d06a05a5d1a97dc68139e532955a002bf1a08d42af783c886"
+    },
+    {
+      "file": "assets/profile-circle-preview.png",
+      "type": "profile-circle",
+      "width": 800,
+      "height": 800,
+      "bytes": 738344,
+      "sha256": "15a682d7106db282149b749af086217294da7d5d76f956af210c44b514f050d4"
+    },
+    {
+      "file": "assets/profile-98-preview.png",
+      "type": "profile-circle",
+      "width": 98,
+      "height": 98,
+      "bytes": 19962,
+      "sha256": "b2a8007d760e6bb55ce053caf395de50d74c12f1dba9c949b3cbfaf99c6769ce"
+    },
+    {
+      "file": "assets/youtube-banner-2560x1440.png",
+      "type": "banner",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 2018022,
+      "sha256": "58f6a1ccb184e0a41508208eaf98a596f65fe3daaa695ee8ff304f9100428719"
+    },
+    {
+      "file": "assets/youtube-banner-safe-area-preview.png",
+      "type": "banner",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 2035406,
+      "sha256": "4e5ee86d91d45e2906a8f760a3527e3b68eff2b901ea8e6a05b2595695138695"
+    },
+    {
+      "file": "assets/youtube-banner-mobile-preview.png",
+      "type": "banner-mobile-preview",
+      "width": 1544,
+      "height": 422,
+      "bytes": 511768,
+      "sha256": "d9eb6ade1ae0dbbf76e34778596bc773d010c74004e6888f314758dd8053084c"
+    },
+    {
+      "file": "assets/youtube-thumbnail-sample.png",
+      "type": "thumbnail",
+      "width": 1280,
+      "height": 720,
+      "bytes": 707427,
+      "sha256": "ca69bd1273a5f27c61de8b61034c4419019295fc7cd94fb458e6fd168b8df942"
+    },
+    {
+      "file": "assets/youtube-thumbnail-neutral-sample.png",
+      "type": "thumbnail",
+      "width": 1280,
+      "height": 720,
+      "bytes": 709242,
+      "sha256": "194f6e9eff90a8df3211fa57fe89cf5a99e22bf4f290e583c876735f6b538437"
+    },
+    {
+      "file": "assets/youtube-thumbnail-chintu-supporting-sample.png",
+      "type": "thumbnail",
+      "width": 1280,
+      "height": 720,
+      "bytes": 675544,
+      "sha256": "3bba975eba0e03c0323d4c325b8c20672f0aa9def9ce3287d988772daf02d2e7"
+    },
+    {
+      "file": "assets/vertical-cover-sample.png",
+      "type": "vertical-cover",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 1505881,
+      "sha256": "0b8afda1a45f02fe111675214d37d5e29c00aaa5d8ab2b7b33b68e9fae8025d5"
+    },
+    {
+      "file": "assets/vertical-cover-crop-preview.png",
+      "type": "vertical-cover",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 1531321,
+      "sha256": "a5f20cb7a754f63e79d721bd072584c24ba85b8a51f6275fb227fef54b2acb34"
+    },
+    {
+      "file": "assets/caption-landscape-overlay.png",
+      "type": "caption-landscape",
+      "width": 1280,
+      "height": 720,
+      "bytes": 13524,
+      "sha256": "2fd5ce1d43f46ebdd9a46de0592a5b5b924e587903651c11e87ed7048de2da37"
+    },
+    {
+      "file": "assets/caption-portrait-overlay.png",
+      "type": "caption-portrait",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 23542,
+      "sha256": "297b260ce545968c766d5fce5ae94a43b4d1a912925607d5183ada2ec9d55b9b"
+    },
+    {
+      "file": "assets/lower-third-landscape-overlay.png",
+      "type": "lower-landscape",
+      "width": 1280,
+      "height": 720,
+      "bytes": 37170,
+      "sha256": "6990920a896bda1c6eda6288433bfbb0ac412f9e639ce9cdb98aa16596d00e1d"
+    },
+    {
+      "file": "assets/lower-third-portrait-overlay.png",
+      "type": "lower-portrait",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 60683,
+      "sha256": "2801dc408511e47e402524bfca434eb2781617a89f431c66522ec80c4f430524"
+    },
+    {
+      "file": "assets/video-watermark-300.png",
+      "type": "watermark",
+      "width": 300,
+      "height": 300,
+      "bytes": 27597,
+      "sha256": "4a141e045702798671c9704bf0fd8641581f8c0df100ac8f202a81ce9be8c5f8"
+    },
+    {
+      "file": "assets/end-card-landscape.png",
+      "type": "outro-landscape",
+      "width": 1280,
+      "height": 720,
+      "bytes": 631451,
+      "sha256": "01365ccf42d4c97e648af22a51ab3199634ad2190b0f16c55b0a89db6a9f2645"
+    },
+    {
+      "file": "assets/end-card-portrait.png",
+      "type": "outro-portrait",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 1374657,
+      "sha256": "5e0ddf54acf1a36baf78f0219531810ec18a6408a1a1563c1800bc11277e41ab"
+    },
+    {
+      "file": "assets/intro-landscape-poster.png",
+      "type": "intro-landscape",
+      "width": 1280,
+      "height": 720,
+      "bytes": 683360,
+      "sha256": "c2e19fd26bef38a29fba432ad7fc8e83a82436dfbe26cc6da38e0643f22bfe77"
+    },
+    {
+      "file": "assets/intro-portrait-poster.png",
+      "type": "intro-portrait",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 1410542,
+      "sha256": "01304638aa2c64fb6a65ed0589374a6faac9611c771e12f82d6e29379d0361f6"
+    },
+    {
+      "file": "assets/intro-landscape.mp4",
+      "type": "intro-landscape",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 2.5,
+      "fps": 24,
+      "bytes": 401932,
+      "sha256": "3f6c00e2ac8a5dadeeaa1e79aabc1d83c2bccb265aa9baf3ef51000782853b47"
+    },
+    {
+      "file": "assets/intro-portrait.mp4",
+      "type": "intro-portrait",
+      "width": 1080,
+      "height": 1920,
+      "durationSeconds": 2.5,
+      "fps": 24,
+      "bytes": 671973,
+      "sha256": "7bb07ffd124f925c149e10a87e67fefd0230d83e8ce90b1adb7c77cf60178ff7"
+    },
+    {
+      "file": "assets/outro-landscape.mp4",
+      "type": "outro-landscape",
+      "width": 1280,
+      "height": 720,
+      "durationSeconds": 4,
+      "fps": 24,
+      "bytes": 222529,
+      "sha256": "a558b93b55f58bea163682b94288db4dd0c19c4b46beb60ca17499aa530edc5a"
+    },
+    {
+      "file": "assets/outro-portrait.mp4",
+      "type": "outro-portrait",
+      "width": 1080,
+      "height": 1920,
+      "durationSeconds": 4,
+      "fps": 24,
+      "bytes": 339050,
+      "sha256": "5872e6767b6f994fdf860dee273486b72502910801abe76496f18444150e7922"
+    },
+    {
+      "file": "cast/Business_Female_01-neutral.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 648689,
+      "sha256": "483fce298b4b545bd09945e308dff292b4be1e29e09954630593632b15fb8560"
+    },
+    {
+      "file": "cast/Business_Female_01-smile.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 648895,
+      "sha256": "53adce19116214dbc7ac7a678c1610757e75a306669675df0d8407331c170497"
+    },
+    {
+      "file": "cast/Business_Female_01-surprised.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 649488,
+      "sha256": "6b82237ba8b829c0a3909a8413b398769d512a2c45252ac3c69dbf786eded02d"
+    },
+    {
+      "file": "cast/Business_Female_02-neutral.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 818942,
+      "sha256": "679022e6543340b9b6cb9c5cd75c8798af42162246835083cf7b603e6409797b"
+    },
+    {
+      "file": "cast/Business_Female_02-smile.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 819320,
+      "sha256": "1b9428f69691572902bbc44b2a9d8d98e1b34f11b20b7fe05c5524a4128caecd"
+    },
+    {
+      "file": "cast/Business_Female_02-surprised.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 819169,
+      "sha256": "6c7cd376ed8700416c4fe226bb500f9473ea631b7f9464b2459cf3c3107d8711"
+    },
+    {
+      "file": "cast/Business_Male_02-neutral.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 662055,
+      "sha256": "757dda542537961b7586e18157da9523f577a37be34effe2477ce30126f3e564"
+    },
+    {
+      "file": "cast/Business_Male_02-smile.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 662394,
+      "sha256": "d40aff30c4e24ff4a307a5538a484c0314d882c1f7e58fe4c397229094b8ee4d"
+    },
+    {
+      "file": "cast/Business_Male_02-surprised.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 662664,
+      "sha256": "4a5a7d90b6ef8b471e125be16a89b201bcee492d3ed4282c16a10dcbc960f7b1"
+    },
+    {
+      "file": "cast/Business_Male_04-neutral.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 703302,
+      "sha256": "6877b681810ff47e00cc525bf8216741ea496c7a29e3ae2cd14593a4265272c0"
+    },
+    {
+      "file": "cast/Business_Male_04-smile.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 703409,
+      "sha256": "4dd8a8167c920b172bf0fdee4ff504cbcb31b5745cfcc2cef0bc5a9c0d24a942"
+    },
+    {
+      "file": "cast/Business_Male_04-surprised.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 703252,
+      "sha256": "4ae0e6822b78d3e5216df4cc7d1e6c68992a3316f767ea0bdf43d063d9055898"
+    },
+    {
+      "file": "cast/Female_Adult_07-neutral.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 710987,
+      "sha256": "3c50068a5b7f2af15e7ccb73f49619aaf942e1fd30b11433047e217b605bbb96"
+    },
+    {
+      "file": "cast/Female_Adult_07-smile.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 711002,
+      "sha256": "d0edbf29ec4e92bbd455bbfd6ccd62fb19ba54299d9e8d4d7aae13958f3d6d5a"
+    },
+    {
+      "file": "cast/Female_Adult_07-surprised.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 712021,
+      "sha256": "a3660a6c0f93e5e36e736dca80e4e5c15141facad2cb10e32feebc729e994558"
+    },
+    {
+      "file": "cast/Host_Anchor_01-neutral.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 631775,
+      "sha256": "1df369da5c8d523d23c5283a33a1e216b735824d8a356c6372692a5a3007ab5a"
+    },
+    {
+      "file": "cast/Host_Anchor_01-smile.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 631640,
+      "sha256": "70c65e230101fd0d78707a184da7b2e7c72c2a81e8432e478d050ddb65924f37"
+    },
+    {
+      "file": "cast/Host_Anchor_01-surprised.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 631773,
+      "sha256": "654a4afd52417ce09302a732a5c4a97b4539335ae70b9cd35519c3967ab016f9"
+    },
+    {
+      "file": "cast/Male_Adult_05-neutral.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 753305,
+      "sha256": "6a51acfdbd4b0f35760920fabb5c5af7c6b14a50692cfa96b3100f8ed753b6c7"
+    },
+    {
+      "file": "cast/Male_Adult_05-smile.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 753010,
+      "sha256": "9112fc76484e684d0057c120d7f269064ff6f21bc454265e887e365e530da542"
+    },
+    {
+      "file": "cast/Male_Adult_05-surprised.png",
+      "type": "cast-cutout",
+      "width": 768,
+      "height": 1024,
+      "bytes": 753860,
+      "sha256": "c6708e1de6e53e010a56a46ebcab6e0f93635ca38fd28de859d74d20c63a6047"
+    },
+    {
+      "file": "audio/intro-sting.wav",
+      "type": "music-excerpt",
+      "durationSeconds": 2.5,
+      "bytes": 480156,
+      "sha256": "652c3ee75935195c4e5917d808cfa741c4c30c2c95c8b3e424f47bce0043298f"
+    },
+    {
+      "file": "audio/outro-sting.wav",
+      "type": "music-excerpt",
+      "durationSeconds": 4,
+      "bytes": 768156,
+      "sha256": "42f5a6f5be33269ffc3e3c15c37f5c0f8ef4a90edd66684e4f4c06997ea8a519"
+    },
+    {
+      "file": "audio/dialogue-bed-preview.wav",
+      "type": "music-excerpt",
+      "durationSeconds": 20,
+      "bytes": 3840156,
+      "sha256": "4ba9552502e92c9d1d7485c08a95f307f76ca3f5019143152b864f23dd740096"
+    }
+  ]
+}

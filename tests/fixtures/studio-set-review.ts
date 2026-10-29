@@ -1,0 +1,10 @@
+import {StudioScene} from '../../src/studio-scene';
+import * as THREE from 'three';
+import {generateCharacter} from '../../shared/character-domain.mjs';
+const ids=['00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000004'];
+const actors=ids.map((id,i)=>generateCharacter('00000000-0000-4000-8000-000000000099',{seed:11+i,id}));
+const scene=new StudioScene(document.querySelector('canvas')!,()=>{},()=>{});scene.setCast(actors);scene.showBranding('ऑटो वाले की पहली हाँ पर यात्री को शक क्यों हुआ?');
+const screen=document.createElement('canvas');screen.width=1280;screen.height=720;const context=screen.getContext('2d')!;context.fillStyle='#071a2f';context.fillRect(0,0,1280,720);const logo=new Image();logo.onload=()=>{const width=1080,height=width*logo.height/logo.width;context.drawImage(logo,100,(720-height)/2,width,height);screenTexture.needsUpdate=true;};logo.src='/branding/baat-ka-bawaal/logo.png';const screenTexture=new THREE.CanvasTexture(screen);screenTexture.colorSpace=THREE.SRGBColorSpace;scene.screen(screenTexture,()=>{});
+let view='outro';const turns=ids.map((characterId,i)=>({id:'turn-'+i,beatId:'beat-'+i,runId:'run',characterId,startMs:i*10000,durationMs:10000,text:'A studio camera review.',intent:i===3?'closing':'statement'}));
+scene.performance({plan:{cast:ids.map((characterId,i)=>({characterId,slotId:i===0?'host':'guest-'+i}))},production:{runId:'run',turns,schedule:turns.map(t=>({beatId:t.beatId})),cues:[]}} as any,()=>({speakerId:ids[0],turnId:view==='intro'?'turn-0':'turn-3',timeMs:view==='intro'?0:35000,programmeTimeMs:view==='intro'?0:35000,playing:true,mouth:{open:0,round:0,wide:0,hiss:0,visemes:{}},...(view==='outro'?{outro:true,outroProgress:1}:{})}));
+(window as any).setReview={scene,THREE,view:(next:string)=>{view=next;scene.coverage(next==='wide'?'wide':'auto');},capture:()=>{const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;scene.renderExport(35000);scene.capture(canvas);return canvas.toDataURL('image/png');}};

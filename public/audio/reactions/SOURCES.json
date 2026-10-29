@@ -1,0 +1,121 @@
+{
+  "author": "Nox_Sound_Design",
+  "title": "Voices - Essentials",
+  "license": "CC0-1.0",
+  "source": "https://nox-sound-design.itch.io/essentials-series-sfx-nox-sound",
+  "adaptations": "Leading silence trimmed, loudness reduced, excerpt limited to 1.15 seconds, fades, 24 kHz mono Vorbis. Stock human vocal cues, not cloned Sarvam voices.",
+  "files": [
+    {
+      "file": "male-1-chuckle-1.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Male/Voice_Male_Expressions/Voice_Male_V1_Laugh_Short_Mono_01.wav",
+      "sourceSha256": "d968dbf6cb9854c292dc872d675159caf9bd19cfe12c9808865c6c7a93c61737",
+      "sha256": "41b3811de5577deac12aefac5a1c3913ca5338f677990a9e69abcc64c3903427",
+      "durationMs": 751
+    },
+    {
+      "file": "male-1-chuckle-2.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Male/Voice_Male_Expressions/Voice_Male_V1_Laugh_Short_Mono_02.wav",
+      "sourceSha256": "b37ae9cadd23393e89714a30a9f508d6f6178a3ae86157eddcb19c05243aff90",
+      "sha256": "5e3241a7e8d1c8cb24b83d00fcb8764b875623de93d07e9d82e49b000d75baac",
+      "durationMs": 746
+    },
+    {
+      "file": "male-1-sigh-1.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Male/Voice_Male_Expressions/Voice_Male_V2_Sigh_Mono_03.wav",
+      "sourceSha256": "3cf7e8d74a623d035a771e8a595624a567531c6380272c8b35d7d0d33f703636",
+      "sha256": "944819a9a9b9717ec2418526ab1bfe4beefe4d281d6f183716a9824e5c9eb13b",
+      "durationMs": 696
+    },
+    {
+      "file": "male-1-sigh-2.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Male/Voice_Male_Expressions/Voice_Male_V2_Sigh_Mono_04.wav",
+      "sourceSha256": "78443e3fa0ee560c426520221d71d0075521385052cffc3fda758cf6647882e5",
+      "sha256": "787f9f057f8fa7403ff0376d7b01c592a563e999ebde9ff11abd60325462340b",
+      "durationMs": 1150
+    },
+    {
+      "file": "male-2-chuckle-1.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Male/Voice_Male_Expressions/Voice_Male_V2_Laugh_Short_Mono_01.wav",
+      "sourceSha256": "6491f4605870e407f7a19662e074d4852ea28ddba136a9d64371f3bc430bf21d",
+      "sha256": "907b4682d4201a70e689f11fd624153292cc6884ef9537f5c86d93f808923f8c",
+      "durationMs": 430
+    },
+    {
+      "file": "male-2-chuckle-2.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Male/Voice_Male_Expressions/Voice_Male_V2_Laugh_Short_Mono_02.wav",
+      "sourceSha256": "3c9978553d818e66a4a02397929d3fccedae3aa4826ace17629d5c5222e556fc",
+      "sha256": "398f3093be0e212e69d5c5978f11ae70af5f60b9cabb7200266202439e7a085c",
+      "durationMs": 375
+    },
+    {
+      "file": "male-2-sigh-1.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Male/Voice_Male_Expressions/Voice_Male_V2_Sigh_Mono_01.wav",
+      "sourceSha256": "9acb73b71baa505d981ca2511537a924d9ffea5ccce482e8d3a8994f4ad1a9f8",
+      "sha256": "2870dffd2ccfd2a01c445f07bad48ec6772983035352eaa993ca87024110a226",
+      "durationMs": 1150
+    },
+    {
+      "file": "male-2-sigh-2.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Male/Voice_Male_Expressions/Voice_Male_V2_Sigh_Mono_02.wav",
+      "sourceSha256": "11967d1c6d2432b5376e5ad7b4abea7d27e11c67ce24e7867f0c3dfac394c6f2",
+      "sha256": "8de4b8a33f45ac2bc009a6b7c0bf842523b9ae052396dbb046e568aa6f094cbe",
+      "durationMs": 740
+    },
+    {
+      "file": "female-1-chuckle-1.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Female/Voice_Female_Expressions/Voice_Female_V1_Laugh_Short_Mono_01.wav",
+      "sourceSha256": "52919e8e71c25a2c449d6c966e013752607122bd82aca28445d5300ed4cf0053",
+      "sha256": "19dfcb4070e943b35a0fd05426ff1d6f8ee91054b7e4bbaf40161b9dbdef7071",
+      "durationMs": 518
+    },
+    {
+      "file": "female-1-chuckle-2.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Female/Voice_Female_Expressions/Voice_Female_V1_Laugh_Short_Mono_02.wav",
+      "sourceSha256": "fcd2c2d3602d7ee0b0db4eb4cbcc3e3fd7c90fdb89a92b9528783f1a572f8345",
+      "sha256": "4446f75628a52c1fe7ef9ca3f01d9883094f08c0223481d0a71e93b8c4def316",
+      "durationMs": 373
+    },
+    {
+      "file": "female-1-sigh-1.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Female/Voice_Female_Expressions/Voice_Female_V1_Sigh_Mono_01.wav",
+      "sourceSha256": "d57ca1fff8687137180fc07ecc73d55938cd62f8d4b5109efe3eab3b1c4403f1",
+      "sha256": "12e80501bbd5e1d4dd2fbddb9bf1908830803bc0f50bbc3e9afb28876416a12b",
+      "durationMs": 769
+    },
+    {
+      "file": "female-1-sigh-2.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Female/Voice_Female_Expressions/Voice_Female_V1_Sigh_Mono_02.wav",
+      "sourceSha256": "f5fd0494fd4a7aaccc986bcfd69248796061155cf467bd662cf751e3b6baa318",
+      "sha256": "501fb9474466aeb7d895a8383c024762565d68de553222afe1e5356ce155fdea",
+      "durationMs": 1002
+    },
+    {
+      "file": "female-2-chuckle-1.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Female/Voice_Female_Expressions/Voice_Female_V2_Laugh_Short_Mono_01.wav",
+      "sourceSha256": "0a498d8e4ccd5a73304a605c88a2c1e79e2b3ad63cd2ee277ab96ef60d23bb9c",
+      "sha256": "2c31aba64b29b24d09d1529f8e780ebc4ca0480c84720ffcfb18f37cba79397d",
+      "durationMs": 320
+    },
+    {
+      "file": "female-2-chuckle-2.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Female/Voice_Female_Expressions/Voice_Female_V2_Laugh_Short_Mono_02.wav",
+      "sourceSha256": "949d40901e55879fdedf29c1ab1f5cbe645f6cd5e97d1cbe5cc2a41a8c05fb14",
+      "sha256": "b188de85fbb0207dc425fe7bc2d20425c01d53a481e58547a31c09c659c3be65",
+      "durationMs": 313
+    },
+    {
+      "file": "female-2-sigh-1.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Female/Voice_Female_Expressions/Voice_Female_V1_Sigh_Mono_03.wav",
+      "sourceSha256": "2183b933bde57b2cbfe99ed7c49210cef05e2b7e7d42e14eccd3c81126df190f",
+      "sha256": "4c2a3489f7a045846bda61f35b4ebab794d96b3a84012e19cd3fb6341c020cad",
+      "durationMs": 1150
+    },
+    {
+      "file": "female-2-sigh-2.ogg",
+      "sourceFile": "Essentials_Series_NOX_SOUND/Voices_Essentials_NOX_SOUND/Voice_Essential_Female/Voice_Female_Expressions/Voice_Female_V1_Sigh_Mono_04.wav",
+      "sourceSha256": "7b1a1bdf71dc39cd93bcf388ca2d72cbceb35516d12d5cf6f787939dd688642c",
+      "sha256": "8535d7f6b5b35c843cd4e27e63c6efc37529b75ef6cdfad686120a98625aba88",
+      "durationMs": 1150
+    }
+  ]
+}

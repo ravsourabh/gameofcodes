@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-30",
+  "publisher": "Game of Codes Production",
+  "assets": [
+    {
+      "group": "existing-show-branding",
+      "inputs": ["public/branding/baat-ka-bawaal/logo.png", "public/branding/baat-ka-bawaal/banner.png", "public/branding/baat-ka-bawaal/desk-led.png"],
+      "sourceRecord": "ASSETS.md and concept/baat-ka-bawaal/prompts.txt",
+      "provenance": "Original project artwork generated with the built-in image tool in earlier work.",
+      "useDecision": "Reuse existing show identity; original files are not overwritten. No trademark registration or exclusivity is claimed."
+    },
+    {
+      "group": "profile-badge",
+      "files": ["source/profile-badge-generated.png", "assets/profile-800.png", "assets/profile-circle-preview.png", "assets/profile-98-preview.png"],
+      "sourceRecord": "source/PROMPTS.md",
+      "provenance": "Built-in image generation edit of the existing show logo, October 30, 2026.",
+      "useDecision": "Prepared for creator visual review; no outside logo or broadcaster mark requested."
+    },
+    {
+      "group": "layouts-and-copy",
+      "files": ["layout.html", "layout.css", "layout.mjs", "brand.json", "CHANNEL_COPY.md"],
+      "provenance": "Authored for this project; source retained.",
+      "useDecision": "Reusable editable publishing templates; sample titles are not approved posts."
+    },
+    {
+      "group": "font",
+      "source": "https://github.com/google/fonts/tree/main/ofl/notosansdevanagari",
+      "license": "SIL Open Font License 1.1",
+      "licenseFile": "notices/FONT-OFL.txt",
+      "files": ["source/NotoSansDevanagari.ttf"],
+      "useDecision": "Embed/render with the retained OFL notice; no font modification."
+    },
+    {
+      "group": "cast-cutouts",
+      "source": "https://github.com/microsoft/Microsoft-Rocketbox",
+      "sourceRecord": "ASSETS.md, shared/avatar-catalog.mjs and scripts/render-publishing-cast.py",
+      "license": "MIT",
+      "licenseFile": "notices/ROCKETBOX-MIT.txt",
+      "provenance": "Transparent stills from seven shipped supported rigs, with neutral, smile and surprised morph settings. Host_Anchor_01 is the existing custom identity derived from Rocketbox Male_Adult_15 and the creator-supplied reference; it stays reserved.",
+      "useDecision": "Carry the MIT notice with the cutout/source kit. Match each actual take's rig, tint and accessories before public use; these base cutouts do not claim episode character assignments."
+    },
+    {
+      "group": "news-theme-and-excerpts",
+      "source": "https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1100544",
+      "licenseInfo": "https://incompetech.com/music/royalty-free/licenses/",
+      "title": "News Theme",
+      "creator": "Kevin MacLeod (incompetech.com)",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceRecord": "public/audio/CREDITS.txt",
+      "files": ["audio/intro-sting.wav", "audio/outro-sting.wav", "audio/dialogue-bed-preview.wav", "assets/intro-landscape.mp4", "assets/intro-portrait.mp4", "assets/outro-landscape.mp4", "assets/outro-portrait.mp4"],
+      "changes": "Excerpts, fades and loudness adjustment.",
+      "useDecision": "Use with source, creator, license link and changes in each episode or derivative description. Metadata comments and adjacent notices do not replace that public attribution."
+    },
+    {
+      "group": "existing-audience-giggle",
+      "source": "https://opengameart.org/content/group-giggling",
+      "creator": "Nocturnal_Vanguard / AuraVoice",
+      "license": "CC0",
+      "sourceRecord": "public/audio/CREDITS.txt",
+      "useDecision": "Existing runtime asset may be carried into episodes; not added to the P01 music masters."
+    },
+    {
+      "group": "existing-actor-reactions",
+      "source": "https://nox-sound-design.itch.io/essentials-series-sfx-nox-sound",
+      "creator": "Nox_Sound_Design",
+      "license": "CC0-1.0",
+      "sourceRecord": "public/audio/reactions/SOURCES.json",
+      "useDecision": "Retain original manifest and credits when packaging runtime assets. Stock vocal effects are not presented as cloned dialogue voices; not added to P01 music masters."
+    },
+    {
+      "group": "episode-media-and-dialogue",
+      "provenance": "Selected GIFs/videos, uploaded footage, generated speech and accepted episode content vary by take.",
+      "useDecision": "Not cleared by this brand kit. Review the actual source/use decision and applicable provider terms per publishing package; do not infer permission from a playable URL or an accepted private take. P01 contains no uploaded third-party meme footage or generated dialogue audio."
+    }
+  ],
+  "platformChecks": {
+    "youtubeBrandingGuidance": "https://support.google.com/youtube/answer/10456525?hl=en",
+    "bannerTarget": [2560, 1440],
+    "essentialContentRegion": [540, 523, 1480, 394],
+    "bannerMaxBytes": 6291456,
+    "note": "Current official guidance recommends 2560x1440 and a file at most 6 MB. Platform crop previews and actual account features are checked again in P02."
+  }
+}

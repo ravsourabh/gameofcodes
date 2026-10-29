@@ -1,0 +1,1 @@
+export function attentionSample(input:{characterId:string;turns:{id:string;characterId:string;startMs:number}[];timeMs:number;hostId?:string;script?:{targetId:string|null}[];atTurn?:number;energy?:number}):{weights:Record<string,number>;targetId:string;changedAtMs:number;delayMs:number};

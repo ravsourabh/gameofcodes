@@ -1,0 +1,692 @@
+{
+  "verifiedAt": "2026-10-29T19:56:07.425Z",
+  "assetCount": 48,
+  "totalBytes": 36934385,
+  "findings": [
+    {
+      "file": "assets/profile-800.png",
+      "bytes": 704038,
+      "hashValid": true
+    },
+    {
+      "file": "assets/profile-circle-preview.png",
+      "bytes": 738344,
+      "hashValid": true
+    },
+    {
+      "file": "assets/profile-98-preview.png",
+      "bytes": 19962,
+      "hashValid": true
+    },
+    {
+      "file": "assets/youtube-banner-2560x1440.png",
+      "bytes": 2018022,
+      "hashValid": true
+    },
+    {
+      "file": "assets/youtube-banner-safe-area-preview.png",
+      "bytes": 2035406,
+      "hashValid": true
+    },
+    {
+      "file": "assets/youtube-banner-mobile-preview.png",
+      "bytes": 511768,
+      "hashValid": true
+    },
+    {
+      "file": "assets/youtube-thumbnail-sample.png",
+      "bytes": 707427,
+      "hashValid": true
+    },
+    {
+      "file": "assets/youtube-thumbnail-neutral-sample.png",
+      "bytes": 709242,
+      "hashValid": true
+    },
+    {
+      "file": "assets/youtube-thumbnail-chintu-supporting-sample.png",
+      "bytes": 675544,
+      "hashValid": true
+    },
+    {
+      "file": "assets/vertical-cover-sample.png",
+      "bytes": 1505881,
+      "hashValid": true
+    },
+    {
+      "file": "assets/vertical-cover-crop-preview.png",
+      "bytes": 1531321,
+      "hashValid": true
+    },
+    {
+      "file": "assets/caption-landscape-overlay.png",
+      "bytes": 13524,
+      "hashValid": true
+    },
+    {
+      "file": "assets/caption-portrait-overlay.png",
+      "bytes": 23542,
+      "hashValid": true
+    },
+    {
+      "file": "assets/lower-third-landscape-overlay.png",
+      "bytes": 37170,
+      "hashValid": true
+    },
+    {
+      "file": "assets/lower-third-portrait-overlay.png",
+      "bytes": 60683,
+      "hashValid": true
+    },
+    {
+      "file": "assets/video-watermark-300.png",
+      "bytes": 27597,
+      "hashValid": true
+    },
+    {
+      "file": "assets/end-card-landscape.png",
+      "bytes": 631451,
+      "hashValid": true
+    },
+    {
+      "file": "assets/end-card-portrait.png",
+      "bytes": 1374657,
+      "hashValid": true
+    },
+    {
+      "file": "assets/intro-landscape-poster.png",
+      "bytes": 683360,
+      "hashValid": true
+    },
+    {
+      "file": "assets/intro-portrait-poster.png",
+      "bytes": 1410542,
+      "hashValid": true
+    },
+    {
+      "file": "assets/intro-landscape.mp4",
+      "bytes": 401932,
+      "hashValid": true
+    },
+    {
+      "file": "assets/intro-portrait.mp4",
+      "bytes": 671973,
+      "hashValid": true
+    },
+    {
+      "file": "assets/outro-landscape.mp4",
+      "bytes": 222529,
+      "hashValid": true
+    },
+    {
+      "file": "assets/outro-portrait.mp4",
+      "bytes": 339050,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Female_01-neutral.png",
+      "bytes": 648689,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Female_01-smile.png",
+      "bytes": 648895,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Female_01-surprised.png",
+      "bytes": 649488,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Female_02-neutral.png",
+      "bytes": 818942,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Female_02-smile.png",
+      "bytes": 819320,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Female_02-surprised.png",
+      "bytes": 819169,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Male_02-neutral.png",
+      "bytes": 662055,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Male_02-smile.png",
+      "bytes": 662394,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Male_02-surprised.png",
+      "bytes": 662664,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Male_04-neutral.png",
+      "bytes": 703302,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Male_04-smile.png",
+      "bytes": 703409,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Business_Male_04-surprised.png",
+      "bytes": 703252,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Female_Adult_07-neutral.png",
+      "bytes": 710987,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Female_Adult_07-smile.png",
+      "bytes": 711002,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Female_Adult_07-surprised.png",
+      "bytes": 712021,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Host_Anchor_01-neutral.png",
+      "bytes": 631775,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Host_Anchor_01-smile.png",
+      "bytes": 631640,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Host_Anchor_01-surprised.png",
+      "bytes": 631773,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Male_Adult_05-neutral.png",
+      "bytes": 753305,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Male_Adult_05-smile.png",
+      "bytes": 753010,
+      "hashValid": true
+    },
+    {
+      "file": "cast/Male_Adult_05-surprised.png",
+      "bytes": 753860,
+      "hashValid": true
+    },
+    {
+      "file": "audio/intro-sting.wav",
+      "bytes": 480156,
+      "hashValid": true
+    },
+    {
+      "file": "audio/outro-sting.wav",
+      "bytes": 768156,
+      "hashValid": true
+    },
+    {
+      "file": "audio/dialogue-bed-preview.wav",
+      "bytes": 3840156,
+      "hashValid": true
+    }
+  ],
+  "media": [
+    {
+      "file": "assets/intro-landscape.mp4",
+      "duration": 2.5,
+      "video": {
+        "codec": "h264",
+        "width": 1280,
+        "height": 720,
+        "fps": "24/1"
+      },
+      "audio": {
+        "codec": "aac",
+        "sampleRate": "48000",
+        "channels": 2
+      }
+    },
+    {
+      "file": "assets/intro-portrait.mp4",
+      "duration": 2.5,
+      "video": {
+        "codec": "h264",
+        "width": 1080,
+        "height": 1920,
+        "fps": "24/1"
+      },
+      "audio": {
+        "codec": "aac",
+        "sampleRate": "48000",
+        "channels": 2
+      }
+    },
+    {
+      "file": "assets/outro-landscape.mp4",
+      "duration": 4,
+      "video": {
+        "codec": "h264",
+        "width": 1280,
+        "height": 720,
+        "fps": "24/1"
+      },
+      "audio": {
+        "codec": "aac",
+        "sampleRate": "48000",
+        "channels": 2
+      }
+    },
+    {
+      "file": "assets/outro-portrait.mp4",
+      "duration": 4,
+      "video": {
+        "codec": "h264",
+        "width": 1080,
+        "height": 1920,
+        "fps": "24/1"
+      },
+      "audio": {
+        "codec": "aac",
+        "sampleRate": "48000",
+        "channels": 2
+      }
+    },
+    {
+      "file": "audio/intro-sting.wav",
+      "duration": 2.5,
+      "video": null,
+      "audio": {
+        "codec": "pcm_s16le",
+        "sampleRate": "48000",
+        "channels": 2
+      }
+    },
+    {
+      "file": "audio/outro-sting.wav",
+      "duration": 4,
+      "video": null,
+      "audio": {
+        "codec": "pcm_s16le",
+        "sampleRate": "48000",
+        "channels": 2
+      }
+    },
+    {
+      "file": "audio/dialogue-bed-preview.wav",
+      "duration": 20,
+      "video": null,
+      "audio": {
+        "codec": "pcm_s16le",
+        "sampleRate": "48000",
+        "channels": 2
+      }
+    }
+  ],
+  "decodedMotion": [
+    {
+      "file": "assets/intro-landscape.mp4",
+      "meanPixelDifference": 12.830925925925927,
+      "changedChannels": 1462
+    },
+    {
+      "file": "assets/intro-portrait.mp4",
+      "meanPixelDifference": 6.952037037037037,
+      "changedChannels": 818
+    }
+  ],
+  "audioMeasurements": [
+    {
+      "file": "intro-sting.wav",
+      "integratedLufs": -15.56,
+      "truePeakDb": -2.76
+    },
+    {
+      "file": "outro-sting.wav",
+      "integratedLufs": -16.5,
+      "truePeakDb": -4.46
+    },
+    {
+      "file": "dialogue-bed-preview.wav",
+      "integratedLufs": -28.6,
+      "truePeakDb": -15.43
+    }
+  ],
+  "visual": [
+    {
+      "file": "assets/profile-circle-preview.png",
+      "clearFraction": 0.212690625,
+      "opaqueFraction": 0.783965625,
+      "bbox": [
+        0,
+        0,
+        799,
+        799
+      ]
+    },
+    {
+      "file": "assets/profile-98-preview.png",
+      "clearFraction": 0.19752186588921283,
+      "opaqueFraction": 0.7769679300291545,
+      "bbox": [
+        0,
+        0,
+        97,
+        97
+      ]
+    },
+    {
+      "file": "assets/caption-landscape-overlay.png",
+      "clearFraction": 0.9640766059027778,
+      "opaqueFraction": 0.02114800347222222,
+      "bbox": [
+        506,
+        582,
+        773,
+        654
+      ]
+    },
+    {
+      "file": "assets/caption-portrait-overlay.png",
+      "clearFraction": 0.971884162808642,
+      "opaqueFraction": 0.019056712962962963,
+      "bbox": [
+        301,
+        1352,
+        670,
+        1458
+      ]
+    },
+    {
+      "file": "assets/lower-third-landscape-overlay.png",
+      "clearFraction": 0.9620008680555555,
+      "opaqueFraction": 0.037999131944444445,
+      "bbox": [
+        77,
+        495,
+        416,
+        597
+      ]
+    },
+    {
+      "file": "assets/lower-third-portrait-overlay.png",
+      "clearFraction": 0.965625,
+      "opaqueFraction": 0.034375,
+      "bbox": [
+        86,
+        1097,
+        625,
+        1228
+      ]
+    },
+    {
+      "file": "cast/Business_Female_01-neutral.png",
+      "clearFraction": 0.5113843282063802,
+      "opaqueFraction": 0.48376210530598956,
+      "bbox": [
+        89,
+        76,
+        676,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Female_01-smile.png",
+      "clearFraction": 0.5113843282063802,
+      "opaqueFraction": 0.48376210530598956,
+      "bbox": [
+        89,
+        76,
+        676,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Female_01-surprised.png",
+      "clearFraction": 0.5113843282063802,
+      "opaqueFraction": 0.48376210530598956,
+      "bbox": [
+        89,
+        76,
+        676,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Female_02-neutral.png",
+      "clearFraction": 0.5025444030761719,
+      "opaqueFraction": 0.4915936787923177,
+      "bbox": [
+        87,
+        87,
+        678,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Female_02-smile.png",
+      "clearFraction": 0.5025444030761719,
+      "opaqueFraction": 0.4915936787923177,
+      "bbox": [
+        87,
+        87,
+        678,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Female_02-surprised.png",
+      "clearFraction": 0.5025444030761719,
+      "opaqueFraction": 0.4915936787923177,
+      "bbox": [
+        87,
+        87,
+        678,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Male_02-neutral.png",
+      "clearFraction": 0.4768562316894531,
+      "opaqueFraction": 0.5182228088378906,
+      "bbox": [
+        60,
+        76,
+        706,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Male_02-smile.png",
+      "clearFraction": 0.4768562316894531,
+      "opaqueFraction": 0.5182228088378906,
+      "bbox": [
+        60,
+        76,
+        706,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Male_02-surprised.png",
+      "clearFraction": 0.4768536885579427,
+      "opaqueFraction": 0.518225351969401,
+      "bbox": [
+        60,
+        76,
+        706,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Male_04-neutral.png",
+      "clearFraction": 0.48316192626953125,
+      "opaqueFraction": 0.5123087565104166,
+      "bbox": [
+        57,
+        96,
+        707,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Male_04-smile.png",
+      "clearFraction": 0.48316319783528644,
+      "opaqueFraction": 0.5123062133789062,
+      "bbox": [
+        57,
+        96,
+        707,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Business_Male_04-surprised.png",
+      "clearFraction": 0.4831593831380208,
+      "opaqueFraction": 0.5123087565104166,
+      "bbox": [
+        57,
+        96,
+        707,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Female_Adult_07-neutral.png",
+      "clearFraction": 0.526892344156901,
+      "opaqueFraction": 0.46771494547526044,
+      "bbox": [
+        90,
+        93,
+        675,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Female_Adult_07-smile.png",
+      "clearFraction": 0.5268999735514323,
+      "opaqueFraction": 0.4677136739095052,
+      "bbox": [
+        90,
+        93,
+        675,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Female_Adult_07-surprised.png",
+      "clearFraction": 0.526879628499349,
+      "opaqueFraction": 0.46773529052734375,
+      "bbox": [
+        90,
+        93,
+        675,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Host_Anchor_01-neutral.png",
+      "clearFraction": 0.4762064615885417,
+      "opaqueFraction": 0.5203463236490885,
+      "bbox": [
+        58,
+        106,
+        706,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Host_Anchor_01-smile.png",
+      "clearFraction": 0.4762064615885417,
+      "opaqueFraction": 0.5203463236490885,
+      "bbox": [
+        58,
+        106,
+        706,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Host_Anchor_01-surprised.png",
+      "clearFraction": 0.4762064615885417,
+      "opaqueFraction": 0.5203463236490885,
+      "bbox": [
+        58,
+        106,
+        706,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Male_Adult_05-neutral.png",
+      "clearFraction": 0.46573766072591144,
+      "opaqueFraction": 0.5308303833007812,
+      "bbox": [
+        58,
+        88,
+        707,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Male_Adult_05-smile.png",
+      "clearFraction": 0.46573766072591144,
+      "opaqueFraction": 0.5308240254720052,
+      "bbox": [
+        58,
+        88,
+        707,
+        1023
+      ]
+    },
+    {
+      "file": "cast/Male_Adult_05-surprised.png",
+      "clearFraction": 0.465728759765625,
+      "opaqueFraction": 0.5308354695638021,
+      "bbox": [
+        58,
+        88,
+        707,
+        1023
+      ]
+    },
+    {
+      "file": "assets/intro-landscape.mp4",
+      "duration": 2.5,
+      "changed": false,
+      "nonblack": true
+    },
+    {
+      "file": "assets/intro-portrait.mp4",
+      "duration": 2.5,
+      "changed": false,
+      "nonblack": true
+    },
+    {
+      "file": "assets/outro-landscape.mp4",
+      "duration": 4,
+      "changed": false,
+      "nonblack": true
+    },
+    {
+      "file": "assets/outro-portrait.mp4",
+      "duration": 4,
+      "changed": false,
+      "nonblack": true
+    }
+  ],
+  "creatorVisualAcceptance": "pending"
+}
