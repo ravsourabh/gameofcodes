@@ -55,5 +55,9 @@
   "approvedStoryHistoryRevision": 1,
   "studioWorkspaceRevision": 1,
   "episodeDiscoveryRevision": 1,
-  "publishingAssetKitRevision": 1
+  "publishingAssetKitRevision": 1,
+  "watchOverlayAutoHideRevision": 1,
+  "legacyInteractiveUiRemoved": true,
+  "legacyWriteApisRemoved": true,
+  "pdfContextExtractionEnabled": false
 }

@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
 import {publishingKitInputs,kitPath} from './copy-publishing-kit.mjs';
 
 // Package an explicit runtime source tree; never use the whole working directory
@@ -37,8 +38,9 @@ const stage=await fs.mkdtemp(path.join(output,revision+'-'));
 for(const name of files){await fs.mkdir(path.dirname(path.join(stage,name)),{recursive:true});await fs.copyFile(path.join(root,name),path.join(stage,name));}
 const run=(bin,args,options={})=>{const result=spawnSync(bin,args,{cwd:stage,stdio:'inherit',...options});if(result.status!==0)throw new Error('Release command failed: '+bin);};
 if(!process.argv.includes('--skip-build')){
- run(process.execPath,[path.join(root,'node_modules/typescript/bin/tsc'),'--noEmit']);
- run(process.execPath,[path.join(root,'node_modules/vite/bin/vite.js'),'build'],{env:{...process.env,GOC_BUILD_REVISION:revision}});
+ const resolve=createRequire(import.meta.url);
+ run(process.execPath,[path.join(path.dirname(resolve.resolve('typescript/package.json')),'bin/tsc'),'--noEmit']);
+ run(process.execPath,[path.join(path.dirname(resolve.resolve('vite/package.json')),'bin/vite.js'),'build'],{env:{...process.env,GOC_BUILD_REVISION:revision}});
  const release=JSON.parse(await fs.readFile(path.join(stage,'dist/release.json'),'utf8'));
  if(release.revision!==revision)throw new Error('Built release identity does not match source.');
  const stat=await fs.stat(path.join(stage,'dist/publishing/baat-ka-bawaal/v1/index.html'));if(!stat.size)throw new Error('Publishing kit missing.');

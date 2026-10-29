@@ -1,5 +1,13 @@
 # Product and code retirement
 
+## Current boundary — October 30, 2026
+
+Channel Studio is the only interactive application. The Council/throne/guide interface, its exclusive verification scripts, legacy write/inference/discussion/news/context APIs, and PDF parsing dependencies are removed. Historical session links use Studio’s read-only saved-record viewer and JSON download. Existing records, character IDs and provider configuration are preserved.
+
+Shared character-library readers, session validators, current AI/speech adapters, realistic avatars, motions and the CourtSurface XR primitive remain required. CI uses scoped immutable release preparation and the data-preserving deploy script; the old Git-pull deployment script is removed.
+
+The dated inventories below are historical and do not describe the current runtime.
+
 Updated October 27, 2026. The channel-first [PRD](PRD.md) and [S01–S15 waves](DELIVERY_WAVES.md) supersede the previous sovereign/council release sequence. Scope is Room 1 first, with shared contracts for future rooms and Participant mode.
 
 ## Retired launch surface

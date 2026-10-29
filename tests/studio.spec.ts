@@ -75,6 +75,17 @@ async function useStudioControl(page:Page,label:string){
 }
 async function fits(page:Page){expect(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight&&document.documentElement.scrollWidth<=innerWidth)).toBe(true);const geometry=await page.locator('#studio-panel').evaluate(node=>({scroll:node.scrollHeight,height:node.clientHeight}));expect(geometry.height).toBeGreaterThan(100);const bounds=await page.locator('#studio-panel').boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.y+bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height);}
 
+test('historical session links open read-only in Studio without loading the retired interface',async({page})=>{
+  const {createSession}=await import('../shared/session-domain.mjs');
+  const saved=createSession({profileId:profile,requestId:randomUUID(),guide:null,draft:{title:'Historical interview',mode:'rehearsal',situation:'Keep this original premise exactly.'}}),folder=path.join(root,'.sovereign/sessions/v1',profile),file=path.join(folder,saved.id+'.json');
+  await mkdir(folder,{recursive:true});await writeFile(file,JSON.stringify(saved));const before=await readFile(file,'utf8');
+  const writes:string[]=[],retired:string[]=[];page.on('request',request=>{if(request.method()!=='GET'&&request.method()!=='HEAD')writes.push(request.method()+' '+request.url());if(/legacy-session-main|throne-court|guide-setup/.test(request.url()))retired.push(request.url());});
+  await page.goto('/?session='+saved.id);await expect(page.locator('body')).toHaveAttribute('data-studio-ready','true');
+  await expect(page.getByRole('heading',{name:'Historical interview',exact:true})).toBeVisible();await expect(page.getByText('Keep this original premise exactly.',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Download saved record',exact:true})).toBeVisible();
+  expect(writes).toEqual([]);expect(retired).toEqual([]);expect(await readFile(file,'utf8')).toBe(before);
+  await page.getByRole('button',{name:'Back to Studio',exact:true}).click();await expect(page.getByRole('button',{name:'Enter newsroom',exact:true})).toBeVisible();expect(new URL(page.url()).searchParams.has('session')).toBe(false);
+});
+
 test('canonical private address restores the saved workspace profile while retaining browser profiles',async({page})=>{
   const owner=randomUUID();
   await page.route('**/api/studio/publishing/workspace-profile',route=>route.fulfill({json:{profile:{id:owner,name:'My saved studio'}}}));
@@ -416,10 +427,36 @@ test('watch mode keeps faces clear and captions return to voices on the same sav
   await page.getByRole('button',{name:'Play prepared show',exact:true}).click();
   await expect(page.locator('.watch-bar')).toBeVisible();await expect(page.locator('#studio-panel')).toBeHidden();await expect(page.locator('.studio-header')).toBeHidden();
   const caption=page.locator('.watch-caption p');await expect(caption).not.toHaveText('Ready to play your saved show.');const line=await caption.textContent();expect(before.production.turns.some((turn:any)=>turn.text===line)).toBe(true);
-  await page.getByRole('button',{name:'Captions only',exact:true}).click();await expect(page.getByRole('button',{name:'Turn voices on',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Turn voices on',exact:true}).click();await expect(page.getByRole('button',{name:'Captions only',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Captions only',exact:true}).click();await page.mouse.move(25,25);await expect(page.getByRole('button',{name:'Turn voices on',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Turn voices on',exact:true}).click();await page.mouse.move(30,30);await expect(page.getByRole('button',{name:'Captions only',exact:true})).toBeVisible();
   await expect(caption).toHaveText(line!);expect((await data('episodes/'+id)).episode.production).toEqual(before.production);
-  await expect(page.locator('body')).toHaveAttribute('data-studio-music',/^(intro|bed)$/);await page.getByRole('button',{name:'Sound & reactions',exact:true}).click();await page.getByRole('button',{name:'Music on',exact:true}).click();await expect(page.locator('body')).toHaveAttribute('data-studio-music','off');await expect(page.getByRole('button',{name:'Music off',exact:true})).toBeVisible();await page.locator('nav [data-action="workspace"]').click();await page.waitForTimeout(3200);await page.screenshot({path:'test-results/studio-watch-mode.png'});await page.keyboard.press('Escape');await expect(page.locator('#studio-panel')).toBeVisible();
+  await expect(page.locator('body')).toHaveAttribute('data-studio-music',/^(intro|bed)$/);await page.mouse.move(20,20);await page.getByRole('button',{name:'Sound & reactions',exact:true}).click();await page.getByRole('button',{name:'Music on',exact:true}).click();await expect(page.locator('body')).toHaveAttribute('data-studio-music','off');await expect(page.getByRole('button',{name:'Music off',exact:true})).toBeVisible();await page.locator('nav [data-action="workspace"]').click();await page.waitForTimeout(3200);await page.screenshot({path:'test-results/studio-watch-mode.png'});await page.keyboard.press('Escape');await expect(page.locator('#studio-panel')).toBeVisible();
+});
+
+test.describe('watch overlay interactions',()=>{
+ test.use({hasTouch:true});
+ test('watch overlay hides on inactivity and returns for mouse, keyboard and touch',async({page})=>{
+  alignedAudio=true;await enter(page);await page.getByRole('button',{name:'Let the cast collaborate',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Play prepared show',exact:true})).toBeEnabled({timeout:45000});
+  await page.getByRole('button',{name:'Play prepared show',exact:true}).click();
+  const bar=page.getByRole('region',{name:'Show playback'}),body=page.locator('body');
+  await page.mouse.move(20,20);await expect(bar).toBeVisible();
+  await expect(body).toHaveAttribute('data-studio-watch-idle','true',{timeout:6000});await expect(bar).toBeHidden();
+  await page.waitForTimeout(3500);await expect(bar).toBeHidden(); // Speech handoffs must not reveal it.
+  await page.mouse.move(30,30);await expect(bar).toBeVisible();
+  await page.keyboard.press('Tab');await expect(page.getByRole('button',{name:'Pause',exact:true})).toBeFocused();
+  await page.waitForTimeout(3500);await expect(bar).toBeVisible();
+  await page.locator('#studio-world').click({position:{x:30,y:30}});
+  await expect(bar).toBeHidden({timeout:6000});
+  await page.touchscreen.tap(30,30);await expect(bar).toBeVisible();
+  await page.getByRole('button',{name:'Captions only',exact:true}).click();
+  await expect(body).toHaveAttribute('data-studio-watch-idle','true',{timeout:6000});await expect(page.locator('.watch-caption')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Turn voices on',exact:true})).toBeHidden();
+  await page.mouse.move(40,40);await page.getByRole('button',{name:'Turn voices on',exact:true}).click();
+  await page.getByRole('button',{name:'Pause',exact:true}).click();await expect(bar).toBeVisible();
+  await page.waitForTimeout(3500);await expect(bar).toBeVisible();
+  await page.getByRole('button',{name:'Show controls',exact:true}).click();await expect(page.locator('#studio-panel')).toBeVisible();
+});
 });
 
 test('a captions-only show can prepare voices while keeping all its dialogue',async({page})=>{
@@ -679,7 +716,7 @@ test('comic performance uses a saved pause for one listener vocal and quiet hand
  await enter(page);await page.getByRole('button',{name:'Let the cast collaborate',exact:true}).click();await expect(page.getByRole('button',{name:'Play prepared show',exact:true})).toBeEnabled({timeout:45000});const id=(await data('episodes')).episodes[0].id,before=(await data('episodes/'+id)).episode;
  expect(before.production.turns.map((line:any)=>line.delivery.pauseMs)).toEqual([350,160,260,450,1800,380]);expect(before.production.cues.filter((cue:any)=>cue.actionId==='speaking.open-palms').length).toBeLessThanOrEqual(2);expect(writes).toBe(1);expect(stages).toBe(1);
  await page.getByRole('button',{name:'Play prepared show',exact:true}).click();await expect.poll(()=>page.locator('body').getAttribute('data-studio-vocal-reactions'),{timeout:20000,intervals:[100]}).toContain('chuckle');await expect.poll(()=>page.evaluate(()=>JSON.parse(document.body.dataset.studioActors||'[]').filter((actor:any)=>actor.actions.includes('comedy.chuckle')).length),{timeout:1500,intervals:[50]}).toBe(1);await page.screenshot({path:'.sovereign/review/comedy-polish/listener-reaction.png'});
- await page.locator('.watch-bar [data-action="pause"]').click();await expect(page.locator('body')).not.toHaveAttribute('data-studio-vocal-reactions',/chuckle/);expect((await data('episodes/'+id)).episode.production).toEqual(before.production);
+ await page.mouse.move(20,20);await page.locator('.watch-bar [data-action="pause"]').click();await expect(page.locator('body')).not.toHaveAttribute('data-studio-vocal-reactions',/chuckle/);expect((await data('episodes/'+id)).episode.production).toEqual(before.production);
  await page.getByRole('button',{name:'Show controls',exact:true}).click();await page.locator('nav [data-action="settings"]').click();await page.getByRole('button',{name:'Sound & reactions',exact:true}).click();await fits(page);await page.getByRole('button',{name:'Character vocals on',exact:true}).click();await expect(page.getByRole('button',{name:'Character vocals off',exact:true})).toBeVisible();await page.reload();await page.locator('nav [data-action="settings"]').click();await page.getByRole('button',{name:'Sound & reactions',exact:true}).click();await expect(page.getByRole('button',{name:'Character vocals off',exact:true})).toBeVisible();expect((await data('episodes/'+id)).episode.production).toEqual(before.production);
 });
 
@@ -723,7 +760,7 @@ test('host introduces himself then the panel with one camera shot for each saved
  alignedAudio=true;shortAudio=true;let order:string[]=[];
  browserAI.writeStudio=async(_profile:any,brain:any,input:any)=>{const ids=input.cast.map((m:any)=>m.characterId),host=input.hostId,others=ids.filter((id:string)=>id!==host);order=[host,...others];const body=[...others,others[0],host];return {brain,text:JSON.stringify({summary:'The host introduces each person before the debate.',detourUsed:false,introductions:order.map((characterId,i)=>({characterId,text:i===0?'आज चाय की कतार की बात करेंगे।':'हमारे साथ हैं '+input.characters.find((p:any)=>p.id===characterId).name+'। अपनी अलग राय लेकर आए हैं।'})),lines:body.map((characterId,i)=>({characterId,text:['चाय की कतार अब फीस मांग रही है।','फिर टिकट से पहले चाय मिलेगी या बाद में?','फीस का हिसाब चाय से भी गर्म निकला।','आज की बहस यहीं समाप्त, फिर मिलेंगे।'][i],intent:i===body.length-1?'closing':i===body.length-2?'payoff':'statement',targetId:null,introducedCharacterIds:[],cues:[]}))})};};
  await enter(page);await page.getByRole('button',{name:'Let the cast collaborate',exact:true}).click();await expect(page.getByRole('button',{name:'Play prepared show',exact:true})).toBeEnabled({timeout:45000});const id=(await data('episodes')).episodes[0].id,before=(await data('episodes/'+id)).episode;expect(before.production.turns.slice(0,order.length).map((line:any)=>line.introductionId)).toEqual(order);expect(before.production.turns.slice(0,order.length).every((line:any)=>line.characterId===order[0])).toBe(true);expect(before.production.turns[0].text).toContain(before.production.turns[0].characterSnapshot.name);
- await page.evaluate(()=>{(window as any).introShots=[];new MutationObserver(()=>{const seen=(window as any).introShots,id=document.body.dataset.studioIntroduction;if(!id||seen.some((shot:any)=>shot.id===id))return;seen.push({id,shot:document.body.dataset.studioShot,camera:JSON.parse(document.body.dataset.studioCamera||'{}')});}).observe(document.body,{attributes:true,attributeFilter:['data-studio-introduction']});});await page.getByRole('button',{name:'Play prepared show',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).introShots.length),{timeout:15000,intervals:[100]}).toBe(order.length);const shots=await page.evaluate(()=>(window as any).introShots);expect(shots.map((shot:any)=>shot.id)).toEqual(order);for(const shot of shots.slice(1)){expect(shot.shot).toBe('close-up');expect(shot.camera.speaker).toBe(shot.id);}await page.screenshot({path:'.sovereign/review/comedy-polish/panel-introduction.png'});await page.locator('.watch-bar [data-action="pause"]').click();expect((await data('episodes/'+id)).episode.production).toEqual(before.production);
+ await page.evaluate(()=>{(window as any).introShots=[];new MutationObserver(()=>{const seen=(window as any).introShots,id=document.body.dataset.studioIntroduction;if(!id||seen.some((shot:any)=>shot.id===id))return;seen.push({id,shot:document.body.dataset.studioShot,camera:JSON.parse(document.body.dataset.studioCamera||'{}')});}).observe(document.body,{attributes:true,attributeFilter:['data-studio-introduction']});});await page.getByRole('button',{name:'Play prepared show',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).introShots.length),{timeout:15000,intervals:[100]}).toBe(order.length);const shots=await page.evaluate(()=>(window as any).introShots);expect(shots.map((shot:any)=>shot.id)).toEqual(order);for(const shot of shots.slice(1)){expect(shot.shot).toBe('close-up');expect(shot.camera.speaker).toBe(shot.id);}await page.screenshot({path:'.sovereign/review/comedy-polish/panel-introduction.png'});await page.mouse.move(20,20);await page.locator('.watch-bar [data-action="pause"]').click();expect((await data('episodes/'+id)).episode.production).toEqual(before.production);
  await page.getByRole('button',{name:'Show controls',exact:true}).click();await page.locator('nav [data-action="takes"]').click();await page.getByRole('button',{name:'Save current take',exact:true}).click();await page.evaluate(()=>(window as any).introShots=[]);await useStudioControl(page,"Horizontal video");await expect(page.locator('body')).toHaveAttribute('data-studio-mode','exports',{timeout:90000});await expect.poll(async()=>(await data('exports')).exports[0]?.status,{timeout:30000}).toBe('completed');const exported=await page.evaluate(()=>(window as any).introShots);expect(exported.map((shot:any)=>shot.id)).toEqual(order);for(const shot of exported.slice(1)){expect(shot.shot).toBe('close-up');expect(shot.camera.speaker).toBe(shot.id);}const job=(await data('exports')).exports[0],movie=await page.request.get(origin+'/api/studio/exports/'+job.id+'/video?profileId='+profile);expect(movie.ok()).toBe(true);await writeFile('.sovereign/review/comedy-polish/introduction-preview.mp4',await movie.body());expect((await data('episodes/'+id)).episode.production).toEqual(before.production);
 
 });

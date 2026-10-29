@@ -30,7 +30,9 @@ import {isId,type Character} from '../shared/session-domain.mjs';
 
 const $=<T extends HTMLElement=HTMLElement>(selector:string)=>document.querySelector<T>(selector)!;
 const esc=(value:unknown)=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
-type Mode='review'|'home'|'cast'|'editor'|'settings'|'episodes'|'sources'|'rundown'|'help'|'performance'|'director'|'screen'|'takes'|'camera'|'practice'|'exports';
+type Mode='review'|'home'|'cast'|'editor'|'settings'|'episodes'|'sources'|'rundown'|'help'|'performance'|'director'|'screen'|'takes'|'camera'|'practice'|'exports'|'history';
+type HistoryView={readOnly:true;suggestedPremise:string;session:{id:string;title:string;characters:{id:string;name:string}[];participants?:{id:string;characterId:string}[];guidance?:{guide?:{id:string;name:string}|null};exchanges?:{id:string;characterId:string;userText:string;text:string}[];contributions?:{id:string;participantId:string;text:string}[]}};
+let historyView:HistoryView|null=null;
 type Pending={path:string;input:Record<string,unknown>};
 type Profile={id:string;name:string};
 type Catalogue={providers:{id:string;name:string;status:string;models:{id:string;name:string}[]}[];voices:{provider:string;id:string;name:string}[]};
@@ -63,6 +65,21 @@ const practice=new StudioPractice();
 let directorRequest:AbortController|null=null;let directorCommands:DirectorCommand[]=[];let directionToken=0;
 let graphicsIssue='',exportPollingStopped=false;const autoExportPolling=new Set<string>();
 let watchMode=false;let motionFamily='all',motionSearch='',motionSelection='';
+let watchAutoHide=false,watchFocusHeld=false,watchIdleTimer:number|undefined;
+function revealWatchControls(){
+  clearTimeout(watchIdleTimer);watchIdleTimer=undefined;
+  if(document.body.dataset.studioWatchIdle!=='false')document.body.dataset.studioWatchIdle='false';
+  watchFocusHeld=watchAutoHide&&!!document.querySelector('.watch-bar :focus-visible');
+  if(!watchAutoHide||watchFocusHeld)return;
+  watchIdleTimer=window.setTimeout(()=>{
+    if(watchAutoHide&&!document.querySelector('.watch-bar :focus-visible'))document.body.dataset.studioWatchIdle='true';
+  },3000);
+}
+function syncWatchControls(){
+  const enabled=watchMode&&mode==='performance'&&(player.active||timeline.playing)&&!error&&!recorder.active;
+  // Caption/scene updates must not restart the user's inactivity clock.
+  if(enabled===watchAutoHide)return;watchAutoHide=enabled;revealWatchControls();
+}
 let settingsPublishing=false;
 const publishing=new StudioPublishing(()=>profileId,()=>render());
 let settingsSound=false,settingsAI=false,settingsWriter=false,settingsReviewer=false;const modelProviders:Record<string,string>={},modelQueries:Record<string,string>={};let voiceFiltersOpen=false;let voiceQuery='',voiceStyle='all',voiceLanguage='compatible';
@@ -267,7 +284,12 @@ function render(){
   document.body.dataset.studioTakeView=takeView;document.body.dataset.studioWatching=String(watched);document.body.dataset.studioFocus=String(watchMode&&mode==='performance');document.body.dataset.studioRecording=String(recorder.active);document.body.dataset.studioMode=mode;document.body.dataset.studioChannel=channel?.id||'';document.body.dataset.studioEpisode=episode?.id||'';document.body.dataset.studioPaused=String(paused);
   const buttons:StudioButton[]=[];let title='',body='',content='';
   const add=(label:string,action:string,style='',disabled=false)=>{if(!disabled&&buttons.length<6)buttons.push({label,action});return button(label,action,style,disabled);};
-  if(!channel){
+  if(mode==='history'&&historyView){
+    const saved=historyView.session,name=(id:string)=>saved.characters.find(actor=>actor.id===id)?.name||(saved.guidance?.guide?.id===id?saved.guidance.guide.name:'Character');
+    const transcript=[...(saved.contributions||[]).map(line=>`<article><strong>${esc(name(saved.participants?.find(person=>person.id===line.participantId)?.characterId||''))}</strong><p>${esc(line.text)}</p></article>`),...(saved.exchanges||[]).map(line=>`<article>${line.userText?`<strong>You</strong><p>${esc(line.userText)}</p>`:''}<strong>${esc(name(line.characterId))}</strong><p>${esc(line.text)}</p></article>`)].join('');
+    title='Saved session · read only';body='The earlier interactive interface is retired. This saved record remains available.';
+    content=`<p class="eyebrow">SAVED HISTORY · READ ONLY</p><h1>${esc(saved.title)}</h1><p class="muted">${body}</p><h2>Premise</h2><p>${esc(historyView.suggestedPremise||'No premise was recorded.')}</p><p class="small">${saved.characters.map(actor=>esc(actor.name)).join(' · ')}</p><details class="history-transcript"><summary>Saved conversation</summary>${transcript||'<p>No dialogue was recorded.</p>'}</details><div class="row">${button('Download saved record','history-download')}${button('Back to Studio','history-close','primary')}</div>`;
+  }else if(!channel){
     title='Your shows. Your characters.';body='Start with बात का बवाल.';
     content=`<p class="eyebrow">GAME OF CODES · STUDIO</p><h1>${title}</h1><p class="muted">Original characters. A straight face. Your premise.</p><div class="channel-tiles"><article class="room-tile"><span class="room-number">01 / SATIRE</span><h2>बात का बवाल</h2><p>मुद्दा छोटा, बवाल बड़ा।</p>${add('Enter newsroom','enter-newsroom','primary')}</article><article class="room-tile planned"><span class="room-number">02 / PLANNED</span><h2>News & Nonsense</h2><p>Real stories. Comic perspectives.</p></article><article class="room-tile planned"><span class="room-number">03 / PLANNED</span><h2>The Reality Room</h2><p>Guests, hosts and judges.</p></article></div>${channels.length?button('New room','create-channel')+`<div class="saved-rooms"><span class="eyebrow">YOUR ROOMS</span>${channels.slice(page*pageSize(),page*pageSize()+pageSize()).map(room=>button(room.name+' · '+(allEpisodes.find(item=>item.channelId===room.id)?.premise.slice(0,55)||'Empty room'),'open:'+room.id,'saved-room')).join('')}${channels.length>3?button('More rooms','more'):''}</div>`:''}<div class="profile-choice"><span>${esc(profiles.find(profile=>profile.id===profileId)?.name)}</span>${button('Switch profile','profiles')}${button('New profile','new-profile')}</div>`;
   }else if(mode==='home'){
@@ -387,6 +409,8 @@ function render(){
   canvas.hidden=!channel||!!graphicsIssue;
   if(busy)root.querySelectorAll<HTMLButtonElement>('button').forEach(node=>{if(!['pause','exit-vr','narrate'].includes(node.dataset.action||''))node.disabled=true;});
   scene?.audience(watchMode&&mode==='performance'||recorder.active);
+  document.body.dataset.studioWatchCaptions=String(timeline.take?timeline.captions:player.captions);
+  syncWatchControls();
   scene?.showBranding(mode==='screen'&&episode?(headlineDrafts[episode.id]??visibleHeadline()):visibleHeadline(),channel?.templateId==='meme-radio');
   scene?.setCast(castPeople() as Character[],mode==='editor'?draft:null,studioSeating(visibleCast().members,visibleCast().slots));scene?.panel(title,body,buttons.length?buttons:[{label:'Room',action:'home'},{label:'Cast',action:'cast'},{label:'Settings',action:'settings'},{label:'Write',action:'write-premise'},{label:'Pause',action:'pause'},{label:'Exit VR',action:'exit-vr'}]);scene?.keyboard(composer,keyboardOpen,hindiKeys);scene?.performance(timeline.take&&episode?{...episode,plan:timeline.take.planSnapshot,production:timeline.take.productionSnapshot}:episode,stageFrame);
   if(focusId){const node=document.getElementById(focusId) as HTMLInputElement|null;node?.focus();if(node&&typeof node.setSelectionRange==='function'&&node.type!=='search'&&start!==null&&start!==undefined)node.setSelectionRange(start,end??start);}
@@ -409,6 +433,8 @@ function voiceEditor(actor:StudioCharacter){
   return `<div class="voice-heading"><h2>Voice</h2><span class="muted small">${voices.length} choices</span></div><div class="choice-fields"><label class="choice-wide">Speech model<select aria-label="Speech model" data-voice-engine><option value="${V4_MODEL}" ${voiceModel===V4_MODEL?'selected':''}>V4 Flash · ${V4_VOICES.length} personas</option><option value="${V3_MODEL}" ${voiceModel===V3_MODEL?'selected':''}>V3 · ${V3_VOICES.length} voices</option></select></label><label class="choice-wide">Voice<select aria-label="Selected voice" data-voice-choice><option value="">Choose a voice…</option>${voices.map(voice=>`<option value="${esc(voice.id)}" ${actor.voice?.id===voice.id&&(actor.voice.model||V3_MODEL)===voiceModel?'selected':''} ${voice.languages.includes(language)?'':'disabled'}>${esc(voice.name)}${voice.languages.includes(language)?'':' · other language'}</option>`).join('')}</select></label></div><details class="voice-filters" ${voiceFiltersOpen?'open':''}><summary>Find a voice · name, language or style</summary><div class="choice-fields"><label>Language<select aria-label="Voice language" data-voice-language><option value="compatible" ${voiceLanguage==='compatible'?'selected':''}>Fits this episode</option><option value="all" ${voiceLanguage==='all'?'selected':''}>All languages</option></select></label><label>Find a voice<input id="voice-search" placeholder="Name or style…" value="${esc(voiceQuery)}"></label><label>Style<select aria-label="Voice style" data-voice-style><option value="all">All styles</option>${styles.map(style=>`<option ${voiceStyle===style?'selected':''} value="${esc(style)}">${esc(style)}</option>`).join('')}</select></label></div></details><div class="row">${button('Preview selected voice','audition','',draftNew||!actor.voice)}<span class="muted small">${esc(actor.voice?.id||'Choose a voice')}</span></div><p class="muted small">Changes apply to newly prepared lines. Saved recordings stay as they are.</p>`;
 }
 async function action(command:string,fromDirector=false){
+  if(command==='history-download'&&historyView){const address=URL.createObjectURL(new Blob([JSON.stringify(historyView.session,null,2)+'\n'],{type:'application/json'}));downloadFile(address,'saved-session-'+historyView.session.id+'.json');setTimeout(()=>URL.revokeObjectURL(address),1000);return;}
+  if(command==='history-close'||command==='leave'&&mode==='history'){historyView=null;mode='home';channel=null;episode=null;status='Your Studio is ready. Historical records are unchanged.';url();render();return;}
   if(command==='graphics-reload'){location.reload();return;}
   if(!fromDirector&&['replay','watch-play','watch-take','pause','show-pause','resume-saved','music','captions'].includes(command)&&timeline.context.state==='suspended')void timeline.context.resume().catch(()=>{});
   if(recorder.active&&!['pause','show-pause','assets-changed'].includes(command)){status='Recording the saved take. Pause stops recording; edits stay available afterwards.';render();return;}
@@ -583,7 +609,11 @@ scene?.screen(screen.texture,time=>screen.tick(time));scene?.onFrame(()=>{const 
 document.querySelector<HTMLCanvasElement>('#studio-world')?.addEventListener('webglcontextlost',event=>{event.preventDefault();graphicsIssue='The 3D view paused. Your saved show is safe.';status=graphicsIssue;error=true;watchMode=false;if(recorder.active)recorder.cancel();timeline.pause();music.stop();if(player.active)void player.pause().catch(()=>{});render();});
 document.querySelector<HTMLCanvasElement>('#studio-world')?.addEventListener('webglcontextrestored',()=>{graphicsIssue='';error=false;status='The 3D studio is restored. Resume when ready.';render();});
 window.addEventListener('resize',()=>render());
-window.addEventListener('pagehide',()=>{exportPollingStopped=true;stopInput();player.dispose();void timeline.dispose();screen.dispose();scene?.dispose();});
-void run(async()=>{await recoverStoryReceipt();await refresh();const parameters=new URL(location.href).searchParams,id=parameters.get('channel');if(id&&isId(id)){await openChannel(id);const episodeId=parameters.get('episode');if(episodeId&&isId(episodeId)){const saved=(await api('episodes/'+episodeId)).episode;if(saved.plan.channelId!==channel?.id)throw new Error('This episode belongs to another channel.');episode=saved;mode=saved.production?'performance':'home';paused=saved.production?.status==='paused';url();}}if(parameters.has('publishing')){const selected=channels.find(c=>c.id===sessionStorage.getItem('goc-publishing-return-channel'))||channels[0];if(selected&&channel?.id!==selected.id)await openChannel(selected.id);if(channel){mode='settings';settingsPublishing=true;await publishing.load();}status='Returned from publishing authorization. Check the connected account below.';const clean=new URL(location.href);clean.searchParams.delete('publishing');history.replaceState(null,'',clean.pathname+clean.search);} if(pending)status='A previous save needs its receipt. Use Retry save.';}).finally(()=>{document.body.dataset.appReady='true';document.body.dataset.studioReady='true';document.body.dataset.avatarStyle='realistic';window.dispatchEvent(new Event('goc-ready'));});
+for(const type of ['pointermove','pointerdown','wheel'] as const)window.addEventListener(type,revealWatchControls,{passive:true});
+window.addEventListener('keydown',revealWatchControls,{capture:true});
+window.addEventListener('focusin',()=>{if(document.querySelector('.watch-bar :focus-visible'))revealWatchControls();});
+window.addEventListener('focusout',()=>{if(watchFocusHeld)queueMicrotask(revealWatchControls);});
+window.addEventListener('pagehide',()=>{clearTimeout(watchIdleTimer);exportPollingStopped=true;stopInput();player.dispose();void timeline.dispose();screen.dispose();scene?.dispose();});
+void run(async()=>{await recoverStoryReceipt();await refresh();const parameters=new URL(location.href).searchParams,id=parameters.get('channel'),oldSession=parameters.get('session');if(oldSession){if(!isId(oldSession))throw new Error('Invalid saved-session link.');historyView=await api('legacy-sessions/'+oldSession);mode='history';status='Historical session opened read only. No generation or changes were made.';return;}if(parameters.has('project')||parameters.has('legacy-session'))status='The earlier project interface is retired. Your saved records are kept; enter Studio to create a show.';if(id&&isId(id)){await openChannel(id);const episodeId=parameters.get('episode');if(episodeId&&isId(episodeId)){const saved=(await api('episodes/'+episodeId)).episode;if(saved.plan.channelId!==channel?.id)throw new Error('This episode belongs to another channel.');episode=saved;mode=saved.production?'performance':'home';paused=saved.production?.status==='paused';url();}}if(parameters.has('publishing')){const selected=channels.find(c=>c.id===sessionStorage.getItem('goc-publishing-return-channel'))||channels[0];if(selected&&channel?.id!==selected.id)await openChannel(selected.id);if(channel){mode='settings';settingsPublishing=true;await publishing.load();}status='Returned from publishing authorization. Check the connected account below.';const clean=new URL(location.href);clean.searchParams.delete('publishing');history.replaceState(null,'',clean.pathname+clean.search);} if(pending)status='A previous save needs its receipt. Use Retry save.';}).finally(()=>{document.body.dataset.appReady='true';document.body.dataset.studioReady='true';document.body.dataset.avatarStyle='realistic';window.dispatchEvent(new Event('goc-ready'));});
 
 window.addEventListener('keydown',event=>{if(event.key==='Escape'&&watchMode){watchMode=false;render();}});

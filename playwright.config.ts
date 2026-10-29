@@ -4,7 +4,7 @@ const baseURL=isolatedPort?`http://127.0.0.1:${isolatedPort}`:'http://localhost:
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: ['**/studio*.spec.ts','**/sessions.spec.ts', '**/characters.spec.ts', '**/conversation.spec.ts','**/guided-setup.spec.ts','**/realistic.spec.ts','**/discussion.spec.ts','**/discussion-repair.spec.ts','**/show.spec.ts'],
+  testMatch: ['**/studio*.spec.ts'],
   fullyParallel: false,
   workers: 1,
   timeout: 70_000,

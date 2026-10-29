@@ -204,3 +204,12 @@ body:not([data-studio-focus=true]) .room-open .studio-dock{position:relative;ins
 }
 @media(max-width:649px){body:not([data-studio-focus=true]) .room-open{padding:12px;gap:12px}}
 @media(max-height:650px) and (min-width:1000px){body:not([data-studio-focus=true]) .room-open{padding:12px;gap:12px}}
+
+/* Keep the stage clear until the viewer interacts again. */
+.watch-bar{transition:opacity .2s ease,visibility .2s}
+body[data-studio-focus=true][data-studio-watch-idle=true] .watch-bar{opacity:0;visibility:hidden;pointer-events:none}
+/* Deliberately enabled captions remain readable while controls fade away. */
+body[data-studio-focus=true][data-studio-watch-idle=true][data-studio-watch-captions=true] .watch-bar{opacity:1;visibility:visible}
+body[data-studio-focus=true][data-studio-watch-idle=true][data-studio-watch-captions=true] .watch-bar .row,
+body[data-studio-focus=true][data-studio-watch-idle=true][data-studio-watch-captions=true] .watch-bar .music-credit{display:none}
+@media(prefers-reduced-motion:reduce){.watch-bar{transition:none}}

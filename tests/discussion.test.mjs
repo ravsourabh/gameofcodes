@@ -3,7 +3,6 @@ import {createSession,updateRoster,assignCharacter} from '../shared/session-doma
 import {generateCharacter} from '../shared/character-domain.mjs';
 import {changeSetup} from '../shared/setup-domain.mjs';
 import {controlDiscussion,nextDiscussionSpeaker,recordDiscussionTurn,elapsedDiscussion} from '../shared/discussion-domain.mjs';
-import {createSessionAI} from '../server/session-ai.mjs';
 export function readyDiscussion(){
  const profileId=randomUUID(),guide=generateCharacter(profileId,{guide:true}),brain={provider:'fixture',model:'requested'},voice={provider:'browser',id:'default'};guide.brain=brain;guide.voice=voice;
  let s=createSession({profileId,guide,requestId:randomUUID(),draft:{title:'A choice',mode:'discussion',situation:''}});
@@ -35,25 +34,4 @@ test('committed turns replay once; duplicates, unknown references, repetition an
 test('the authoritative clock and turn budget survive pause, reload and completion',()=>{
  let s=readyDiscussion(),at='2026-10-26T12:00:00Z';s=control(s,'start',{now:at});assert.equal(elapsedDiscussion(s,Date.parse(at)+1500),1500);s=control(s,'pause',{now:'2026-10-26T12:00:02Z'});assert.equal(s.discussion.elapsedMs,2000);assert.equal(elapsedDiscussion(s,Date.parse(at)+100000),2000);
  s=control(s,'resume',{now:'2026-10-26T12:00:03Z'});s.discussion.elapsedMs=600001;assert.throws(()=>turn(s,reply(s)),/budget/);s=control(s,'finish');assert.equal(s.status,'completed');assert.equal(s.discussion.runningSince,null);
-});
-test('provider contracts constrain real participant references and give every new speaker the last actual claim',async()=>{
- let s=control(readyDiscussion(),'start'),requests=[];const ai=createSessionAI({env:{OPENAI_API_KEY:'test-only',ANTHROPIC_API_KEY:'test-only',GEMINI_API_KEY:'test-only'},transport:async(url,options)=>{
-  if(url.endsWith('/v1/models'))return Response.json({data:[{id:'gpt-fixture'}]});
-  if(url.includes('/v1/models?'))return Response.json({data:[{id:'claude-fixture'}]});
-  if(url.includes('/v1beta/models?'))return Response.json({models:[{name:'models/gemini-fixture',supportedGenerationMethods:['generateContent']}]});
-  const body=JSON.parse(options.body),provider=url.includes('anthropic')?'anthropic':url.includes('googleapis')?'gemini':'openai';
-  const schema=body.text?.format?.schema||body.output_config?.format?.schema||body.generationConfig?.responseJsonSchema;assert.ok(schema);requests.push({provider,body,schema});
-  if(provider==='anthropic')assert.equal(schema.properties.relatedIds.maxItems,undefined);
-  const related=schema.properties.relatedIds.items.enum?.slice(-1)||[],answer={text:`A unique ${provider} contribution ${requests.length}.`,position:'Compare costs with demand.',kind:related.length?'objection':'opening',relatedIds:related,questionForParticipantId:null,onTopic:true};
-  return Response.json(provider==='openai'?{model:'gpt-fixture-resolved',output:[{content:[{type:'output_text',text:JSON.stringify(answer)}]}]}:provider==='anthropic'?{model:'claude-fixture-resolved',content:[{type:'text',text:JSON.stringify(answer)}]}:{modelVersion:'gemini-fixture-resolved',candidates:[{content:{parts:[{text:JSON.stringify(answer)}]}}]});
- }});
- for(const [index,provider] of ['openai','anthropic','gemini'].entries()){
-  const p=nextDiscussionSpeaker(s),c=s.characters.find(c=>c.id===p.characterId);p.brain={provider,model:provider==='openai'?'gpt-fixture':provider==='anthropic'?'claude-fixture':'gemini-fixture'};
-  // For the third adapter check, reuse a participant with a committed opening.
-  if(index===2){s.discussion.nextIndex=0;s.participants[0].brain=p.brain;}
-  const actual=nextDiscussionSpeaker(s),result=await ai.discussion(s.profileId,c,actual,s);
-  const schema=requests.at(-1).schema;assert.ok(!JSON.stringify(schema.properties.questionForParticipantId).includes(actual.id));
-  s=recordDiscussionTurn(s,{requestId:randomUUID(),expectedRevision:s.revision,epoch:s.epoch,participantId:actual.id,...result});
- }
- const openaiInput=JSON.parse(requests[0].body.input),anthropicInput=JSON.parse(requests[1].body.messages[0].content);assert.deepEqual(openaiInput.history,[]);assert.equal(anthropicInput.history.at(-1).id,s.contributions[0].id);assert.equal(anthropicInput.latestContribution.text,s.contributions[0].text);assert.equal(s.contributions.at(-1).brain.provider,'gemini');
 });

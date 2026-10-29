@@ -10,7 +10,7 @@ Shared contracts cover future news/comedy/reality channels and first-person Part
 
 ## Implementation status
 
-Fresh visits now open the channel studio and Room 1 workspace. Cast selection/design, rich character profiles, brain/voice preferences, channel/episode language, written or browser-narrated premise review, corrections, saved episodes and source/rundown controls belong inside the room. Realistic previews support desktop interaction and native headset ray/pinch/keyboards. No guide is automatically created or shown. Old session/project links retain the earlier UI through a separate compatibility entry.
+Fresh visits now open the channel studio and Room 1 workspace. Cast selection/design, rich character profiles, brain/voice preferences, channel/episode language, written or browser-narrated premise review, corrections, saved episodes and source/rundown controls belong inside the room. Realistic previews support desktop interaction and native headset ray/pinch/keyboards. No guide is automatically created or shown. Historical session links open a read-only saved-record view in Studio. The Council/throne/guide interface and its write/inference APIs are removed.
 
 S01–S04 are complete locally. S05–S07 now have the local speech, prepared-conversation and core-performance implementation; see [S05_S07_AUDIT.md](S05_S07_AUDIT.md) and the [earlier audit](S03_S04_AUDIT.md) and [studio API](STUDIO_API.md). Accepted characters save once and remain reusable after leaving a cast. Rich profiles include behaviour, psychology, likes/dislikes, backstory and scoped canon; creator-approved presets are fictional and editable. The studio layer enriches old characters without rewriting their original library. Exact receipts recover lost/partial joins without duplicates, and accepted take data snapshots remain immutable.
 
@@ -24,7 +24,7 @@ Recorded YouTube, Shorts and Instagram publishing is planned in [PUBLISHING_WAVE
 
 The [P01 publishing kit](publishing/baat-ka-bawaal/v1/index.html) prepares the creator-confirmed Baat Ka Bawaal channel, with Game of Codes Production as publisher and Chhola Bhatura as the featured host. It contains local artwork previews, editable templates, original-rig cutouts, audio/intro/outro assets, copy and source notices. Account connections and publishing remain later waves; final artwork acceptance is pending review.
 
-P02 now adds **Settings → Publishing** locally, with protected YouTube/Instagram connections and private setup. Start with [creating your social accounts](P02_SETUP.md); no accounts or live grants have been created for you. The [P02 audit](P02_AUDIT.md) records local verification and outstanding DNS/gateway/provider gates. Full publishing and scheduling remain P03–P09.
+**Settings → Publishing** and the protected asset gallery are live. Start with [creating your social accounts](P02_SETUP.md); no accounts or live grants have been created for you. DNS and the private gateway are configured. Provider OAuth credentials, automatic publishing and scheduling remain later work.
 
 ## AI director, voices and opening cameras
 
@@ -38,8 +38,7 @@ With cameras on **Auto**, show playback starts with a deterministic fly-in, then
 
 The desktop workspace keeps the stage beside a dedicated controls column.
 **Watch mode** expands the stage; **Show controls** returns to the workspace.
-Playback keeps its main actions visible, with **Direct the performance** and
-**Script & versions** opening the less frequent tools.
+The watch overlay fades after three seconds without activity and returns on mouse, touch or keyboard input. It stays visible when paused or keyboard-focused. Captions-only subtitles remain readable while buttons hide. **Direct the performance** and **Script & versions** open the less frequent workspace tools.
 
 **Takes** separates **Versions** (review and story approval), **Edit** (dialogue
 order, audio trims and camera shots), and **Export** (horizontal/vertical video
@@ -63,7 +62,7 @@ and version provenance, while shared cast, voices and media are preserved.
 
 ## Run
 
-Requires **Node.js 22.13+ or Node 24** (including PDF text extraction).
+Requires **Node.js 22.13+ or Node 24**. The retired PDF-upload API and its parsing dependencies are removed.
 
 ```powershell
 npm install
@@ -79,18 +78,18 @@ The session service binds to loopback on port **4176**. Vite proxies `/api` to i
 
 ## AI configuration
 
-Put server keys in ignored **`.env.local`**, following `.env.example`, then restart `npm run dev`. One of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` enables that provider's model catalogue. OpenAI also supplies cloud speech/transcription. `SARVAM_API_KEY` enables Hindi speech through [Sarvam's REST API](https://docs.sarvam.ai/api-reference/text-to-speech/convert), using the documented Bulbul v3 model/speaker pairing and WAV output. A missing or failed Sarvam route leaves a visible recovery path and captions. `ELEVENLABS_API_KEY` is optional and needs voice-catalogue read and speech access. If its key lacks `voices_read`, the app reports the restriction; OpenAI/device voices remain separate choices. Never use a `VITE_` prefix for secrets. Local environment files are excluded from Git and Docker build context.
+Put server keys in ignored **`.env.local`**, following `.env.example`, then restart `npm run dev`. One of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` enables that provider's model catalogue. OpenAI also supplies cloud speech; current premise narration uses browser speech recognition. `SARVAM_API_KEY` enables Hindi speech through [Sarvam's REST API](https://docs.sarvam.ai/api-reference/text-to-speech/convert), using the documented Bulbul v3 model/speaker pairing and WAV output. A missing or failed Sarvam route leaves a visible recovery path and captions. `ELEVENLABS_API_KEY` is optional and needs voice-catalogue read and speech access. If its key lacks `voices_read`, the app reports the restriction; OpenAI/device voices remain separate choices. Never use a `VITE_` prefix for secrets. Local environment files are excluded from Git and Docker build context.
 
 Catalogues establish listed choices, not guaranteed inference access for every model. Requests can still fail because of model access, permissions or usage balance; the user explicitly chooses a replacement. The current session runtime supports cloud model calls. The old local CLI coding adapters are archived and are not offered as connected choices.
 
 ## Saved sessions and compatibility
 
-- New data: `.sovereign/sessions/v1/<profile-id>/<session-id>.json`.
+- Historical, read-only sessions: `.sovereign/sessions/v1/<profile-id>/<session-id>.json`. New shows use Studio storage.
 - Studio channels/episodes: `.sovereign/studio/v1/<profile-id>/{channels,episodes}/<id>.json`. Accepted take snapshots live atomically with their episode. The studio UI uses these records independently of old session storage.
 - Studio character overlays: `.sovereign/studio/v1/<profile-id>/characters/<profile-id>.json`. New accepted characters, rich-profile revisions, portraits, recent use, learned canon and durable receipts live here. Legacy source libraries are unchanged by enrichment.
 - Character library and tutorial progress: `.sovereign/characters/v1/<profile-id>/library.json`. Guide snapshots, attributed notes, reviewed excerpts, proposal/model provenance, confirmations and setup step live with the session. Older drafts remain readable without a write-time migration on load.
 - Browser profile selection: `goc-session-profiles-v1` in local storage. Existing profile names/IDs can be reused without copying their old project context.
-- Session links use `?session=<uuid>`. Select the matching browser profile. Old `?project=` links are identified rather than reinterpreted as new sessions.
+- Session links use `?session=<uuid>` and open a read-only Studio viewer with saved-record download. Select the matching browser profile. Old `?project=` links are identified rather than reinterpreted as new sessions.
 - Saves use request IDs, revision checks, a monotonic event sequence, atomic file replacement, and cancellation epochs. Retries do not duplicate changes; conflicting revisions ask the user to reload the saved version.
 - Character exchanges and actual model provenance are session-scoped. Assignments and deliberate **Use this look** changes preserve roles, positions and previous replies. Library edits do not rewrite other sessions.
 - Unknown schema versions, inconsistent records, and storage junction conflicts are reported without resetting or overwriting the saved record.
@@ -121,7 +120,7 @@ For isolated browser verification, set `GOC_TEST_PORT` to an unused port before 
 
 ## Historical implementation and retired launchers
 
-The old coding-preview entry and its npm launch aliases are retired. `scripts/dev.mjs --legacy` fails before starting a service. Its unused source, tools, fixtures and assets are retained in [the historical archive](archive/legacy-coding/README.md), denied by the development file server and excluded from Docker. The [retirement inventory](RETIREMENT_PLAN.md) identifies reused modules and the visible guide/court replacement still due in S04/S09. Existing saved work and character IDs remain preserved.
+The old coding-preview entry and its npm launch aliases are retired. `scripts/dev.mjs --legacy` fails before starting a service. Its unused source, tools, fixtures and assets are retained in [the historical archive](archive/legacy-coding/README.md), denied by the development file server and excluded from Docker. The Council/throne/guide UI, exclusive verification scripts, legacy write/discussion/news/context APIs and PDF dependencies are removed. Shared readers, provider/speech adapters and Studio XR surfaces remain, as recorded in the [retirement inventory](RETIREMENT_PLAN.md). Existing saved work and character IDs remain preserved.
 
 W01–W06, [the conversation repair audit](CONVERSATION_REPAIR_AUDIT.md), and [the show-room audit](SHOW_ROOMS_AUDIT.md) describe the earlier prototype and its follow-ups. Their completion claims do not mean the new studio release is complete. The former [PRD](archive/product/PRD-discussion-rehearsal-2026-10-27.md) and [prototype README](archive/product/README-prototype-2026-10-27.md) are retained as history.
 

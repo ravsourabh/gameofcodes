@@ -6,8 +6,17 @@ import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
-test('default application import graph resolves without the retired coding services or entry',async()=>{
-  const visited=new Set(),retired=['server/preview.mjs','server/court.mjs','server/providers.mjs','server/protocol.mjs','src/court-main.ts','src/scene.ts','src/preview.ts'];
+const retired=[
+  'server/preview.mjs','server/court.mjs','server/providers.mjs','server/protocol.mjs',
+  'src/court-main.ts','src/scene.ts','src/preview.ts',
+  'src/legacy-session-main.ts','src/session-scene.ts','src/character-workshop.ts',
+  'src/session-conversation.ts','src/guide-setup.ts','src/session-discussion.ts',
+  'src/session.css','src/characters.css','src/environment-assets.ts',
+  'src/throne-court.ts','src/roundtable.ts','src/broadcast-camera.ts',
+  'shared/interface-intents.mjs','shared/interface-intents.d.mts','public/crown.svg',
+];
+test('Studio application import graph resolves without retired coding or Council interfaces',async()=>{
+  const visited=new Set();
   async function visit(file){
     if(visited.has(file))return;visited.add(file);const source=await readFile(file,'utf8');
     for(const match of source.matchAll(/(?:from\s*|import\s*\(\s*|import\s*|new\s+URL\s*\(\s*)['"](\.[^'"\r\n]+)['"]/g)){
@@ -17,8 +26,8 @@ test('default application import graph resolves without the retired coding servi
     }
   }
   for(const entry of ['src/session-main.ts','scripts/dev.mjs','server/session-server.mjs'])await visit(path.join(root,entry));
-  assert.ok(visited.size>35);
-  for(const entry of retired){assert.equal(visited.has(path.join(root,entry)),false);await assert.rejects(access(path.join(root,entry)));await access(path.join(root,'archive/legacy-coding',entry));}
+  for(const entry of ['src/studio-main.ts','src/studio-scene.ts','src/court-surfaces.ts','src/realistic-avatar.ts','src/studio-motion.ts'])assert.ok(visited.has(path.join(root,entry)),`Studio still needs ${entry}`);
+  for(const entry of retired){assert.equal(visited.has(path.join(root,entry)),false);await assert.rejects(access(path.join(root,entry)),{code:'ENOENT'});}
   assert.match(await readFile(path.join(root,'index.html'),'utf8'),/src\/session-main\.ts/);
   const manifest=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
   assert.equal(manifest.scripts['dev:legacy'],undefined);assert.equal(manifest.dependencies.ws,undefined);

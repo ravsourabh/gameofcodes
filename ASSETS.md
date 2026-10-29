@@ -96,7 +96,7 @@ The additional source revision is `0943055db6ec570bcef9f2c8b41c9e5467c808f9`. Op
 
 ## Throne court (W06)
 
-`src/throne-court.ts` authors the current discussion hall using local geometry and deterministic stone/wood/cloth textures from `EnvironmentAssets`. It includes the sovereign throne/dais, ribbed arches, columns, rose/aisle windows, heraldic banners, lanterns, radial floor inlay, presenter seal, lectern and waiting bench. Static meshes are merged by material; inactive rooms are hidden. Two bounded warm lights supplement the shared daylight; there are no dynamic shadows or downloaded environment assets. `scripts/review-court.mjs` renders all six bundled people with an explicit AI fixture, captures a screenshot and reports integration timings/draw counts without provider calls. Physical Quest performance remains to be measured.
+The earlier Council/throne environment and its dedicated verification script are retired. The active newsroom is authored by `src/studio-set.ts` with Studio branding, local geometry and the retained Rocketbox rigs. No retired environment source is required for saved records.
 
 ### Custom host (Host_Anchor_01)
 
